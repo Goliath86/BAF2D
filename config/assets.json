@@ -1,0 +1,62 @@
+{
+  "sprites": {
+    "player": {
+      "src": null,
+      "frameWidth": 16,
+      "frameHeight": 16,
+      "origin": [8, 8],
+      "placeholder": {
+        "shape": "player",
+        "outline": "#0b2a44",
+        "body": "#3fa9f5",
+        "head": "#f2c79b",
+        "feet": "#1c3b57",
+        "gun": "#c8c8d0"
+      },
+      "animations": {
+        "idle": { "frames": [0], "fps": 1 },
+        "walk": { "frames": [1, 0, 2, 0], "fps": 10 }
+      }
+    },
+    "bullet": {
+      "src": null,
+      "frameWidth": 6,
+      "frameHeight": 4,
+      "origin": [3, 2],
+      "placeholder": { "shape": "bullet", "color": "#ffb627", "core": "#fff4c2" }
+    },
+    "crosshair": {
+      "src": null,
+      "frameWidth": 9,
+      "frameHeight": 9,
+      "origin": [4, 4],
+      "placeholder": { "shape": "crosshair", "color": "#ffffff", "outline": "#000000" }
+    }
+  },
+
+  "tilesets": {
+    "base": {
+      "src": null,
+      "tileSize": 16,
+      "tiles": [
+        { "id": 0, "name": "floor", "solid": false, "placeholder": { "style": "floor", "color": "#2a2f3a", "detail": "#323846", "edge": "#252a33" } },
+        { "id": 1, "name": "floor_alt", "solid": false, "placeholder": { "style": "floor", "color": "#2f3a2f", "detail": "#3a463a", "edge": "#283228" } },
+        { "id": 2, "name": "wall", "solid": true, "placeholder": { "style": "wall", "color": "#5a4a3a", "light": "#7a6650", "dark": "#3d3127" } },
+        { "id": 3, "name": "crate", "solid": true, "placeholder": { "style": "crate", "color": "#8a5a2b", "light": "#b07a40", "dark": "#4f3216" } }
+      ]
+    }
+  },
+
+  "sounds": {
+    "shoot": {
+      "src": null,
+      "volume": 0.25,
+      "placeholder": { "wave": "square", "freqStart": 900, "freqEnd": 180, "duration": 0.08 }
+    },
+    "hit": {
+      "src": null,
+      "volume": 0.15,
+      "placeholder": { "wave": "noise", "duration": 0.06 }
+    }
+  }
+}

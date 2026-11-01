@@ -1,0 +1,66 @@
+{
+  "title": "BAF2D",
+  "assets": "config/assets.json",
+  "startLevel": "config/levels/level01.json",
+
+  "display": {
+    "targetHeight": 216,
+    "minScale": 1,
+    "maxScale": 10,
+    "background": "#0b0b12"
+  },
+
+  "audio": {
+    "masterVolume": 0.6
+  },
+
+  "mobile": {
+    "requestFullscreen": true,
+    "lockLandscape": true
+  },
+
+  "camera": {
+    "smoothing": 10,
+    "lookAhead": 24
+  },
+
+  "player": {
+    "sprite": "player",
+    "speed": 90,
+    "hitbox": [10, 10],
+    "faceMoveWhenIdle": true,
+    "weapon": {
+      "bulletSprite": "bullet",
+      "sound": "shoot",
+      "hitSound": "hit",
+      "fireRate": 8,
+      "bulletSpeed": 260,
+      "bulletLife": 1.2,
+      "spreadDeg": 3,
+      "muzzleOffset": 8
+    }
+  },
+
+  "input": {
+    "keyboard": {
+      "up": ["KeyW", "ArrowUp"],
+      "down": ["KeyS", "ArrowDown"],
+      "left": ["KeyA", "ArrowLeft"],
+      "right": ["KeyD", "ArrowRight"],
+      "fire": ["Space"],
+      "debug": ["F3"]
+    },
+    "mouse": {
+      "fireButton": 0
+    },
+    "touch": {
+      "radius": 0.16,
+      "deadZone": 0.12,
+      "fireThreshold": 0.75,
+      "dynamic": true,
+      "opacity": 0.7
+    }
+  },
+
+  "debug": false
+}

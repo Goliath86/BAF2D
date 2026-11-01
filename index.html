@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0b0b12">
+  <link rel="manifest" href="manifest.webmanifest">
+  <title>BAF2D</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app">
+    <canvas id="game"></canvas>
+    <canvas id="ui"></canvas>
+  </div>
+
+  <div id="overlay-start" class="overlay hidden">
+    <div class="panel">
+      <h1>BAF2D</h1>
+      <p class="hint-desktop">WASD / frecce: muovi &middot; Mouse: mira &middot; Click / Spazio: spara &middot; F3: debug</p>
+      <p class="hint-touch">Stick SX: muovi &middot; Stick DX: mira<br>(spingi lo stick DX oltre il cerchio tratteggiato per sparare)</p>
+      <p class="blink">Clicca / tocca per iniziare</p>
+    </div>
+  </div>
+
+  <div id="overlay-rotate" class="overlay">
+    <div class="panel">
+      <div class="rotate-icon"></div>
+      <p>Ruota il dispositivo in orizzontale</p>
+    </div>
+  </div>
+
+  <div id="overlay-message" class="overlay hidden">
+    <div class="panel"><p id="message-text">Caricamento...</p></div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

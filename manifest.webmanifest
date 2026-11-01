@@ -1,0 +1,9 @@
+{
+  "name": "BAF2D",
+  "short_name": "BAF2D",
+  "start_url": ".",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0b0b12",
+  "theme_color": "#0b0b12"
+}
