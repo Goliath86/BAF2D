@@ -80,6 +80,7 @@ body.mode-desktop #app {
   margin: 10px 0;
   font-size: 15px;
   line-height: 1.5;
+  white-space: pre-line; /* "\n" nei testi tradotti = a capo */
 }
 
 .blink {

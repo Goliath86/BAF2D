@@ -6,8 +6,9 @@ import { Player } from './player.js';
 const STEP = 1 / 60; // update a timestep fisso
 
 export class Game {
-  constructor({ config, assets, audio, display, input, level }) {
+  constructor({ config, assets, audio, display, input, level, i18n }) {
     this.config = config;
+    this.i18n = i18n; // per i testi di HUD/menu: this.i18n.t('chiave')
     this.assets = assets;
     this.audio = audio;
     this.display = display;

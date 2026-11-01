@@ -1,4 +1,5 @@
 import { loadJSON } from './engine/loader.js';
+import { I18n } from './engine/i18n.js';
 import { Display } from './engine/display.js';
 import { Assets } from './engine/assets.js';
 import { AudioManager } from './engine/audio.js';
@@ -32,10 +33,16 @@ async function enterFullscreenLandscape(mobileCfg) {
 }
 
 async function boot() {
-  showMessage('Caricamento...');
+  const i18n = new I18n();
+  let i18nReady = false;
   try {
     const config = await loadJSON('config/game.json');
     document.title = config.title || document.title;
+
+    await i18n.load(config.i18n);
+    i18nReady = true;
+    i18n.applyToDOM();
+    showMessage(i18n.t('loading'));
 
     const [assetsCfg, level] = await Promise.all([loadJSON(config.assets), loadJSON(config.startLevel)]);
 
@@ -47,7 +54,7 @@ async function boot() {
     await audio.load();
 
     const input = new Input(display, config.input);
-    const game = new Game({ config, assets, audio, display, input, level });
+    const game = new Game({ config, assets, audio, display, input, level, i18n });
     game.start();
 
     hideMessage();
@@ -70,7 +77,8 @@ async function boot() {
     window.BAF2D = game; // comodo per il debug da console
   } catch (e) {
     console.error(e);
-    showMessage(e.message);
+    // Se i file lingua non sono disponibili si usa il testo inglese di riserva dell'errore
+    showMessage(i18nReady ? i18n.error(e) : e.message);
   }
 }
 

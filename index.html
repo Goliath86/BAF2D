@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
@@ -20,21 +20,21 @@
   <div id="overlay-start" class="overlay hidden">
     <div class="panel">
       <h1>BAF2D</h1>
-      <p class="hint-desktop">WASD / frecce: muovi &middot; Mouse: mira &middot; Click / Spazio: spara &middot; F3: debug</p>
-      <p class="hint-touch">Stick SX: muovi &middot; Stick DX: mira<br>(spingi lo stick DX oltre il cerchio tratteggiato per sparare)</p>
-      <p class="blink">Clicca / tocca per iniziare</p>
+      <p class="hint-desktop" data-i18n="start.hintDesktop"></p>
+      <p class="hint-touch" data-i18n="start.hintTouch"></p>
+      <p class="blink" data-i18n="start.tapToStart"></p>
     </div>
   </div>
 
   <div id="overlay-rotate" class="overlay">
     <div class="panel">
       <div class="rotate-icon"></div>
-      <p>Ruota il dispositivo in orizzontale</p>
+      <p data-i18n="rotate.message"></p>
     </div>
   </div>
 
-  <div id="overlay-message" class="overlay hidden">
-    <div class="panel"><p id="message-text">Caricamento...</p></div>
+  <div id="overlay-message" class="overlay">
+    <div class="panel"><p id="message-text"></p></div>
   </div>
 
   <script type="module" src="js/main.js"></script>

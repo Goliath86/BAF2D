@@ -36,9 +36,10 @@ config/
   game.json            parametri generali (display, player, arma, input, camera, audio)
   assets.json          sprite, tileset e suoni
   levels/level01.json  livello di test
+  lang/                testi localizzati (en.json = default, it.json)
 js/
   main.js              bootstrap
-  engine/              display, input, touch (joystick), assets, placeholder, tilemap, camera, audio, loader
+  engine/              display, input, touch (joystick), assets, placeholder, tilemap, camera, audio, loader, i18n
   game/                game (loop, proiettili, render), player
 tools/serve.mjs        server statico di sviluppo (solo moduli Node built-in)
 ```
@@ -93,6 +94,33 @@ La mappa è un array di stringhe; `legend` associa ogni carattere a un tile (per
 ```
 
 `fill` è il tile usato per completare righe più corte. Fuori dalla mappa tutto è considerato solido.
+
+### Localizzazione (`config/lang/*.json`)
+
+Tutti i testi visibili stanno in un file JSON per lingua (`en.json`, `it.json`, ...), con chiavi annidate
+(`"start": { "tapToStart": "..." }` → chiave `start.tapToStart`) e segnaposto `{nome}`. Per andare a capo usa `\n`.
+
+Configurazione in `game.json`:
+
+```json
+"i18n": {
+  "default": "en",
+  "language": "auto",
+  "available": ["en", "it"],
+  "path": "config/lang/{lang}.json"
+}
+```
+
+Scelta della lingua, in ordine: parametro URL `?lang=it` → `language` (se diverso da `"auto"`) →
+lingue del browser → `default`. Le chiavi mancanti in una lingua ricadono su quella di default.
+
+- **Aggiungere una lingua**: copia `en.json` in `xx.json`, traducilo e aggiungi `"xx"` ad `available`.
+- **HTML**: usa l'attributo `data-i18n="chiave"`, il testo viene inserito all'avvio.
+- **Codice**: `i18n.t('chiave', { param: valore })` (disponibile anche come `game.i18n`).
+- **Errori**: lancia `new LocalizedError('errors.chiave', { ... })` (`js/engine/errors.js`).
+
+Unica eccezione: gli errori di caricamento hanno un testo inglese di riserva nel codice, perché possono
+verificarsi prima che i file lingua siano disponibili (es. gioco aperto senza server).
 
 ### Parametri principali (`config/game.json`)
 

@@ -1,0 +1,22 @@
+{
+  "meta": {
+    "name": "Italiano"
+  },
+  "loading": "Caricamento...",
+  "start": {
+    "hintDesktop": "WASD / frecce: muovi · Mouse: mira · Click / Spazio: spara · F3: debug",
+    "hintTouch": "Stick SX: muovi · Stick DX: mira\n(spingi lo stick DX oltre il cerchio tratteggiato per sparare)",
+    "tapToStart": "Clicca / tocca per iniziare"
+  },
+  "rotate": {
+    "message": "Ruota il dispositivo in orizzontale"
+  },
+  "errors": {
+    "fetch": "Impossibile caricare \"{url}\". Il gioco va avviato tramite un server HTTP locale (es. \"node tools/serve.mjs\"), non aprendo index.html direttamente.",
+    "http": "Errore {status} caricando \"{url}\"",
+    "json": "JSON non valido in \"{url}\": {details}",
+    "unknownSprite": "Sprite non definito in assets.json: \"{name}\"",
+    "unknownTileset": "Tileset non definito in assets.json: \"{name}\"",
+    "unknownTile": "Tile \"{tile}\" non definito nel tileset \"{tileset}\""
+  }
+}

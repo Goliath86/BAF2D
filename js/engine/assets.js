@@ -1,6 +1,7 @@
 // Gestione sprite e tileset definiti in assets.json.
 
 import { loadImage } from './loader.js';
+import { LocalizedError } from './errors.js';
 import { createSpritePlaceholder, createTilesetPlaceholder } from './placeholders.js';
 
 async function tryLoadImage(src) {
@@ -63,13 +64,13 @@ export class Assets {
 
   sprite(name) {
     const s = this.sprites.get(name);
-    if (!s) throw new Error(`Sprite non definito in assets.json: "${name}"`);
+    if (!s) throw new LocalizedError('errors.unknownSprite', { name });
     return s;
   }
 
   tileset(name) {
     const t = this.tilesets.get(name);
-    if (!t) throw new Error(`Tileset non definito in assets.json: "${name}"`);
+    if (!t) throw new LocalizedError('errors.unknownTileset', { name });
     return t;
   }
 }

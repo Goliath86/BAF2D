@@ -3,6 +3,13 @@
   "assets": "config/assets.json",
   "startLevel": "config/levels/level01.json",
 
+  "i18n": {
+    "default": "en",
+    "language": "auto",
+    "available": ["en", "it"],
+    "path": "config/lang/{lang}.json"
+  },
+
   "display": {
     "targetHeight": 216,
     "minScale": 1,

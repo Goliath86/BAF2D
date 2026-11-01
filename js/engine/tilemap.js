@@ -2,6 +2,8 @@
 // Il livello usa righe di caratteri + una "legend" che mappa ogni carattere a un tile
 // (per nome o id) e, opzionalmente, a uno spawn: { "tile": "floor", "spawn": "player" }.
 
+import { LocalizedError } from './errors.js';
+
 export class TileMap {
   constructor(level, tileset) {
     this.tileset = tileset;
@@ -45,7 +47,7 @@ export class TileMap {
   _resolveTile(ref) {
     if (typeof ref === 'number') return ref;
     const t = this.tileset.byName.get(ref);
-    if (!t) throw new Error(`Tile "${ref}" non definito nel tileset "${this.tileset.name}"`);
+    if (!t) throw new LocalizedError('errors.unknownTile', { tile: ref, tileset: this.tileset.name });
     return t.id;
   }
 

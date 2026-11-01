@@ -1,0 +1,22 @@
+{
+  "meta": {
+    "name": "English"
+  },
+  "loading": "Loading...",
+  "start": {
+    "hintDesktop": "WASD / arrows: move · Mouse: aim · Click / Space: fire · F3: debug",
+    "hintTouch": "Left stick: move · Right stick: aim\n(push the right stick past the dashed circle to fire)",
+    "tapToStart": "Click / tap to start"
+  },
+  "rotate": {
+    "message": "Rotate your device to landscape"
+  },
+  "errors": {
+    "fetch": "Unable to load \"{url}\". The game must be run through a local HTTP server (e.g. \"node tools/serve.mjs\"), not by opening index.html directly.",
+    "http": "Error {status} while loading \"{url}\"",
+    "json": "Invalid JSON in \"{url}\": {details}",
+    "unknownSprite": "Sprite not defined in assets.json: \"{name}\"",
+    "unknownTileset": "Tileset not defined in assets.json: \"{name}\"",
+    "unknownTile": "Tile \"{tile}\" is not defined in tileset \"{tileset}\""
+  }
+}
