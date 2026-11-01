@@ -1,6 +1,7 @@
 {
   "title": "BAF2D",
   "assets": "config/assets.json",
+  "effects": "config/effects.json",
   "startLevel": "config/levels/level01.json",
 
   "i18n": {
@@ -39,11 +40,13 @@
     "weapon": {
       "bulletSprite": "bullet",
       "sound": "shoot",
-      "hitSound": "hit",
       "fireRate": 8,
-      "bulletSpeed": 260,
-      "bulletLife": 1.2,
+      "bulletSpeed": 300,
       "spreadDeg": 3,
+      "rangeJitter": 0.06,
+      "minRange": 4,
+      "maxRange": 600,
+      "screenMargin": 3,
       "muzzleOffset": 8
     }
   },

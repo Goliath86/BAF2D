@@ -25,6 +25,27 @@
       "origin": [3, 2],
       "placeholder": { "shape": "bullet", "color": "#ffb627", "core": "#fff4c2" }
     },
+    "hole_ground": {
+      "src": null,
+      "frameWidth": 7,
+      "frameHeight": 7,
+      "origin": [3, 3],
+      "placeholder": { "shape": "hole", "frames": 3, "rim": "#1b1e26", "center": "#08090c", "chips": "#454b5a" }
+    },
+    "hole_wall": {
+      "src": null,
+      "frameWidth": 7,
+      "frameHeight": 7,
+      "origin": [3, 3],
+      "placeholder": { "shape": "hole", "frames": 3, "rim": "#2a211a", "center": "#0d0a08", "cracks": "#3d3127" }
+    },
+    "hole_wood": {
+      "src": null,
+      "frameWidth": 7,
+      "frameHeight": 7,
+      "origin": [3, 3],
+      "placeholder": { "shape": "hole", "frames": 3, "rim": "#4f3216", "center": "#1a0f06", "cracks": "#6b4420" }
+    },
     "crosshair": {
       "src": null,
       "frameWidth": 9,
@@ -39,10 +60,10 @@
       "src": null,
       "tileSize": 16,
       "tiles": [
-        { "id": 0, "name": "floor", "solid": false, "placeholder": { "style": "floor", "color": "#2a2f3a", "detail": "#323846", "edge": "#252a33" } },
-        { "id": 1, "name": "floor_alt", "solid": false, "placeholder": { "style": "floor", "color": "#2f3a2f", "detail": "#3a463a", "edge": "#283228" } },
-        { "id": 2, "name": "wall", "solid": true, "placeholder": { "style": "wall", "color": "#5a4a3a", "light": "#7a6650", "dark": "#3d3127" } },
-        { "id": 3, "name": "crate", "solid": true, "placeholder": { "style": "crate", "color": "#8a5a2b", "light": "#b07a40", "dark": "#4f3216" } }
+        { "id": 0, "name": "floor", "solid": false, "impact": "ground", "placeholder": { "style": "floor", "color": "#2a2f3a", "detail": "#323846", "edge": "#252a33" } },
+        { "id": 1, "name": "floor_alt", "solid": false, "impact": "ground", "placeholder": { "style": "floor", "color": "#2f3a2f", "detail": "#3a463a", "edge": "#283228" } },
+        { "id": 2, "name": "wall", "solid": true, "impact": "wall", "placeholder": { "style": "wall", "color": "#5a4a3a", "light": "#7a6650", "dark": "#3d3127" } },
+        { "id": 3, "name": "crate", "solid": true, "impact": "wood", "placeholder": { "style": "crate", "color": "#8a5a2b", "light": "#b07a40", "dark": "#4f3216" } }
       ]
     }
   },
@@ -53,10 +74,20 @@
       "volume": 0.25,
       "placeholder": { "wave": "square", "freqStart": 900, "freqEnd": 180, "duration": 0.08 }
     },
-    "hit": {
+    "hit_wall": {
       "src": null,
       "volume": 0.15,
       "placeholder": { "wave": "noise", "duration": 0.06 }
+    },
+    "hit_ground": {
+      "src": null,
+      "volume": 0.08,
+      "placeholder": { "wave": "noise", "duration": 0.04 }
+    },
+    "hit_wood": {
+      "src": null,
+      "volume": 0.2,
+      "placeholder": { "wave": "triangle", "freqStart": 320, "freqEnd": 90, "duration": 0.07 }
     }
   }
 }

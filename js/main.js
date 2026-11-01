@@ -44,7 +44,11 @@ async function boot() {
     i18n.applyToDOM();
     showMessage(i18n.t('loading'));
 
-    const [assetsCfg, level] = await Promise.all([loadJSON(config.assets), loadJSON(config.startLevel)]);
+    const [assetsCfg, level, effectsCfg] = await Promise.all([
+      loadJSON(config.assets),
+      loadJSON(config.startLevel),
+      loadJSON(config.effects),
+    ]);
 
     const display = new Display($('game'), $('ui'), config.display);
     const assets = new Assets();
@@ -54,7 +58,7 @@ async function boot() {
     await audio.load();
 
     const input = new Input(display, config.input);
-    const game = new Game({ config, assets, audio, display, input, level, i18n });
+    const game = new Game({ config, assets, audio, display, input, level, effectsCfg, i18n });
     game.start();
 
     hideMessage();

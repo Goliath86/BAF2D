@@ -22,6 +22,9 @@ Sparatutto top-down in pixel-art per browser. Lingua di lavoro con l'utente: **i
 - Test lingua: `?lang=it` nell'URL.
 - Verifica rapida senza browser interattivo: Chrome headless con `--screenshot` e `--enable-logging=stderr`
   (gli errori di console compaiono nel log). Chrome: `C:\Program Files (x86)\Google\Chrome\Application\chrome.exe`.
+- Test di input/gameplay: Chrome headless con `--remote-debugging-port=9222` + script Node (WebSocket globale) che usa
+  CDP (`Input.dispatchMouseEvent`, `Runtime.evaluate` su `window.BAF2D`, `Page.captureScreenshot`). Nel rilascio del
+  mouse passare `button: 'left'`, altrimenti il tasto resta premuto. Script di test nello scratchpad, non nel repo.
 - Controllo sintassi: `node --check <file.js>`. Chiudere il server di sviluppo a fine verifica.
 
 ## Git
@@ -48,11 +51,13 @@ js/engine/
   camera.js           follow con smoothing esponenziale + lookAhead verso la mira, clamp ai bordi
   audio.js            Web Audio; suoni da file o sintetizzati (square/sine/.../noise); unlock al primo gesto
 js/game/
-  game.js             loop a timestep fisso 60 Hz, proiettili, particelle, render, HUD debug
+  game.js             loop a timestep fisso 60 Hz, proiettili (gittata + impatti), render, HUD debug
   player.js           movimento, mira, fuoco, animazione
+  effects.js          Effects: decal con fade (buchi) e particelle (fumo/scintille/schegge), impact(type, ...)
 config/
   game.json           parametri generali (display, i18n, player/weapon, input, camera, audio, mobile)
-  assets.json         sprites / tilesets / sounds
+  assets.json         sprites / tilesets (con "impact" per tile) / sounds
+  effects.json        tipi di impatto: decal + emitters + sound
   levels/*.json       livelli
   lang/*.json         testi
 tools/serve.mjs       server statico (solo moduli Node built-in)
@@ -67,6 +72,10 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
 - Tile: `id`, `name`, `solid`, `index` opzionale (posizione nello sheet). Fuori mappa = solido.
 - Livelli: `legend` mappa caratteri a nome/id del tile o a `{ "tile", "spawn" }`; `fill` completa righe corte.
 - Collisioni: `moveAndCollide` presuppone spostamenti per tick < dimensione tile.
+- Colpi: la gittata si fissa allo sparo. Desktop con mouse = distanza dal mirino (± `rangeJitter`, angolo ± `spreadDeg`);
+  touch o senza mouse = fino al bordo schermo di quel momento (`screenMargin`). Fine corsa = impatto del tile a terra;
+  tile solido prima = impatto muro (buco spostato di `WALL_DECAL_INSET` px dentro la faccia colpita, particelle lungo la normale).
+  I proiettili avanzano a sotto-passi da 2px per non attraversare i muri.
 - `input.endFrame()` va chiamato a fine di ogni tick di update (azzera i `wasPressed`).
 - Su touch in portrait il gioco è in pausa e compare l'overlay "ruota il dispositivo" (CSS + `Game.paused`).
 - Il click/tocco di avvio fa `stopPropagation` per non sparare subito; fullscreen + lock landscape solo su touch.
@@ -75,7 +84,8 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
 
 ## Stato attuale
 
-- Fatto: base rendering, movimento, collisioni, camera, controlli desktop/mobile, proiettili base,
+- Fatto: base rendering, movimento, collisioni, camera, controlli desktop/mobile, proiettili con gittata
+  (mirino su desktop, bordo schermo su touch) e impatti (buchi con fade, fumo, scintille, schegge),
   placeholder grafici e sonori, localizzazione en/it.
 - Non ancora presenti: nemici, danni/vita, HUD di gioco, menu, selettore lingua in-game, asset grafici reali.
 - I controlli touch non sono ancora stati verificati su un dispositivo reale.

@@ -35,12 +35,13 @@ index.html, css/style.css, manifest.webmanifest
 config/
   game.json            parametri generali (display, player, arma, input, camera, audio)
   assets.json          sprite, tileset e suoni
+  effects.json         impatti dei colpi (buchi, fumo, scintille, schegge)
   levels/level01.json  livello di test
   lang/                testi localizzati (en.json = default, it.json)
 js/
   main.js              bootstrap
   engine/              display, input, touch (joystick), assets, placeholder, tilemap, camera, audio, loader, i18n
-  game/                game (loop, proiettili, render), player
+  game/                game (loop, proiettili, render), player, effects (decal e particelle)
 tools/serve.mjs        server statico di sviluppo (solo moduli Node built-in)
 ```
 
@@ -80,6 +81,31 @@ Gli sprite orientabili (player, proiettile) devono guardare verso **destra**.
 
 **Suoni**: `src` (wav/mp3/ogg) e `volume`; il placeholder è un suono sintetizzato
 (`wave`: `square`/`sine`/`triangle`/`sawtooth`/`noise`, `freqStart`, `freqEnd`, `duration`).
+
+Ogni tile può avere `"impact"`: il tipo di effetto (in `effects.json`) quando viene colpito da un proiettile
+(default `"wall"` per i tile solidi, `"ground"` per gli altri).
+
+### Colpi ed effetti (`config/effects.json`)
+
+La gittata di ogni colpo è decisa al momento dello sparo:
+
+- **desktop (mouse)**: il colpo termina dove si trova il mirino, con imprecisione data da `weapon.spreadDeg`
+  (angolo) e `weapon.rangeJitter` (± frazione della distanza);
+- **touch** (o tastiera senza mouse): il colpo prosegue fino al bordo dello schermo visibile al momento dello sparo
+  (meno `weapon.screenMargin` px).
+
+A fine corsa si genera l'impatto del tile sottostante (es. `ground`); se prima incontra un tile solido,
+l'impatto del muro (es. `wall`, `wood`). Ogni impatto in `effects.json` definisce:
+
+- `decal`: sprite del buco (`sprite`), durata in secondi (`life`) e durata della dissolvenza finale (`fade`);
+  se lo sprite ha più frame, ne viene scelto uno a caso come variante;
+- `sound`: suono da `assets.json`;
+- `emitters`: lista di emettitori di particelle (fumo, scintille, schegge, polvere) con
+  `count`, `colors`, `speed`, `life`, `size` ([iniziale, finale]), `drag`, `rise` (deriva verso l'alto, per il fumo),
+  `spreadDeg` (cono attorno alla normale della superficie; sul terreno l'emissione è a 360°), `alpha`, `fade`.
+  I valori numerici accettano un numero o un intervallo `[min, max]`.
+
+`maxDecals` e `maxParticles` limitano gli elementi contemporanei.
 
 ### Livelli (`config/levels/*.json`)
 
@@ -126,7 +152,8 @@ verificarsi prima che i file lingua siano disponibili (es. gioco aperto senza se
 
 - `display.targetHeight`: altezza virtuale in pixel di gioco.
 - `player.speed` (px/s), `player.hitbox`, `player.faceMoveWhenIdle` (su touch, senza mira, il personaggio guarda dove cammina).
-- `player.weapon`: `fireRate` (colpi/s), `bulletSpeed`, `bulletLife`, `spreadDeg`, `muzzleOffset`, suoni.
+- `player.weapon`: `fireRate` (colpi/s), `bulletSpeed`, `spreadDeg`, `rangeJitter`, `minRange`, `maxRange`,
+  `screenMargin`, `muzzleOffset`, `sound`.
 - `input.keyboard`: mappatura azioni → `KeyboardEvent.code`.
 - `input.touch`: `radius` (frazione del lato corto dello schermo), `deadZone`, `fireThreshold`
   (frazione del raggio oltre la quale si spara), `dynamic` (lo stick nasce dove appoggi il dito), `opacity`.

@@ -64,6 +64,31 @@ const SPRITE_SHAPES = {
     rect(g, 2, 1, w - 3, h - 2, p.core);
   },
 
+  /** Foro di proiettile (decal). Ogni frame è una variante diversa. */
+  hole(g, w, h, p, frame) {
+    const r = rng(frame * 7 + 3);
+    const cx = w / 2;
+    const cy = h / 2;
+    disc(g, cx, cy, 2.6, p.rim);
+    disc(g, cx + (r() - 0.5), cy + (r() - 0.5), 1.6, p.center);
+    const dirs = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]];
+    const extra = p.cracks || p.chips;
+    if (!extra) return;
+    for (let k = 0; k < 3; k++) {
+      const [dx, dy] = dirs[Math.floor(r() * dirs.length)];
+      const x = Math.floor(cx) + dx * 2;
+      const y = Math.floor(cy) + dy * 2;
+      if (p.cracks) {
+        // crepa: linea che parte dal bordo del foro
+        rect(g, x, y, 1, 1, p.cracks);
+        rect(g, x + dx, y + dy, 1, 1, p.cracks);
+      } else {
+        // schegge di terreno sparse attorno
+        rect(g, x + dx, y + dy, 1, 1, p.chips);
+      }
+    }
+  },
+
   crosshair(g, w, h, p) {
     const c = Math.floor(w / 2);
     // contorno
