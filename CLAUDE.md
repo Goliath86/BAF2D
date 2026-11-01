@@ -15,6 +15,15 @@ Sparatutto top-down in pixel-art per browser. Lingua di lavoro con l'utente: **i
   (SX = movimento in spazio schermo su/giù/strafe; DX = mira, spinto oltre `fireThreshold` = fuoco).
 - **Pixel-art nitida**: canvas di gioco a bassa risoluzione, scalato di un fattore intero.
 
+## Asset con licenza (CraftPix)
+
+- Gli asset acquistati (CraftPix) vanno in `assets/licensed/`, cartella esclusa da git: **mai committarli**
+  né spostarli altrove nel repo (la licenza vieta la distribuzione dei file sorgente PNG ecc.).
+- Il repo deve funzionare anche senza: se un `src` non esiste il motore usa il placeholder.
+- La licenza CraftPix vieta l'uso degli asset per sviluppare/testare/migliorare sistemi AI: **non aprire/visualizzare
+  le immagini** in `assets/licensed/`. Per dimensioni e numero di frame chiedere all'utente o leggere solo i metadati
+  (larghezza/altezza) del file senza guardarne il contenuto.
+
 ## Avvio e verifica
 
 - Server: `node tools/serve.mjs [porta]` (default 8080, ascolta anche in LAN per test da telefono).
