@@ -1,21 +1,51 @@
 {
   "sprites": {
-    "player": {
+    "soldier_body": {
       "src": null,
-      "frameWidth": 16,
-      "frameHeight": 16,
-      "origin": [8, 8],
+      "frameWidth": 24,
+      "frameHeight": 24,
+      "origin": [12, 12],
       "placeholder": {
-        "shape": "player",
-        "outline": "#0b2a44",
-        "body": "#3fa9f5",
-        "head": "#f2c79b",
-        "feet": "#1c3b57",
-        "gun": "#c8c8d0"
+        "shape": "soldier_body",
+        "autoOutline": "#0d0f08",
+        "uniform": "#5b6b3a",
+        "camo": "#47552c",
+        "camo2": "#6f7f48",
+        "vest": "#3f4a26",
+        "vestDark": "#2c3419",
+        "pack": "#4a5530",
+        "packDark": "#333b20",
+        "rifle": "#262626",
+        "rifleLight": "#4d4d4d",
+        "rifleDark": "#121212",
+        "glove": "#a08c5c",
+        "helmet": "#8a7a50",
+        "helmetDark": "#5a4e33",
+        "helmetLight": "#ab9a6c"
+      },
+      "animations": {
+        "idle": { "frames": [0], "fps": 1 }
+      }
+    },
+    "soldier_legs": {
+      "src": null,
+      "frameWidth": 24,
+      "frameHeight": 24,
+      "origin": [12, 12],
+      "placeholder": {
+        "shape": "soldier_legs",
+        "autoOutline": "#0d0f08",
+        "walkFrames": 8,
+        "stride": 7,
+        "trousers": "#4f5e33",
+        "trousersDark": "#3c4826",
+        "boot": "#3a2e22",
+        "bootLight": "#5c4a36",
+        "bootDark": "#1a140e"
       },
       "animations": {
         "idle": { "frames": [0], "fps": 1 },
-        "walk": { "frames": [1, 0, 2, 0], "fps": 10 }
+        "walk": { "frames": [1, 2, 3, 4, 5, 6, 7, 8], "fps": 14 }
       }
     },
     "bullet": {

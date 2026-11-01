@@ -110,6 +110,7 @@ export class Animator {
     this.time = 0;
   }
 
+  /** dt negativo = animazione all'indietro (es. camminata in retromarcia). */
   update(dt) {
     this.time += dt;
   }
@@ -117,7 +118,8 @@ export class Animator {
   get frame() {
     const a = this.sprite.animations[this.name];
     if (!a) return 0;
-    const i = Math.floor(this.time * (a.fps || 1)) % a.frames.length;
+    const n = a.frames.length;
+    const i = ((Math.floor(this.time * (a.fps || 1)) % n) + n) % n;
     return a.frames[i];
   }
 }

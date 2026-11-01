@@ -76,6 +76,15 @@ Gli sprite orientabili (player, proiettile) devono guardare verso **destra**.
 }
 ```
 
+**Giocatore su due livelli**: `player.sprite` è il busto (ruota verso la mira), `player.legsSprite` (opzionale)
+sono le gambe, che ruotano verso la direzione di marcia con animazioni `idle` e `walk`. Camminando all'indietro
+rispetto alla mira (oltre `backpedalAngleDeg`) le gambe restano allineate al busto e il passo va al contrario.
+Senza `legsSprite` si usa un unico sprite con le proprie animazioni `idle`/`walk`.
+
+**Placeholder**: `placeholder.shape` sceglie il disegno procedurale (`soldier_body`, `soldier_legs`, `bullet`,
+`hole`, `crosshair`, `circle`, `rect`, ...); i colori sono parametri nel JSON. `autoOutline` aggiunge un contorno
+di 1px del colore indicato.
+
 **Tileset**: tile quadrati di `tileSize` px; ogni tile ha `id`, `name`, `solid` e opzionalmente `index`
 (posizione nello sheet, default = `id`).
 
@@ -151,11 +160,14 @@ verificarsi prima che i file lingua siano disponibili (es. gioco aperto senza se
 ### Parametri principali (`config/game.json`)
 
 - `display.targetHeight`: altezza virtuale in pixel di gioco.
-- `player.speed` (px/s), `player.hitbox`, `player.faceMoveWhenIdle` (su touch, senza mira, il personaggio guarda dove cammina).
+- `player.speed` (px/s), `player.hitbox`, `player.faceMoveWhenIdle` (su touch, senza mira, il personaggio guarda dove cammina),
+  `player.legsSprite`, `player.legsTurnSpeed`, `player.backpedalAngleDeg`.
 - `player.weapon`: `fireRate` (colpi/s), `bulletSpeed`, `spreadDeg`, `rangeJitter`, `minRange`, `maxRange`,
   `screenMargin`, `muzzleOffset`, `sound`.
 - `input.keyboard`: mappatura azioni → `KeyboardEvent.code`.
-- `input.touch`: `radius` (frazione del lato corto dello schermo), `deadZone`, `fireThreshold`
+- `input.touch`: `radius` (frazione del lato corto dello schermo), `deadZone`,
+  `moveCurve` (risposta dello stick sinistro: la velocità è proporzionale allo spostamento; 1 = lineare,
+  > 1 più precisione alle basse velocità), `fireThreshold`
   (frazione del raggio oltre la quale si spara), `dynamic` (lo stick nasce dove appoggi il dito), `opacity`.
 - `camera.smoothing`, `camera.lookAhead` (px di anticipo nella direzione di mira).
 - `mobile.requestFullscreen`, `mobile.lockLandscape`.

@@ -77,6 +77,11 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
 - Coordinate: mondo in pixel di gioco; `Display.cssToGame()` converte da `clientX/Y`. I joystick lavorano in px CSS.
 - Render: la camera viene arrotondata (`Math.round`) prima di traslare; `drawSprite` arrotonda le posizioni.
 - Sprite orientabili guardano a **destra** (angolo 0) e vengono ruotati liberamente (non a 8 direzioni).
+- Giocatore su due livelli: gambe (`legsSprite`, ruotano verso il movimento, passo al contrario in retromarcia)
+  sotto il busto (`sprite`, ruota verso la mira). La grafica attuale è procedurale (`soldier_body`/`soldier_legs`
+  in `placeholders.js`, colori in `assets.json`): l'utente preferisce grafica creata via canvas.
+- Movimento touch analogico: lunghezza vettore stick SX (dopo deadzone, elevata a `moveCurve`) × `speed`.
+- `Animator.update(dt)` accetta dt negativo (animazione all'indietro).
 - Spritesheet a griglia, frame numerati da sinistra a destra / dall'alto in basso; `origin` = punto di ancoraggio.
 - Tile: `id`, `name`, `solid`, `index` opzionale (posizione nello sheet). Fuori mappa = solido.
 - Livelli: `legend` mappa caratteri a nome/id del tile o a `{ "tile", "spawn" }`; `fill` completa righe corte.

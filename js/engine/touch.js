@@ -32,6 +32,7 @@ export class TouchSticks {
     this.cfg = {
       radius: 0.16,
       deadZone: 0.12,
+      moveCurve: 1,
       fireThreshold: 0.75,
       dynamic: true,
       opacity: 0.7,
@@ -101,7 +102,10 @@ export class TouchSticks {
     s.ky = s.by + dy;
     s.raw = d / R;
     const dz = this.cfg.deadZone;
-    const mag = s.raw < dz ? 0 : (s.raw - dz) / (1 - dz);
+    // Intensità 0..1 proporzionale allo spostamento oltre la deadzone; moveCurve > 1 dà più
+    // precisione alle basse velocità, < 1 raggiunge prima la velocità piena.
+    const lin = s.raw < dz ? 0 : (s.raw - dz) / (1 - dz);
+    const mag = Math.pow(lin, this.cfg.moveCurve);
     s.x = d > 0 ? (dx / d) * mag : 0;
     s.y = d > 0 ? (dy / d) * mag : 0;
   }
