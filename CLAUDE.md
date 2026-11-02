@@ -119,4 +119,4 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
   placeholder grafici e sonori, localizzazione en/it, catalogo armi (pistola, fucile, pompa) con cambio arma,
   caricatore e ricarica (R / pulsante touch), danno per arma.
 - Non ancora presenti: raccolta armi da terra, riserva di munizioni (ora infinita), HUD munizioni su desktop, nemici, danni/vita, HUD di gioco, menu, selettore lingua in-game, asset grafici reali.
-- I controlli touch non sono ancora stati verificati su un dispositivo reale.
+- Controlli touch (stick + pulsante ricarica) verificati dall'utente su un dispositivo reale (2026-11-02).
