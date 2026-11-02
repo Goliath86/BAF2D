@@ -134,7 +134,8 @@ export class Game {
     }
 
     const sprite = this.assets.sprite(w.bulletSprite || 'bullet');
-    this.bullets.push({ x: m.x, y: m.y, dx, dy, angle: a, speed: w.bulletSpeed || 300, range, sprite });
+    // damage: danno del singolo proiettile/pallino (verrà applicato ai bersagli colpiti)
+    this.bullets.push({ x: m.x, y: m.y, dx, dy, angle: a, speed: w.bulletSpeed || 300, range, sprite, damage: w.damage ?? 0 });
   }
 
   /** Debug: passa all'arma successiva del catalogo. */
@@ -250,7 +251,12 @@ export class Game {
     // UI ad alta risoluzione
     const ui = display.uiCtx;
     ui.clearRect(0, 0, display.cssWidth, display.cssHeight);
-    if (this.running && input.mode === 'touch') input.sticks.draw(ui);
+    if (this.running && input.mode === 'touch') {
+      const p = this.player;
+      input.sticks.draw(ui, {
+        reload: { label: String(p.ammo), progress: p.reloadProgress, alert: p.ammo === 0 && !p.reloading },
+      });
+    }
     if (this.debug) this._drawDebug(ui);
   }
 
@@ -264,7 +270,8 @@ export class Game {
       `pos ${player.x.toFixed(1)}, ${player.y.toFixed(1)}`,
       `move ${mv.x.toFixed(2)}, ${mv.y.toFixed(2)}`,
       `aim ${((player.angle * 180) / Math.PI).toFixed(0)}° fire ${input.isFiring() ? 'Y' : 'N'}`,
-      `weapon ${player.weapon.id} (F4: next)`,
+      `weapon ${player.weapon.id} (F4: next) dmg ${player.weapon.damage}`,
+      `ammo ${player.ammo}/${player.weapon.magazine}${player.reloading ? ` reloading ${Math.round(player.reloadProgress * 100)}%` : ''}`,
       `bullets ${this.bullets.length} decals ${effects.decals.length} particles ${effects.particles.length}`,
     ];
     ui.save();

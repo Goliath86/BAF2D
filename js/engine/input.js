@@ -35,7 +35,9 @@ export class Input {
     return !!codes && codes.some((c) => this.keys.has(c));
   }
 
+  /** Azione premuta in questo tick: da tastiera o da un pulsante touch con lo stesso nome. */
   wasPressed(action) {
+    if (this.sticks.wasPressed(action)) return true;
     const codes = this.bindings[action];
     return !!codes && codes.some((c) => this.pressed.has(c));
   }
@@ -82,6 +84,7 @@ export class Input {
   /** Da chiamare a fine tick di update: azzera i "pressed" del tick. */
   endFrame() {
     this.pressed.clear();
+    this.sticks.endFrame();
   }
 
   // ---------- Interno ----------

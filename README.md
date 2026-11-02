@@ -22,6 +22,7 @@ Apri `http://localhost:8080/`. Per provarlo su un telefono collegato alla stessa
 | WASD / frecce: muovi (su, giù, strafe) | Stick sinistro: muovi |
 | Mouse: mira | Stick destro: mira |
 | Click sinistro / Spazio: spara | Stick destro spinto oltre il cerchio tratteggiato: spara |
+| R: ricarica | Pulsante tondo sopra lo stick destro: ricarica |
 | F3: overlay di debug · F4: arma successiva (debug) | |
 
 La modalità (desktop/touch) cambia automaticamente in base all'ultimo input usato.
@@ -85,7 +86,8 @@ Senza `legsSprite` si usa un unico sprite con le proprie animazioni `idle`/`walk
 **Placeholder**: `placeholder.shape` sceglie il disegno procedurale (`soldier_body`, `soldier_legs`, `weapon`,
 `bullet`, `hole`, `crosshair`, `circle`, `rect`, ...); i colori sono parametri nel JSON. `autoOutline` aggiunge un contorno
 di 1px del colore indicato. Per `soldier_body` e `weapon`, `placeholder.weapon` sceglie l'arma disegnata
-(`rifle`, `shotgun`, `pistol`).
+(`rifle`, `shotgun`, `pistol`); `soldier_body` genera anche `reloadFrames` frame di ricarica (frame 1..n,
+da usare nell'animazione `reload`).
 
 **Ereditarietà**: uno sprite con `"extends": "altro_sprite"` eredita la definizione dell'altro (dimensioni, origin,
 animazioni; `placeholder` fuso campo per campo) tranne `src`. Esempio: `soldier_pistol` estende `soldier_rifle`
@@ -95,7 +97,8 @@ cambiando solo `placeholder.weapon`.
 (posizione nello sheet, default = `id`).
 
 **Suoni**: `src` (wav/mp3/ogg) e `volume`; il placeholder è un suono sintetizzato
-(`wave`: `square`/`sine`/`triangle`/`sawtooth`/`noise`, `freqStart`, `freqEnd`, `duration`).
+(`wave`: `square`/`sine`/`triangle`/`sawtooth`/`noise`, `freqStart`, `freqEnd`, `duration`; `at` = lista di istanti
+in secondi in cui ripeterlo, es. i "clack" della ricarica).
 
 Ogni tile può avere `"impact"`: il tipo di effetto (in `effects.json`) quando viene colpito da un proiettile
 (default `"wall"` per i tile solidi, `"ground"` per gli altri).
@@ -132,14 +135,24 @@ l'impatto del muro (es. `wall`, `wood`). Ogni impatto in `effects.json` definisc
 | `bodySprite` | busto del soldato che impugna quest'arma (default: `player.sprite`) |
 | `pickupSprite` | sprite dell'arma a terra (per la futura raccolta) |
 | `bulletSprite`, `sound` | sprite del proiettile e suono dello sparo |
+| `damage` | danno di ogni proiettile (per il fucile a pompa, di ogni pallino) |
+| `magazine` | colpi nel caricatore |
+| `reloadTime` | durata della ricarica in secondi (l'animazione `reload` del busto viene adattata a questa durata) |
+| `reloadSound`, `emptySound` | suono della ricarica e del grilletto a vuoto |
+| `reloadMoveFactor` | velocità durante la ricarica: `1` normale, `0.4` rallentato, `0` fermo |
+| `autoReload` | `true` = a caricatore vuoto premere il grilletto avvia la ricarica |
 | `auto` | `true` = automatica (spara finché tieni premuto), `false` = un colpo per pressione |
 | `fireRate` | colpi al secondo |
 | `pellets` | proiettili per colpo (> 1 per il fucile a pompa) |
 | `bulletSpeed`, `spreadDeg`, `rangeJitter`, `minRange`, `maxRange`, `screenMargin` | vedi "Colpi ed effetti" |
 | `muzzleOffset` | distanza in px della volata dal centro del giocatore |
 
-Da codice: `player.equip(id)` impugna un'arma e restituisce l'id di quella lasciata
-(da console: `BAF2D.player.equip('shotgun')`).
+La ricarica si avvia con **R** (desktop) o con il **pulsante tondo** sopra lo stick destro (touch), che mostra
+i colpi rimasti, l'avanzamento della ricarica e diventa rosso a caricatore vuoto. Durante la ricarica non si spara;
+cambiare arma la interrompe.
+
+Da codice: `player.equip(id, ammo)` impugna un'arma (con `ammo` colpi, default caricatore pieno) e restituisce
+`{ id, ammo }` di quella lasciata (da console: `BAF2D.player.equip('shotgun')`).
 
 ### Livelli (`config/levels/*.json`)
 
@@ -194,6 +207,8 @@ verificarsi prima che i file lingua siano disponibili (es. gioco aperto senza se
   `moveCurve` (risposta dello stick sinistro: la velocità è proporzionale allo spostamento; 1 = lineare,
   > 1 più precisione alle basse velocità), `fireThreshold`
   (frazione del raggio oltre la quale si spara), `holdToRepeat` (tenendo lo stick oltre la soglia anche le armi
-  semiautomatiche continuano a sparare), `dynamic` (lo stick nasce dove appoggi il dito), `opacity`.
+  semiautomatiche continuano a sparare), `dynamic` (lo stick nasce dove appoggi il dito), `opacity`,
+  `buttons` (pulsanti tondi; la chiave è l'azione generata, es. `reload`: `anchor` = stick di riferimento,
+  `offset` = spostamento in raggi di stick dalla sua posizione di riposo, `radius` = frazione del lato corto, `icon`).
 - `camera.smoothing`, `camera.lookAhead` (px di anticipo nella direzione di mira).
 - `mobile.requestFullscreen`, `mobile.lockLandscape`.

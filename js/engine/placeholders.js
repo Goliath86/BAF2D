@@ -104,10 +104,10 @@ function rng(seed) {
 const GUNS = {
   rifle: {
     length: 14,
-    draw(g, x, cy, p) {
+    draw(g, x, cy, p, noMag = false) {
       rect(g, x, cy - 1, 14, 2, p.gun);
       rect(g, x + 3, cy - 1, 8, 1, p.gunLight);
-      rect(g, x + 6, cy + 1, 2, 2, p.gunDark); // caricatore
+      if (!noMag) rect(g, x + 6, cy + 1, 2, 2, p.gunDark); // caricatore
       rect(g, x + 13, cy - 1, 1, 2, p.gunDark); // volata
     },
   },
@@ -136,27 +136,50 @@ const GUNS = {
 };
 
 /**
- * Come il soldato impugna ciascuna arma (coordinate relative al pivot cx,cy e al centro busto bx):
- * x dell'arma, braccia [x0,y0,x1,y1] (spessore 2) e guanti [x,y] (2x2).
+ * Come il soldato impugna ciascuna arma (coordinate relative al pivot cx,cy e al centro busto bx).
+ * gunX = x dell'arma; right/left: spalla, fine del braccio (spessore 2) e guanto (2x2).
+ * Ricarica: reloadCycles = quante volte la mano sinistra va alla tasca del giubbotto
+ * (1 = caricatore, >1 = cartucce una alla volta); hidesMag = il caricatore sparisce a metà.
  */
 const GRIPS = {
   rifle: (cx, cy, bx) => ({
     gunX: cx - 2,
-    arms: [[bx, cy + 4, cx + 2, cy + 1], [bx, cy - 6, cx + 5, cy - 2]],
-    gloves: [[cx + 2, cy], [cx + 6, cy - 2]],
+    right: { shoulder: [bx, cy + 4], hand: [cx + 2, cy + 1], glove: [cx + 2, cy] },
+    left: { shoulder: [bx, cy - 6], hand: [cx + 5, cy - 2], glove: [cx + 6, cy - 2] },
+    reloadCycles: 1,
+    hidesMag: true,
+    carry: 'mag',
   }),
   shotgun: (cx, cy, bx) => ({
     gunX: cx - 2,
-    arms: [[bx, cy + 4, cx + 2, cy + 1], [bx, cy - 6, cx + 7, cy - 2]],
-    gloves: [[cx + 2, cy], [cx + 8, cy - 2]],
+    right: { shoulder: [bx, cy + 4], hand: [cx + 2, cy + 1], glove: [cx + 2, cy] },
+    left: { shoulder: [bx, cy - 6], hand: [cx + 7, cy - 2], glove: [cx + 8, cy - 2] },
+    reloadCycles: 3,
+    hidesMag: false,
+    carry: 'shell',
   }),
   // pistola a due mani, braccia tese in avanti
   pistol: (cx, cy, bx) => ({
     gunX: cx + 6,
-    arms: [[bx, cy + 4, cx + 4, cy], [bx, cy - 5, cx + 4, cy - 2]],
-    gloves: [[cx + 5, cy - 1]],
+    right: { shoulder: [bx, cy + 4], hand: [cx + 4, cy], glove: [cx + 5, cy - 1] },
+    left: { shoulder: [bx, cy - 5], hand: [cx + 4, cy - 2], glove: [cx + 5, cy - 1] },
+    reloadCycles: 1,
+    hidesMag: false,
+    carry: 'mag',
   }),
 };
+
+/**
+ * Posa di ricarica per il frame "frame" (0 = nessuna ricarica, 1..n = fasi).
+ * reach 0..1 = quanto la mano sinistra è vicina alla tasca; returning = sta tornando con il colpo/caricatore.
+ */
+function reloadPose(frame, n, cycles) {
+  if (frame <= 0 || n <= 0) return { t: 0, pull: 0, reach: 0, returning: false };
+  const t = (frame - 0.5) / n; // 0..1 lungo tutta la ricarica
+  const pull = Math.sin(Math.PI * t); // arma tirata verso il busto
+  const c = (t * cycles) % 1; // fase del singolo andirivieni della mano
+  return { t, pull, reach: Math.sin(Math.PI * c), returning: c >= 0.5 };
+}
 
 // ---------- Sprite ----------
 // Convenzione: gli sprite orientabili guardano verso DESTRA (angolo 0).
@@ -165,9 +188,10 @@ const SPRITE_SHAPES = {
   /**
    * Soldato moderno, parte superiore (ruota verso la mira): zaino, spalle in mimetica,
    * giubbotto tattico, arma impugnata (placeholder.weapon: rifle|shotgun|pistol), guanti, elmetto.
-   * Frame unico.
+   * Frame 0 = fermo; frame 1..reloadFrames = ricarica (la mano sinistra va alla tasca del giubbotto
+   * e torna con caricatore/cartuccia, l'arma si avvicina al busto).
    */
-  soldier_body(g, w, h, p) {
+  soldier_body(g, w, h, p, frame) {
     const cx = Math.floor(w / 2);
     const cy = Math.floor(h / 2);
     const r = rng(11);
@@ -195,15 +219,38 @@ const SPRITE_SHAPES = {
     rect(g, bx, cy - 4, 1, 2, p.vestDark);
     rect(g, bx, cy + 2, 1, 2, p.vestDark);
 
-    // braccia: destra (in basso) verso l'impugnatura, sinistra (in alto) verso l'astina
     const grip = GRIPS[kind](cx, cy, bx);
-    for (const [x0, y0, x1, y1] of grip.arms) line(g, x0, y0, x1, y1, p.uniform, 2);
+    const pose = reloadPose(frame, p.reloadFrames || 0, grip.reloadCycles);
 
-    // arma (canna centrata sull'asse dello sprite)
-    GUNS[kind].draw(g, grip.gunX, cy, p);
+    // arma e mano destra arretrano verso il busto durante la ricarica
+    const pull = Math.round(pose.pull * 2);
+    const R = grip.right;
+    const rHand = [R.hand[0] - pull, R.hand[1]];
+    const rGlove = [R.glove[0] - pull, R.glove[1]];
 
-    // guanti sopra l'arma
-    for (const [x, y] of grip.gloves) rect(g, x, y, 2, 2, p.glove);
+    // mano sinistra: dall'astina alla tasca del giubbotto e ritorno
+    const L = grip.left;
+    const pocket = [bx - 1, cy - 4];
+    const ox = Math.round((pocket[0] - L.glove[0]) * pose.reach);
+    const oy = Math.round((pocket[1] - L.glove[1]) * pose.reach);
+    const lHand = [L.hand[0] + ox, L.hand[1] + oy];
+    const lGlove = [L.glove[0] + ox, L.glove[1] + oy];
+
+    // braccia: destra (in basso) verso l'impugnatura, sinistra (in alto) verso l'astina
+    line(g, R.shoulder[0], R.shoulder[1], rHand[0], rHand[1], p.uniform, 2);
+    line(g, L.shoulder[0], L.shoulder[1], lHand[0], lHand[1], p.uniform, 2);
+
+    // arma (canna centrata sull'asse dello sprite); il caricatore manca a metà ricarica
+    const noMag = grip.hidesMag && pose.t > 0.3 && pose.t < 0.75;
+    GUNS[kind].draw(g, grip.gunX - pull, cy, p, noMag);
+
+    // guanti sopra l'arma; tornando dalla tasca la mano sinistra porta caricatore o cartuccia
+    rect(g, rGlove[0], rGlove[1], 2, 2, p.glove);
+    if (pose.returning && pose.reach > 0.2) {
+      if (grip.carry === 'shell') rect(g, lGlove[0] + 2, lGlove[1], 1, 2, p.shell || '#a8322a');
+      else rect(g, lGlove[0] + 1, lGlove[1] + 1, 2, 2, p.gunDark);
+    }
+    rect(g, lGlove[0], lGlove[1], 2, 2, p.glove);
 
     // elmetto
     disc(g, bx, cy, 3.5, p.helmetDark);

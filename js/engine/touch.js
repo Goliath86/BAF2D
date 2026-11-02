@@ -40,6 +40,49 @@ export class TouchSticks {
     };
     this.left = new Stick('left');
     this.right = new Stick('right');
+
+    // Pulsanti tondi: il nome è l'azione che generano (input.wasPressed(nome))
+    this.buttons = Object.entries(this.cfg.buttons || {}).map(([action, b]) => ({
+      action,
+      radius: b.radius ?? 0.07,
+      anchor: b.anchor || 'right',
+      offset: b.offset || [0, -2],
+      icon: b.icon || null,
+      id: null, // pointerId che lo tiene premuto
+    }));
+    this.pressed = new Set();
+  }
+
+  /**
+   * Centro e raggio (px CSS) di un pulsante: "offset" è in raggi di stick rispetto
+   * alla posizione di riposo dello stick "anchor" (es. [0, -2] = sopra lo stick destro).
+   */
+  buttonGeometry(b) {
+    const R = this.radius;
+    const home = this.homePosition(b.anchor === 'left' ? this.left : this.right);
+    return {
+      x: home.x + b.offset[0] * R,
+      y: home.y + b.offset[1] * R,
+      r: Math.min(window.innerWidth, window.innerHeight) * b.radius,
+    };
+  }
+
+  /** Azione di un pulsante premuta in questo tick. */
+  wasPressed(action) {
+    return this.pressed.has(action);
+  }
+
+  endFrame() {
+    this.pressed.clear();
+  }
+
+  _buttonAt(x, y) {
+    for (const b of this.buttons) {
+      const g = this.buttonGeometry(b);
+      // area di tocco un po' più larga del disegno
+      if (Math.hypot(x - g.x, y - g.y) <= g.r * 1.25) return b;
+    }
+    return null;
   }
 
   /** Raggio in px CSS, proporzionale al lato corto dello schermo. */
@@ -56,6 +99,14 @@ export class TouchSticks {
   }
 
   onDown(e) {
+    const button = this._buttonAt(e.clientX, e.clientY);
+    if (button) {
+      if (button.id === null) {
+        button.id = e.pointerId;
+        this.pressed.add(button.action);
+      }
+      return;
+    }
     const stick = e.clientX < window.innerWidth / 2 ? this.left : this.right;
     if (stick.active) return;
     stick.id = e.pointerId;
@@ -81,11 +132,16 @@ export class TouchSticks {
     for (const s of [this.left, this.right]) {
       if (s.id === e.pointerId) s.reset();
     }
+    for (const b of this.buttons) {
+      if (b.id === e.pointerId) b.id = null;
+    }
   }
 
   releaseAll() {
     this.left.reset();
     this.right.reset();
+    for (const b of this.buttons) b.id = null;
+    this.pressed.clear();
   }
 
   _update(s, px, py) {
@@ -125,9 +181,72 @@ export class TouchSticks {
     return this.right.active && this.right.raw >= this.cfg.fireThreshold;
   }
 
-  draw(ctx) {
+  /**
+   * state: stato dei pulsanti fornito dal gioco, per azione:
+   * { label (testo breve, es. colpi), progress (0..1, anello di avanzamento), alert (evidenziato) }
+   */
+  draw(ctx, state = {}) {
     this._drawStick(ctx, this.left, false);
     this._drawStick(ctx, this.right, true);
+    for (const b of this.buttons) this._drawButton(ctx, b, state[b.action] || {});
+  }
+
+  _drawButton(ctx, b, st) {
+    const { x, y, r } = this.buttonGeometry(b);
+    const down = b.id !== null;
+    const accent = st.alert ? 'rgba(255,90,70,0.95)' : 'rgba(255,255,255,0.7)';
+
+    ctx.save();
+    ctx.globalAlpha = this.cfg.opacity * (down ? 1 : 0.8);
+
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, TAU);
+    ctx.fillStyle = down ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)';
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = accent;
+    ctx.stroke();
+
+    if (b.icon === 'reload') {
+      // freccia circolare
+      const ir = r * 0.62;
+      const a0 = -Math.PI * 0.35;
+      const a1 = a0 + TAU * 0.8;
+      ctx.beginPath();
+      ctx.arc(x, y, ir, a0, a1);
+      ctx.lineWidth = Math.max(2, r * 0.1);
+      ctx.strokeStyle = accent;
+      ctx.stroke();
+      const hx = x + Math.cos(a1) * ir;
+      const hy = y + Math.sin(a1) * ir;
+      const t = a1 + Math.PI / 2; // tangente nel verso della freccia
+      const s = r * 0.22;
+      ctx.beginPath();
+      ctx.moveTo(hx + Math.cos(t) * s, hy + Math.sin(t) * s);
+      ctx.lineTo(hx + Math.cos(t + 2.4) * s, hy + Math.sin(t + 2.4) * s);
+      ctx.lineTo(hx + Math.cos(t - 2.4) * s, hy + Math.sin(t - 2.4) * s);
+      ctx.closePath();
+      ctx.fillStyle = accent;
+      ctx.fill();
+    }
+
+    if (st.label) {
+      ctx.font = `bold ${Math.round(r * 0.6)}px monospace`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = accent;
+      ctx.fillText(st.label, x, y + 1);
+    }
+
+    if (st.progress > 0) {
+      ctx.beginPath();
+      ctx.arc(x, y, r + 3, -Math.PI / 2, -Math.PI / 2 + TAU * st.progress);
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = 'rgba(255,200,80,0.95)';
+      ctx.stroke();
+    }
+
+    ctx.restore();
   }
 
   _drawStick(ctx, s, isAim) {

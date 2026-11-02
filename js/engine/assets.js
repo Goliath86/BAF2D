@@ -139,6 +139,14 @@ export class Animator {
     this.time += dt;
   }
 
+  /** Posiziona l'animazione corrente a una frazione 0..1 della sua durata (es. ricarica). */
+  setProgress(p) {
+    const a = this.sprite.animations[this.name];
+    if (!a) return;
+    const n = a.frames.length;
+    this.time = (Math.min(Math.max(p, 0), 0.9999) * n) / (a.fps || 1);
+  }
+
   get frame() {
     const a = this.sprite.animations[this.name];
     if (!a) return 0;

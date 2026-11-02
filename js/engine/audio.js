@@ -35,13 +35,16 @@ export class AudioManager {
     if (this.ctx && this.ctx.state !== 'running') this.ctx.resume();
   }
 
+  /** Riproduce un suono; restituisce { stop() } per interromperlo (es. ricarica annullata). */
   play(name) {
+    const none = { stop() {} };
     const ctx = this.ctx;
-    if (!ctx || ctx.state !== 'running') return;
+    if (!ctx || ctx.state !== 'running') return none;
     const def = this.defs[name];
-    if (!def) return;
+    if (!def) return none;
     const vol = def.volume ?? 1;
     const buffer = this.buffers.get(name);
+    let sources = [];
     if (buffer) {
       const src = ctx.createBufferSource();
       src.buffer = buffer;
@@ -49,14 +52,28 @@ export class AudioManager {
       g.gain.value = vol;
       src.connect(g).connect(this.master);
       src.start();
+      sources = [src];
     } else if (def.placeholder) {
-      this._synth(def.placeholder, vol);
+      // "at": istanti (s) di partenza delle ripetizioni del suono sintetizzato (default [0])
+      const at = def.placeholder.at || [0];
+      sources = at.map((delay) => this._synth(def.placeholder, vol, delay));
     }
+    return {
+      stop() {
+        for (const s of sources) {
+          try {
+            s.stop();
+          } catch (e) {
+            // già terminato
+          }
+        }
+      },
+    };
   }
 
-  _synth(p, vol) {
+  _synth(p, vol, delay = 0) {
     const ctx = this.ctx;
-    const t = ctx.currentTime;
+    const t = ctx.currentTime + delay;
     const dur = p.duration || 0.1;
     const g = ctx.createGain();
     g.gain.setValueAtTime(vol, t);
@@ -80,5 +97,6 @@ export class AudioManager {
     src.connect(g);
     src.start(t);
     src.stop(t + dur + 0.02);
+    return src;
   }
 }

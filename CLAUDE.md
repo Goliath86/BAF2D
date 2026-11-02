@@ -53,7 +53,7 @@ js/engine/
   i18n.js             I18n: load(cfg), t(key, params), applyToDOM() per [data-i18n], error(e)
   display.js          canvas "game" low-res (scala intera, image-rendering: pixelated) + canvas "ui" nativo
   input.js            input unificato; mode 'desktop'|'touch' cambia con l'ultimo dispositivo usato
-  touch.js            TouchSticks: stick dinamici, coordinate in px CSS, disegnati sul canvas ui
+  touch.js            TouchSticks: stick dinamici + pulsanti tondi (azioni), px CSS, disegnati sul canvas ui
   assets.js           Assets (sprite/tileset), drawSprite(), Animator
   placeholders.js     grafica procedurale quando "src" è null o il file manca
   tilemap.js          TileMap da livello (righe di caratteri + legend), collisioni AABB asse per asse
@@ -84,8 +84,17 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
   in `placeholders.js`, colori in `assets.json`): l'utente preferisce grafica creata via canvas.
 - Armi: il busto dipende dall'arma (`bodySprite`, es. `soldier_rifle/pistol/shotgun`, che estendono lo stesso sprite
   cambiando `placeholder.weapon`; disegni in `GUNS`/`GRIPS` di `placeholders.js`). `player.equip(id)` cambia arma e
-  restituisce l'id della precedente (pensato per la raccolta da terra; `pickupSprite` già definito). F4 = arma
-  successiva (debug). Semiautomatiche: la pressione durante il cooldown resta in coda; su touch `holdToRepeat`.
+  restituisce `{ id, ammo }` della precedente (pensato per la raccolta da terra; `pickupSprite` già definito);
+  `equip(id, ammo)` accetta i colpi nel caricatore. F4 = arma successiva (debug). Semiautomatiche: la pressione
+  durante il cooldown resta in coda; su touch `holdToRepeat`.
+- Munizioni/ricarica: `magazine`, `reloadTime`, `reloadSound`, `emptySound`, `reloadMoveFactor` (0 = fermo),
+  `autoReload`, `damage` (salvato su ogni proiettile, `bullet.damage`, per i futuri bersagli). Azione `reload`:
+  tasto R o pulsante touch. Animazione `reload` del busto riprodotta con `Animator.setProgress()` (dura sempre
+  `reloadTime`); frame procedurali via `reloadPose()` in `placeholders.js`. Il cambio arma annulla la ricarica
+  e ferma il suo suono (`audio.play()` restituisce `{ stop() }`).
+- Pulsanti touch (`input.touch.buttons`): la chiave è l'azione, `input.wasPressed(azione)` li legge insieme
+  alla tastiera; posizione relativa alla posizione di riposo di uno stick; il gioco passa lo stato da disegnare
+  (`label`, `progress`, `alert`) a `sticks.draw(ui, state)`. Tocco sul pulsante = niente stick.
 - Sprite con `extends`: ereditano tutto tranne `src`, `placeholder` fuso campo per campo.
 - Movimento touch analogico: lunghezza vettore stick SX (dopo deadzone, elevata a `moveCurve`) × `speed`.
 - `Animator.update(dt)` accetta dt negativo (animazione all'indietro).
@@ -107,6 +116,7 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
 
 - Fatto: base rendering, movimento, collisioni, camera, controlli desktop/mobile, proiettili con gittata
   (mirino su desktop, bordo schermo su touch) e impatti (buchi con fade, fumo, scintille, schegge),
-  placeholder grafici e sonori, localizzazione en/it, catalogo armi (pistola, fucile, pompa) con cambio arma.
-- Non ancora presenti: raccolta armi da terra, munizioni/ricarica, nemici, danni/vita, HUD di gioco, menu, selettore lingua in-game, asset grafici reali.
+  placeholder grafici e sonori, localizzazione en/it, catalogo armi (pistola, fucile, pompa) con cambio arma,
+  caricatore e ricarica (R / pulsante touch), danno per arma.
+- Non ancora presenti: raccolta armi da terra, riserva di munizioni (ora infinita), HUD munizioni su desktop, nemici, danni/vita, HUD di gioco, menu, selettore lingua in-game, asset grafici reali.
 - I controlli touch non sono ancora stati verificati su un dispositivo reale.

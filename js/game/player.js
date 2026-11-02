@@ -28,6 +28,8 @@ export class Player {
 
     // Busto: lo sprite dipende dall'arma impugnata (vedi equip)
     this.weapon = null;
+    this.ammo = 0; // colpi nel caricatore
+    this.reload = null; // { time, duration, sound } durante la ricarica
     this.sprite = null;
     this.anim = null;
     this.equip(cfg.weapon);
@@ -41,14 +43,17 @@ export class Player {
   }
 
   /**
-   * Impugna l'arma con id "id" (config/weapons.json). Restituisce l'id dell'arma
-   * lasciata, così che un domani possa essere fatta cadere a terra.
+   * Impugna l'arma con id "id" (config/weapons.json) con "ammo" colpi nel caricatore
+   * (default: pieno). Restituisce { id, ammo } dell'arma lasciata (o null), così che
+   * un domani possa essere fatta cadere a terra con i colpi rimasti.
    */
-  equip(id) {
+  equip(id, ammo) {
     const weapon = this.weapons.get(id);
-    const previous = this.weapon?.id ?? null;
-    if (previous === weapon.id) return previous;
+    const previous = this.weapon ? { id: this.weapon.id, ammo: this.ammo } : null;
     this.weapon = weapon;
+    this.ammo = Math.max(0, Math.min(weapon.magazine, ammo ?? weapon.magazine));
+    this.reload?.sound?.stop(); // il cambio arma interrompe la ricarica (e il suo suono)
+    this.reload = null;
     this.sprite = this.assets.sprite(weapon.bodySprite || this.cfg.sprite);
     this.anim = new Animator(this.sprite, 'idle');
     this.cooldown = 0;
@@ -58,12 +63,51 @@ export class Player {
     return previous;
   }
 
+  get reloading() {
+    return this.reload !== null;
+  }
+
+  /** Avanzamento della ricarica 0..1 (0 se non sta ricaricando). */
+  get reloadProgress() {
+    return this.reload ? Math.min(1, this.reload.time / this.reload.duration) : 0;
+  }
+
+  /** Avvia la ricarica se il caricatore non è pieno. */
+  startReload(game) {
+    const w = this.weapon;
+    if (this.reload || this.ammo >= w.magazine) return false;
+    this.reload = { time: 0, duration: Math.max(0.01, w.reloadTime), sound: null };
+    this.shotQueued = false;
+    if (w.reloadSound) this.reload.sound = game.audio.play(w.reloadSound);
+    return true;
+  }
+
+  _updateReload(dt) {
+    if (!this.reload) return;
+    this.reload.time += dt;
+    if (this.reload.time >= this.reload.duration) {
+      this.ammo = this.weapon.magazine;
+      this.reload = null;
+    }
+  }
+
   update(dt, game) {
     const { input, map, camera } = game;
+    const w = this.weapon;
+
+    // Ricarica: avanza il tempo, avvio manuale (R / pulsante touch)
+    this._updateReload(dt);
+    if (input.wasPressed('reload')) this.startReload(game);
 
     // Movimento (spazio schermo: su/giù/strafe sx/dx, indipendente dalla mira).
     // Su touch la lunghezza del vettore (0..1) dipende da quanto è spinto lo stick -> velocità analogica.
+    // Durante la ricarica la velocità è moltiplicata per reloadMoveFactor (0 = fermo).
     const move = input.getMove();
+    if (this.reload) {
+      const f = Math.max(0, w.reloadMoveFactor ?? 1);
+      move.x *= f;
+      move.y *= f;
+    }
     const mag = Math.min(1, Math.hypot(move.x, move.y));
     const p = map.moveAndCollide(this.x, this.y, this.hw, this.hh, move.x * this.speed * dt, move.y * this.speed * dt);
     this.x = p.x;
@@ -84,18 +128,35 @@ export class Player {
     // (su touch le semiautomatiche possono ripetere tenendo lo stick, vedi input.touch.holdToRepeat)
     this.cooldown = Math.max(0, this.cooldown - dt);
     // Una pressione durante il cooldown resta "in coda" e parte appena l'arma è pronta.
+    // Durante la ricarica non si spara; a caricatore vuoto il grilletto fa "click"
+    // (e, se l'arma ha autoReload, parte la ricarica).
     const firing = input.isFiring();
-    const auto = this.weapon.auto || (input.mode === 'touch' && input.touchHoldToRepeat);
-    if (firing && !this.triggerHeld) this.shotQueued = true;
-    if ((this.shotQueued || (auto && firing)) && this.cooldown <= 0) {
-      this.cooldown = 1 / (this.weapon.fireRate || 8);
+    const pressed = firing && !this.triggerHeld;
+    const auto = w.auto || (input.mode === 'touch' && input.touchHoldToRepeat);
+    if (this.reload) {
       this.shotQueued = false;
-      game.fire(this);
+    } else if (this.ammo <= 0) {
+      this.shotQueued = false;
+      if (pressed && w.emptySound) game.audio.play(w.emptySound);
+      if (firing && w.autoReload) this.startReload(game);
+    } else {
+      if (pressed) this.shotQueued = true;
+      if ((this.shotQueued || (auto && firing)) && this.cooldown <= 0) {
+        this.cooldown = 1 / (w.fireRate || 8);
+        this.shotQueued = false;
+        this.ammo--;
+        game.fire(this);
+      }
     }
     this.triggerHeld = firing;
 
     // Animazioni
-    if (this.legs) {
+    if (this.reload && this.sprite.animations.reload) {
+      // L'animazione di ricarica dura esattamente reloadTime, qualunque sia il suo fps
+      this.anim.play('reload');
+      this.anim.setProgress(this.reloadProgress);
+      if (this.legs) this._updateLegs(dt, move, mag);
+    } else if (this.legs) {
       this._updateLegs(dt, move, mag);
       this.anim.play('idle');
       this.anim.update(dt);

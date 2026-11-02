@@ -4,8 +4,8 @@
   },
   "loading": "Loading...",
   "start": {
-    "hintDesktop": "WASD / arrows: move · Mouse: aim · Click / Space: fire · F3: debug",
-    "hintTouch": "Left stick: move · Right stick: aim\n(push the right stick past the dashed circle to fire)",
+    "hintDesktop": "WASD / arrows: move · Mouse: aim · Click / Space: fire · R: reload · F3: debug",
+    "hintTouch": "Left stick: move · Right stick: aim · Round button: reload\n(push the right stick past the dashed circle to fire)",
     "tapToStart": "Click / tap to start"
   },
   "rotate": {

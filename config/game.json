@@ -51,6 +51,7 @@
       "left": ["KeyA", "ArrowLeft"],
       "right": ["KeyD", "ArrowRight"],
       "fire": ["Space"],
+      "reload": ["KeyR"],
       "debug": ["F3"],
       "debugNextWeapon": ["F4"]
     },
@@ -64,7 +65,10 @@
       "fireThreshold": 0.75,
       "holdToRepeat": true,
       "dynamic": true,
-      "opacity": 0.7
+      "opacity": 0.7,
+      "buttons": {
+        "reload": { "anchor": "right", "offset": [0, -2.1], "radius": 0.07, "icon": "reload" }
+      }
     }
   },
 

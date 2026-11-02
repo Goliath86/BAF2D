@@ -4,8 +4,8 @@
   },
   "loading": "Caricamento...",
   "start": {
-    "hintDesktop": "WASD / frecce: muovi · Mouse: mira · Click / Spazio: spara · F3: debug",
-    "hintTouch": "Stick SX: muovi · Stick DX: mira\n(spingi lo stick DX oltre il cerchio tratteggiato per sparare)",
+    "hintDesktop": "WASD / frecce: muovi · Mouse: mira · Click / Spazio: spara · R: ricarica · F3: debug",
+    "hintTouch": "Stick SX: muovi · Stick DX: mira · Pulsante tondo: ricarica\n(spingi lo stick DX oltre il cerchio tratteggiato per sparare)",
     "tapToStart": "Clicca / tocca per iniziare"
   },
   "rotate": {
