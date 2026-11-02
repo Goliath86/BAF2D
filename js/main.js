@@ -81,6 +81,22 @@ async function boot() {
       { once: true }
     );
 
+    // Game over: la scena si desatura e compare la schermata; clic/tocco (o Invio) per ricominciare
+    const gameOverOverlay = $('overlay-gameover');
+    game.onGameOver = () => {
+      document.body.classList.add('game-over');
+      gameOverOverlay.classList.remove('hidden');
+    };
+    game.onRestart = () => {
+      document.body.classList.remove('game-over');
+      gameOverOverlay.classList.add('hidden');
+    };
+    gameOverOverlay.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation(); // il clic per ricominciare non deve sparare
+      game.restart(); // ignorato finché non è trascorso gameOver.restartDelay
+    });
+
     window.BAF2D = game; // comodo per il debug da console
   } catch (e) {
     console.error(e);

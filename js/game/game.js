@@ -23,19 +23,50 @@ export class Game {
     this.background = config.display?.background || '#000';
 
     this.map = new TileMap(level, assets.tileset(level.tileset));
-    const spawn = this.map.spawns.player || { x: this.map.pixelWidth / 2, y: this.map.pixelHeight / 2 };
+    this.spawn = this.map.spawns.player || { x: this.map.pixelWidth / 2, y: this.map.pixelHeight / 2 };
     this.weapons = weapons;
-    this.player = new Player(config.player, spawn.x, spawn.y, assets, weapons);
 
     this.bullets = [];
     this.effects = new Effects(effectsCfg, assets, audio);
     this.crosshair = assets.sprites.get('crosshair') || null;
-    this.hud = new Hud(config.hud, i18n, assets);
-
     this.camera = new Camera(config.camera);
-    this.camera.snap(this.player.x, this.player.y, 0, display.width, display.height, this.map);
+
+    // Game over: callback impostati da main.js per mostrare/nascondere la schermata (DOM)
+    this.gameOverCfg = config.gameOver || {};
+    this.onGameOver = null;
+    this.onRestart = null;
 
     this._fps = { value: 0, frames: 0, time: 0 };
+    this._reset();
+  }
+
+  /** Stato di una nuova partita: giocatore allo spawn, niente proiettili/effetti. */
+  _reset() {
+    const { config, assets, weapons, display } = this;
+    this.player = new Player(config.player, this.spawn.x, this.spawn.y, assets, weapons);
+    this.hud = new Hud(config.hud, this.i18n, assets);
+    this.bullets.length = 0;
+    this.effects.clear();
+    this.over = null; // { time, shown, pool, drop } dopo la morte del giocatore
+    this.camera.snap(this.player.x, this.player.y, 0, display.width, display.height, this.map);
+  }
+
+  /** Ricomincia la partita (dalla schermata di game over). */
+  restart() {
+    if (!this.canRestart) return;
+    this._reset();
+    this.onRestart?.();
+  }
+
+  get isGameOver() {
+    return this.over !== null;
+  }
+
+  /** La schermata di game over è visibile da almeno restartDelay secondi. */
+  get canRestart() {
+    const o = this.over;
+    const g = this.gameOverCfg;
+    return !!o && o.shown && o.time >= (g.delay ?? 1.5) + (g.restartDelay ?? 0.8);
   }
 
   get paused() {
@@ -88,12 +119,71 @@ export class Game {
     if (input.wasPressed('debugHeal')) this.player.heal(this.config.debugDamage ?? 10);
 
     this.player.update(dt, this);
+    if (this.player.dead && !this.over) this._startGameOver();
+    if (this.over) this._updateGameOver(dt);
     this.hud.update(dt, this.player);
     this._updateBullets(dt);
     this.effects.update(dt);
 
     this.camera.follow(this.player.x, this.player.y, this.player.angle, display.width, display.height, this.map, dt);
     input.endFrame();
+  }
+
+  // ---------- Morte e game over ----------
+
+  _startGameOver() {
+    const p = this.player;
+    const g = this.gameOverCfg;
+    const a = p.deathAngle;
+    if (p.cfg.deathSound) this.audio.play(p.cfg.deathSound);
+
+    // pozza sotto il corpo (si allarga in poolTime secondi)
+    const poolSprite = g.poolSprite && this.assets.sprites.get(g.poolSprite);
+    const back = p.cfg.deadOffset ?? 4;
+    const pool = poolSprite
+      ? { sprite: poolSprite, x: p.x - Math.cos(a) * back, y: p.y - Math.sin(a) * back, angle: Math.floor(Math.random() * 4) * (Math.PI / 2) }
+      : null;
+
+    // l'arma cade a terra davanti al corpo, un po' di lato
+    let drop = null;
+    const dropSprite = g.dropWeapon !== false && p.weapon.pickupSprite && this.assets.sprites.get(p.weapon.pickupSprite);
+    if (dropSprite) {
+      const dist = g.dropDistance ?? 9;
+      const first = Math.random() < 0.5 ? -1 : 1;
+      // prova un lato, poi l'altro, se l'arma finirebbe dentro un muro
+      for (const side of [first, -first]) {
+        const da = a + side * (0.5 + Math.random() * 0.6);
+        const x = p.x + Math.cos(da) * dist;
+        const y = p.y + Math.sin(da) * dist;
+        if (this.map.isSolidAt(x, y)) continue;
+        drop = { sprite: dropSprite, x, y, angle: a + side * (0.8 + Math.random()) };
+        break;
+      }
+    }
+
+    this.over = { time: 0, shown: false, pool, drop };
+  }
+
+  _updateGameOver(dt) {
+    const o = this.over;
+    o.time += dt;
+    if (!o.shown && o.time >= (this.gameOverCfg.delay ?? 1.5)) {
+      o.shown = true;
+      this.onGameOver?.();
+    }
+    if (this.canRestart && this.input.wasPressed('confirm')) this.restart();
+  }
+
+  _drawDeathProps(ctx) {
+    const o = this.over;
+    if (!o) return;
+    if (o.pool) {
+      // frame della pozza in base al tempo: si allarga fino all'ultimo frame
+      const k = Math.min(1, o.time / (this.gameOverCfg.poolTime ?? 2.5));
+      const frame = Math.min(o.pool.sprite.frameCount - 1, Math.floor(k * o.pool.sprite.frameCount));
+      drawSprite(ctx, o.pool.sprite, frame, o.pool.x, o.pool.y, o.pool.angle);
+    }
+    if (o.drop) drawSprite(ctx, o.drop.sprite, 0, o.drop.x, o.drop.y, o.drop.angle);
   }
 
   // ---------- Proiettili ----------
@@ -242,13 +332,14 @@ export class Game {
 
     this.map.draw(ctx, cx, cy, W, H);
     this.effects.drawDecals(ctx);
+    this._drawDeathProps(ctx);
     this.player.draw(ctx);
     for (const b of this.bullets) drawSprite(ctx, b.sprite, 0, b.x, b.y, b.angle);
     this.effects.drawParticles(ctx);
 
     ctx.restore();
 
-    if (this.running && input.mode === 'desktop' && input.mouse.seen && this.crosshair) {
+    if (this.running && !this.over && input.mode === 'desktop' && input.mouse.seen && this.crosshair) {
       const m = input.mouseGame;
       drawSprite(ctx, this.crosshair, 0, m.x, m.y);
     }
@@ -256,7 +347,7 @@ export class Game {
     // UI ad alta risoluzione
     const ui = display.uiCtx;
     ui.clearRect(0, 0, display.cssWidth, display.cssHeight);
-    if (this.running && input.mode === 'touch') {
+    if (this.running && !this.over && input.mode === 'touch') {
       const p = this.player;
       input.sticks.draw(ui, {
         reload: { label: String(p.ammo), progress: p.reloadProgress, alert: p.ammo === 0 && !p.reloading },

@@ -87,6 +87,12 @@ export class Effects {
     }
   }
 
+  /** Rimuove tutti i decal e le particelle (es. nuova partita). */
+  clear() {
+    this.decals.length = 0;
+    this.particles.length = 0;
+  }
+
   update(dt) {
     for (let i = this.decals.length - 1; i >= 0; i--) {
       const d = this.decals[i];

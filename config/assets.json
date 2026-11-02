@@ -43,6 +43,26 @@
       "src": null,
       "placeholder": { "weapon": "shotgun" }
     },
+    "soldier_dead": {
+      "extends": "soldier_rifle",
+      "src": null,
+      "placeholder": {
+        "shape": "soldier_dead",
+        "trousers": "#4f5e33",
+        "boot": "#3a2e22",
+        "bootDark": "#1a140e"
+      },
+      "animations": {
+        "idle": { "frames": [0], "fps": 1 }
+      }
+    },
+    "blood_pool": {
+      "src": null,
+      "frameWidth": 28,
+      "frameHeight": 28,
+      "origin": [14, 14],
+      "placeholder": { "shape": "pool", "frames": 8, "color": "#6e1010", "dark": "#4a0808", "light": "#9a2a22" }
+    },
     "pickup_rifle": {
       "src": null,
       "frameWidth": 16,
@@ -155,6 +175,11 @@
       "src": null,
       "volume": 0.4,
       "placeholder": { "wave": "noise", "duration": 0.18 }
+    },
+    "player_death": {
+      "src": null,
+      "volume": 0.3,
+      "placeholder": { "wave": "sawtooth", "freqStart": 320, "freqEnd": 45, "duration": 0.6 }
     },
     "dry_fire": {
       "src": null,

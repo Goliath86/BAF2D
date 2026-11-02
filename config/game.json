@@ -28,6 +28,15 @@
     "lockLandscape": true
   },
 
+  "gameOver": {
+    "delay": 1.5,
+    "restartDelay": 0.8,
+    "poolSprite": "blood_pool",
+    "poolTime": 2.5,
+    "dropWeapon": true,
+    "dropDistance": 9
+  },
+
   "hud": {
     "margin": 5,
     "font": "\"Courier New\", monospace",
@@ -74,6 +83,9 @@
     "backpedalAngleDeg": 100,
     "speed": 90,
     "maxHealth": 100,
+    "deadSprite": "soldier_dead",
+    "deadOffset": 4,
+    "deathSound": "player_death",
     "hitbox": [10, 10],
     "faceMoveWhenIdle": true,
     "weapon": "rifle"
@@ -87,6 +99,7 @@
       "right": ["KeyD", "ArrowRight"],
       "fire": ["Space"],
       "reload": ["KeyR"],
+      "confirm": ["Enter", "NumpadEnter"],
       "debug": ["F3"],
       "debugNextWeapon": ["F4"],
       "debugHurt": ["F5"],

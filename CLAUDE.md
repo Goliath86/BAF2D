@@ -99,7 +99,12 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
 - HUD: disegnato sul canvas `ui` ma in unità di pixel di gioco (`u = display.cssPerPixel`, rettangoli a multipli
   di u) per restare in stile pixel-art; testi con font reale (nomi armi tradotti) e ombra di 1 pixel di gioco.
   In alto per non coprire gli stick su mobile; l'overlay F3 va sotto (`hud.topHeight()`). Vita: `player.health`,
-  `maxHealth`, `damage(n)`, `heal(n)`, `dead` (la morte non ha ancora conseguenze). F5/F6 = danno/cura (debug).
+  `maxHealth`, `damage(n)`, `heal(n)` (non resuscita), `dead`. F5/F6 = danno/cura (debug).
+- Morte: `Player.update` non fa nulla da morto, `draw` usa `deadSprite` ruotato di `deathAngle`. `Game` crea
+  `this.over` (pozza `blood_pool` + arma caduta), dopo `gameOver.delay` chiama `onGameOver` (main.js mostra
+  `#overlay-gameover` e mette `body.game-over` = filtro CSS sul canvas di gioco). `restart()` (clic/tocco
+  sull'overlay o azione `confirm` = Invio) funziona solo dopo `restartDelay`; `_reset()` ricrea Player e Hud,
+  svuota proiettili/effetti e chiama `onRestart`. Game resta senza DOM: l'interfaccia HTML è in main.js.
 - Sprite con `extends`: ereditano tutto tranne `src`, `placeholder` fuso campo per campo.
 - Movimento touch analogico: lunghezza vettore stick SX (dopo deadzone, elevata a `moveCurve`) × `speed`.
 - `Animator.update(dt)` accetta dt negativo (animazione all'indietro).
@@ -122,6 +127,6 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
 - Fatto: base rendering, movimento, collisioni, camera, controlli desktop/mobile, proiettili con gittata
   (mirino su desktop, bordo schermo su touch) e impatti (buchi con fade, fumo, scintille, schegge),
   placeholder grafici e sonori, localizzazione en/it, catalogo armi (pistola, fucile, pompa) con cambio arma,
-  caricatore e ricarica (R / pulsante touch), danno per arma, vita del giocatore, HUD (vita, arma, munizioni).
-- Non ancora presenti: raccolta armi da terra, riserva di munizioni (ora infinita), nemici, morte/game over, menu, selettore lingua in-game, asset grafici reali.
+  caricatore e ricarica (R / pulsante touch), danno per arma, vita del giocatore, HUD (vita, arma, munizioni), morte con schermata di game over e riavvio.
+- Non ancora presenti: raccolta armi da terra, riserva di munizioni (ora infinita), nemici, menu, selettore lingua in-game, asset grafici reali.
 - Controlli touch (stick + pulsante ricarica) verificati dall'utente su un dispositivo reale (2026-11-02).

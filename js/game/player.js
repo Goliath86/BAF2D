@@ -41,6 +41,10 @@ export class Player {
     this.legsAnim = this.legs ? new Animator(this.legs, 'idle') : null;
     this.legsAngle = 0;
     this.legsTurnSpeed = cfg.legsTurnSpeed ?? 14;
+
+    // Corpo a terra dopo la morte (opzionale)
+    this.deadSprite = cfg.deadSprite ? assets.sprite(cfg.deadSprite) : null;
+    this.deathAngle = 0;
     this.backpedal = (cfg.backpedalAngleDeg ?? 100) * DEG;
   }
 
@@ -71,13 +75,21 @@ export class Player {
 
   /** Subisce "amount" danni; restituisce i danni effettivamente applicati. */
   damage(amount) {
+    if (this.dead) return 0;
     const before = this.health;
     this.health = Math.max(0, this.health - Math.max(0, amount));
+    if (this.dead) {
+      // morto: la ricarica si interrompe e il corpo cade all'indietro rispetto alla mira
+      this.reload?.sound?.stop();
+      this.reload = null;
+      this.deathAngle = this.angle;
+    }
     return before - this.health;
   }
 
-  /** Recupera "amount" punti vita (fino al massimo); restituisce quanto recuperato. */
+  /** Recupera "amount" punti vita (fino al massimo); restituisce quanto recuperato. Non resuscita. */
   heal(amount) {
+    if (this.dead) return 0;
     const before = this.health;
     this.health = Math.min(this.maxHealth, this.health + Math.max(0, amount));
     return this.health - before;
@@ -112,6 +124,7 @@ export class Player {
   }
 
   update(dt, game) {
+    if (this.dead) return; // nessun controllo da morto
     const { input, map, camera } = game;
     const w = this.weapon;
 
@@ -219,6 +232,15 @@ export class Player {
   }
 
   draw(ctx) {
+    if (this.dead && this.deadSprite) {
+      // corpo a terra: lo sprite ha la testa a sinistra, quindi ruotato come la mira
+      // la testa finisce dietro (caduto all'indietro), i piedi restano dov'era il giocatore
+      const back = this.cfg.deadOffset ?? 4;
+      const x = this.x - Math.cos(this.deathAngle) * back;
+      const y = this.y - Math.sin(this.deathAngle) * back;
+      drawSprite(ctx, this.deadSprite, 0, x, y, this.deathAngle);
+      return;
+    }
     if (this.legs) drawSprite(ctx, this.legs, this.legsAnim.frame, this.x, this.y, this.legsAngle);
     drawSprite(ctx, this.sprite, this.anim.frame, this.x, this.y, this.angle);
   }

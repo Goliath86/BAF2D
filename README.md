@@ -29,6 +29,9 @@ Apri `http://localhost:8080/`. Per provarlo su un telefono collegato alla stessa
 in alto a destra l'arma in uso (nome tradotto, icona), i colpi (`12/30` e tacche), la barra di ricarica e gli avvisi
 "RICARICA" / "SCARICO".
 
+**Game over**: a vita zero il soldato cade a terra, perde l'arma e compare una pozza di sangue; dopo un attimo la
+scena si desatura e appare la schermata di game over. Clic, tocco o Invio per ricominciare.
+
 La modalità (desktop/touch) cambia automaticamente in base all'ultimo input usato.
 Su mobile, al primo tocco il gioco prova ad andare a schermo intero e a bloccare l'orientamento in landscape;
 dove non è supportato (es. iOS Safari) in portrait compare un overlay "ruota il dispositivo" e il gioco va in pausa.
@@ -215,6 +218,11 @@ verificarsi prima che i file lingua siano disponibili (es. gioco aperto senza se
   `buttons` (pulsanti tondi; la chiave è l'azione generata, es. `reload`: `anchor` = stick di riferimento,
   `offset` = spostamento in raggi di stick dalla sua posizione di riposo, `radius` = frazione del lato corto, `icon`).
 - `player.maxHealth`: punti vita (da codice `player.damage(n)` / `player.heal(n)`; F5/F6 in debug, quantità `debugDamage`).
+- Morte: `player.deadSprite` (corpo a terra, testa a sinistra), `player.deadOffset` (px di cui il corpo cade
+  all'indietro), `player.deathSound`.
+- `gameOver`: `delay` (secondi tra la morte e la schermata), `restartDelay` (attesa prima che clic/tocco/Invio
+  facciano ricominciare, contro i riavvii involontari), `poolSprite`/`poolTime` (pozza che si allarga sotto il corpo:
+  i frame dello sprite vanno dal più piccolo al più grande), `dropWeapon`/`dropDistance` (l'arma cade a terra).
 - `hud`: misure in pixel di gioco (`margin`, `fontSize`, `font`) e colori. `hud.health`: barra della vita
   (`width`, `height`, `showValue`, colori, `lowThreshold` = frazione sotto cui lampeggia, `trailDelay`/`trailSpeed`
   = scia chiara della vita persa). `hud.weapon`: `iconScale` (icona = `pickupSprite` dell'arma), `ammoFontSize`,

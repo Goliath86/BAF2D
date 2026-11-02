@@ -317,6 +317,71 @@ const SPRITE_SHAPES = {
     disc(g, cx - 0.5, cy, 2.5, p.head);
   },
 
+  /**
+   * Soldato a terra, supino, visto dall'alto: testa (elmetto) a SINISTRA, piedi a destra,
+   * braccia aperte. Ruotato come la mira, risulta caduto all'indietro.
+   */
+  soldier_dead(g, w, h, p) {
+    const cx = Math.floor(w / 2);
+    const cy = Math.floor(h / 2);
+    const r = rng(23);
+    const tx = cx - 2; // centro del torso
+
+    // gambe leggermente divaricate, con anfibi
+    line(g, tx + 3, cy - 2, cx + 8, cy - 4, p.trousers, 2);
+    line(g, tx + 3, cy + 1, cx + 8, cy + 3, p.trousers, 2);
+    rect(g, cx + 8, cy - 5, 2, 3, p.boot);
+    rect(g, cx + 8, cy + 3, 2, 3, p.boot);
+    rect(g, cx + 9, cy - 5, 1, 3, p.bootDark);
+    rect(g, cx + 9, cy + 3, 1, 3, p.bootDark);
+
+    // braccia aperte, guanti
+    line(g, tx - 2, cy - 4, tx + 1, cy - 9, p.uniform, 2);
+    line(g, tx - 2, cy + 3, tx - 4, cy + 8, p.uniform, 2);
+    rect(g, tx + 1, cy - 10, 2, 2, p.glove);
+    rect(g, tx - 5, cy + 8, 2, 2, p.glove);
+
+    // torso in mimetica con giubbotto
+    ellipse(g, tx, cy, 4, 5, p.uniform);
+    for (let k = 0; k < 10; k++) {
+      const x = tx - 3 + Math.floor(r() * 7);
+      const y = cy - 4 + Math.floor(r() * 9);
+      const dx = (x + 0.5 - tx) / 4;
+      const dy = (y + 0.5 - cy) / 5;
+      if (dx * dx + dy * dy <= 0.7) rect(g, x, y, 1, 1, k % 2 ? p.camo : p.camo2);
+    }
+    rect(g, tx - 2, cy - 3, 5, 6, p.vest);
+    rect(g, tx - 1, cy - 3, 1, 2, p.vestDark);
+    rect(g, tx + 1, cy + 1, 1, 2, p.vestDark);
+
+    // elmetto
+    disc(g, tx - 6, cy, 3.5, p.helmetDark);
+    disc(g, tx - 6, cy, 2.7, p.helmet);
+    rect(g, tx - 7, cy - 2, 2, 1, p.helmetLight);
+  },
+
+  /**
+   * Pozza che si allarga: frame 0..frames-1 dal più piccolo al più grande.
+   * Macchia irregolare = unione di dischi con offset fissi.
+   */
+  pool(g, w, h, p, frame) {
+    const n = p.frames || 6;
+    const k = n > 1 ? frame / (n - 1) : 1;
+    const cx = w / 2;
+    const cy = h / 2;
+    const maxR = Math.min(w, h) / 2 - 2;
+    const rad = (2 + (maxR - 2) * k) / 1.3; // le macchie sporgono fino a 1.3 * rad: restano nel frame
+    const r = rng(5); // stesse macchie in ogni frame, solo più grandi
+    const blobs = [[0, 0, 1]];
+    for (let i = 0; i < 5; i++) {
+      const a = r() * Math.PI * 2;
+      blobs.push([Math.cos(a) * 0.55, Math.sin(a) * 0.55, 0.45 + r() * 0.3]);
+    }
+    for (const [ox, oy, s] of blobs) disc(g, cx + ox * rad, cy + oy * rad, rad * s, p.dark || p.color);
+    for (const [ox, oy, s] of blobs) disc(g, cx + ox * rad, cy + oy * rad, Math.max(1, rad * s - 1), p.color);
+    if (rad > 4) rect(g, Math.round(cx - rad * 0.3), Math.round(cy - rad * 0.4), 2, 1, p.light || p.color); // riflesso
+  },
+
   /** Arma da sola (es. oggetto a terra da raccogliere), centrata nel frame. */
   weapon(g, w, h, p) {
     const gun = GUNS[p.weapon] || GUNS.rifle;

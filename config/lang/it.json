@@ -11,6 +11,12 @@
   "rotate": {
     "message": "Ruota il dispositivo in orizzontale"
   },
+  "gameOver": {
+    "title": "GAME OVER",
+    "subtitle": "Sei stato ucciso",
+    "restartDesktop": "Clicca o premi Invio per giocare ancora",
+    "restartTouch": "Tocca per giocare ancora"
+  },
   "hud": {
     "reloading": "RICARICA",
     "empty": "SCARICO"

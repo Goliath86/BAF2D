@@ -11,6 +11,12 @@
   "rotate": {
     "message": "Rotate your device to landscape"
   },
+  "gameOver": {
+    "title": "GAME OVER",
+    "subtitle": "You have been killed",
+    "restartDesktop": "Click or press Enter to play again",
+    "restartTouch": "Tap to play again"
+  },
   "hud": {
     "reloading": "RELOADING",
     "empty": "EMPTY"
