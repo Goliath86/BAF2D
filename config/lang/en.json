@@ -11,12 +11,19 @@
   "rotate": {
     "message": "Rotate your device to landscape"
   },
+  "weapons": {
+    "pistol": "Pistol",
+    "rifle": "Assault rifle",
+    "shotgun": "Shotgun"
+  },
   "errors": {
     "fetch": "Unable to load \"{url}\". The game must be run through a local HTTP server (e.g. \"node tools/serve.mjs\"), not by opening index.html directly.",
     "http": "Error {status} while loading \"{url}\"",
     "json": "Invalid JSON in \"{url}\": {details}",
     "unknownSprite": "Sprite not defined in assets.json: \"{name}\"",
     "unknownTileset": "Tileset not defined in assets.json: \"{name}\"",
-    "unknownTile": "Tile \"{tile}\" is not defined in tileset \"{tileset}\""
+    "unknownTile": "Tile \"{tile}\" is not defined in tileset \"{tileset}\"",
+    "unknownWeapon": "Weapon not defined in weapons.json: \"{name}\"",
+    "spriteExtendsLoop": "Circular \"extends\" in sprite \"{name}\" (assets.json)"
   }
 }

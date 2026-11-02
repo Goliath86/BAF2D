@@ -1,0 +1,61 @@
+{
+  "defaults": {
+    "bodySprite": null,
+    "pickupSprite": null,
+    "bulletSprite": "bullet",
+    "sound": null,
+    "auto": true,
+    "fireRate": 8,
+    "pellets": 1,
+    "bulletSpeed": 300,
+    "spreadDeg": 3,
+    "rangeJitter": 0.06,
+    "minRange": 4,
+    "maxRange": 600,
+    "screenMargin": 3,
+    "muzzleOffset": 12
+  },
+
+  "weapons": {
+    "pistol": {
+      "name": "weapons.pistol",
+      "bodySprite": "soldier_pistol",
+      "pickupSprite": "pickup_pistol",
+      "sound": "shoot_pistol",
+      "auto": false,
+      "fireRate": 5,
+      "bulletSpeed": 280,
+      "spreadDeg": 2,
+      "rangeJitter": 0.05,
+      "maxRange": 400,
+      "muzzleOffset": 11
+    },
+    "rifle": {
+      "name": "weapons.rifle",
+      "bodySprite": "soldier_rifle",
+      "pickupSprite": "pickup_rifle",
+      "sound": "shoot_rifle",
+      "auto": true,
+      "fireRate": 8,
+      "bulletSpeed": 300,
+      "spreadDeg": 3,
+      "rangeJitter": 0.06,
+      "maxRange": 600,
+      "muzzleOffset": 12
+    },
+    "shotgun": {
+      "name": "weapons.shotgun",
+      "bodySprite": "soldier_shotgun",
+      "pickupSprite": "pickup_shotgun",
+      "sound": "shoot_shotgun",
+      "auto": false,
+      "fireRate": 1.4,
+      "pellets": 7,
+      "bulletSpeed": 320,
+      "spreadDeg": 16,
+      "rangeJitter": 0.25,
+      "maxRange": 170,
+      "muzzleOffset": 12
+    }
+  }
+}

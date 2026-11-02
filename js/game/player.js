@@ -11,20 +11,26 @@ function angleDiff(a, b) {
 }
 
 export class Player {
-  constructor(cfg, x, y, assets) {
+  constructor(cfg, x, y, assets, weapons) {
     this.cfg = cfg;
+    this.assets = assets;
+    this.weapons = weapons;
     this.x = x;
     this.y = y;
     this.angle = 0; // mira (busto)
     this.speed = cfg.speed ?? 90;
     this.hw = (cfg.hitbox?.[0] ?? 10) / 2;
     this.hh = (cfg.hitbox?.[1] ?? 10) / 2;
-    this.weapon = cfg.weapon || {};
     this.cooldown = 0;
+    this.triggerHeld = false; // per le armi semiautomatiche (un colpo per pressione)
+    this.shotQueued = false;
     this.moving = false;
 
-    this.sprite = assets.sprite(cfg.sprite);
-    this.anim = new Animator(this.sprite, 'idle');
+    // Busto: lo sprite dipende dall'arma impugnata (vedi equip)
+    this.weapon = null;
+    this.sprite = null;
+    this.anim = null;
+    this.equip(cfg.weapon);
 
     // Gambe opzionali su livello separato: ruotano verso la direzione di marcia
     this.legs = cfg.legsSprite ? assets.sprite(cfg.legsSprite) : null;
@@ -32,6 +38,24 @@ export class Player {
     this.legsAngle = 0;
     this.legsTurnSpeed = cfg.legsTurnSpeed ?? 14;
     this.backpedal = (cfg.backpedalAngleDeg ?? 100) * DEG;
+  }
+
+  /**
+   * Impugna l'arma con id "id" (config/weapons.json). Restituisce l'id dell'arma
+   * lasciata, così che un domani possa essere fatta cadere a terra.
+   */
+  equip(id) {
+    const weapon = this.weapons.get(id);
+    const previous = this.weapon?.id ?? null;
+    if (previous === weapon.id) return previous;
+    this.weapon = weapon;
+    this.sprite = this.assets.sprite(weapon.bodySprite || this.cfg.sprite);
+    this.anim = new Animator(this.sprite, 'idle');
+    this.cooldown = 0;
+    // triggerHeld resta quello reale: se si stava tenendo premuto, una semiautomatica
+    // appena impugnata non spara finché non si rilascia
+    this.shotQueued = false;
+    return previous;
   }
 
   update(dt, game) {
@@ -56,12 +80,19 @@ export class Player {
       this.angle = Math.atan2(move.y, move.x);
     }
 
-    // Fuoco
+    // Fuoco: automatico finché si tiene premuto, semiautomatico un colpo per pressione
+    // (su touch le semiautomatiche possono ripetere tenendo lo stick, vedi input.touch.holdToRepeat)
     this.cooldown = Math.max(0, this.cooldown - dt);
-    if (input.isFiring() && this.cooldown <= 0) {
+    // Una pressione durante il cooldown resta "in coda" e parte appena l'arma è pronta.
+    const firing = input.isFiring();
+    const auto = this.weapon.auto || (input.mode === 'touch' && input.touchHoldToRepeat);
+    if (firing && !this.triggerHeld) this.shotQueued = true;
+    if ((this.shotQueued || (auto && firing)) && this.cooldown <= 0) {
       this.cooldown = 1 / (this.weapon.fireRate || 8);
-      game.spawnBullet(this);
+      this.shotQueued = false;
+      game.fire(this);
     }
+    this.triggerHeld = firing;
 
     // Animazioni
     if (this.legs) {

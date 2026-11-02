@@ -69,6 +69,11 @@ export class Input {
     return (this.mouse.buttons & (1 << this.fireButton)) !== 0 || this.isDown('fire');
   }
 
+  /** Su touch, tenere lo stick oltre la soglia ripete il fuoco anche con armi semiautomatiche. */
+  get touchHoldToRepeat() {
+    return this.cfg.touch?.holdToRepeat ?? true;
+  }
+
   /** Posizione del mouse in pixel di gioco (schermo). */
   get mouseGame() {
     return this.display.cssToGame(this.mouse.x, this.mouse.y);

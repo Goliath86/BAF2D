@@ -61,11 +61,13 @@ js/engine/
   audio.js            Web Audio; suoni da file o sintetizzati (square/sine/.../noise); unlock al primo gesto
 js/game/
   game.js             loop a timestep fisso 60 Hz, proiettili (gittata + impatti), render, HUD debug
-  player.js           movimento, mira, fuoco, animazione
+  player.js           movimento, mira, fuoco (auto/semiauto), animazione, equip(id) dell'arma
+  weapons.js          Weapons: catalogo da weapons.json (defaults + voce), get(id)/ids
   effects.js          Effects: decal con fade (buchi) e particelle (fumo/scintille/schegge), impact(type, ...)
 config/
-  game.json           parametri generali (display, i18n, player/weapon, input, camera, audio, mobile)
-  assets.json         sprites / tilesets (con "impact" per tile) / sounds
+  game.json           parametri generali (display, i18n, player + id arma iniziale, input, camera, audio, mobile)
+  weapons.json        armi: "defaults" + "weapons" { id: { name, bodySprite, pickupSprite, auto, pellets, ... } }
+  assets.json         sprites (anche "extends") / tilesets (con "impact" per tile) / sounds
   effects.json        tipi di impatto: decal + emitters + sound
   levels/*.json       livelli
   lang/*.json         testi
@@ -80,6 +82,11 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
 - Giocatore su due livelli: gambe (`legsSprite`, ruotano verso il movimento, passo al contrario in retromarcia)
   sotto il busto (`sprite`, ruota verso la mira). La grafica attuale è procedurale (`soldier_body`/`soldier_legs`
   in `placeholders.js`, colori in `assets.json`): l'utente preferisce grafica creata via canvas.
+- Armi: il busto dipende dall'arma (`bodySprite`, es. `soldier_rifle/pistol/shotgun`, che estendono lo stesso sprite
+  cambiando `placeholder.weapon`; disegni in `GUNS`/`GRIPS` di `placeholders.js`). `player.equip(id)` cambia arma e
+  restituisce l'id della precedente (pensato per la raccolta da terra; `pickupSprite` già definito). F4 = arma
+  successiva (debug). Semiautomatiche: la pressione durante il cooldown resta in coda; su touch `holdToRepeat`.
+- Sprite con `extends`: ereditano tutto tranne `src`, `placeholder` fuso campo per campo.
 - Movimento touch analogico: lunghezza vettore stick SX (dopo deadzone, elevata a `moveCurve`) × `speed`.
 - `Animator.update(dt)` accetta dt negativo (animazione all'indietro).
 - Spritesheet a griglia, frame numerati da sinistra a destra / dall'alto in basso; `origin` = punto di ancoraggio.
@@ -100,6 +107,6 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
 
 - Fatto: base rendering, movimento, collisioni, camera, controlli desktop/mobile, proiettili con gittata
   (mirino su desktop, bordo schermo su touch) e impatti (buchi con fade, fumo, scintille, schegge),
-  placeholder grafici e sonori, localizzazione en/it.
-- Non ancora presenti: nemici, danni/vita, HUD di gioco, menu, selettore lingua in-game, asset grafici reali.
+  placeholder grafici e sonori, localizzazione en/it, catalogo armi (pistola, fucile, pompa) con cambio arma.
+- Non ancora presenti: raccolta armi da terra, munizioni/ricarica, nemici, danni/vita, HUD di gioco, menu, selettore lingua in-game, asset grafici reali.
 - I controlli touch non sono ancora stati verificati su un dispositivo reale.

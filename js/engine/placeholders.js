@@ -97,18 +97,81 @@ function rng(seed) {
   };
 }
 
+// ---------- Armi ----------
+// Ogni arma è vista dall'alto, canna verso destra, asse sulle righe cy-1..cy
+// (caricatore ecc. possono sporgere sotto fino a cy+2). x = pixel più a sinistra.
+
+const GUNS = {
+  rifle: {
+    length: 14,
+    draw(g, x, cy, p) {
+      rect(g, x, cy - 1, 14, 2, p.gun);
+      rect(g, x + 3, cy - 1, 8, 1, p.gunLight);
+      rect(g, x + 6, cy + 1, 2, 2, p.gunDark); // caricatore
+      rect(g, x + 13, cy - 1, 1, 2, p.gunDark); // volata
+    },
+  },
+  shotgun: {
+    length: 14,
+    draw(g, x, cy, p) {
+      rect(g, x, cy - 1, 3, 2, p.wood); // calcio
+      rect(g, x, cy, 3, 1, p.woodDark);
+      rect(g, x + 3, cy - 1, 4, 2, p.gun); // castello
+      rect(g, x + 3, cy - 1, 4, 1, p.gunLight);
+      rect(g, x + 7, cy - 1, 7, 1, p.gun); // canna
+      rect(g, x + 7, cy, 7, 1, p.gunDark); // serbatoio tubolare
+      rect(g, x + 9, cy - 1, 3, 2, p.wood); // pompa
+      rect(g, x + 9, cy, 3, 1, p.woodDark);
+      rect(g, x + 13, cy - 1, 1, 1, p.gunDark); // volata
+    },
+  },
+  pistol: {
+    length: 5,
+    draw(g, x, cy, p) {
+      rect(g, x, cy - 1, 5, 2, p.gun);
+      rect(g, x + 1, cy - 1, 3, 1, p.gunLight);
+      rect(g, x + 4, cy - 1, 1, 2, p.gunDark); // volata
+    },
+  },
+};
+
+/**
+ * Come il soldato impugna ciascuna arma (coordinate relative al pivot cx,cy e al centro busto bx):
+ * x dell'arma, braccia [x0,y0,x1,y1] (spessore 2) e guanti [x,y] (2x2).
+ */
+const GRIPS = {
+  rifle: (cx, cy, bx) => ({
+    gunX: cx - 2,
+    arms: [[bx, cy + 4, cx + 2, cy + 1], [bx, cy - 6, cx + 5, cy - 2]],
+    gloves: [[cx + 2, cy], [cx + 6, cy - 2]],
+  }),
+  shotgun: (cx, cy, bx) => ({
+    gunX: cx - 2,
+    arms: [[bx, cy + 4, cx + 2, cy + 1], [bx, cy - 6, cx + 7, cy - 2]],
+    gloves: [[cx + 2, cy], [cx + 8, cy - 2]],
+  }),
+  // pistola a due mani, braccia tese in avanti
+  pistol: (cx, cy, bx) => ({
+    gunX: cx + 6,
+    arms: [[bx, cy + 4, cx + 4, cy], [bx, cy - 5, cx + 4, cy - 2]],
+    gloves: [[cx + 5, cy - 1]],
+  }),
+};
+
 // ---------- Sprite ----------
 // Convenzione: gli sprite orientabili guardano verso DESTRA (angolo 0).
 
 const SPRITE_SHAPES = {
   /**
    * Soldato moderno, parte superiore (ruota verso la mira): zaino, spalle in mimetica,
-   * giubbotto tattico, fucile imbracciato, guanti, elmetto. Frame unico.
+   * giubbotto tattico, arma impugnata (placeholder.weapon: rifle|shotgun|pistol), guanti, elmetto.
+   * Frame unico.
    */
   soldier_body(g, w, h, p) {
     const cx = Math.floor(w / 2);
     const cy = Math.floor(h / 2);
     const r = rng(11);
+    const kind = GUNS[p.weapon] ? p.weapon : 'rifle';
 
     const bx = cx - 1; // centro del busto (leggermente arretrato rispetto al pivot)
 
@@ -133,18 +196,14 @@ const SPRITE_SHAPES = {
     rect(g, bx, cy + 2, 1, 2, p.vestDark);
 
     // braccia: destra (in basso) verso l'impugnatura, sinistra (in alto) verso l'astina
-    line(g, bx, cy + 4, cx + 2, cy + 1, p.uniform, 2);
-    line(g, bx, cy - 6, cx + 5, cy - 2, p.uniform, 2);
+    const grip = GRIPS[kind](cx, cy, bx);
+    for (const [x0, y0, x1, y1] of grip.arms) line(g, x0, y0, x1, y1, p.uniform, 2);
 
-    // fucile (canna centrata sull'asse dello sprite, punta sul bordo destro)
-    rect(g, cx - 2, cy - 1, w - cx + 2, 2, p.rifle);
-    rect(g, cx + 1, cy - 1, w - cx - 4, 1, p.rifleLight);
-    rect(g, cx + 4, cy + 1, 2, 2, p.rifleDark); // caricatore
-    rect(g, w - 1, cy - 1, 1, 2, p.rifleDark); // volata
+    // arma (canna centrata sull'asse dello sprite)
+    GUNS[kind].draw(g, grip.gunX, cy, p);
 
-    // guanti sopra il fucile
-    rect(g, cx + 2, cy, 2, 2, p.glove);
-    rect(g, cx + 6, cy - 2, 2, 2, p.glove);
+    // guanti sopra l'arma
+    for (const [x, y] of grip.gloves) rect(g, x, y, 2, 2, p.glove);
 
     // elmetto
     disc(g, bx, cy, 3.5, p.helmetDark);
@@ -209,6 +268,12 @@ const SPRITE_SHAPES = {
     rect(g, cx + 2, cy - 1, w - cx - 3, 2, p.gun);
     // testa
     disc(g, cx - 0.5, cy, 2.5, p.head);
+  },
+
+  /** Arma da sola (es. oggetto a terra da raccogliere), centrata nel frame. */
+  weapon(g, w, h, p) {
+    const gun = GUNS[p.weapon] || GUNS.rifle;
+    gun.draw(g, Math.floor((w - gun.length) / 2), Math.floor(h / 2) - 1, p);
   },
 
   bullet(g, w, h, p) {

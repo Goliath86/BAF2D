@@ -22,7 +22,7 @@ Apri `http://localhost:8080/`. Per provarlo su un telefono collegato alla stessa
 | WASD / frecce: muovi (su, giù, strafe) | Stick sinistro: muovi |
 | Mouse: mira | Stick destro: mira |
 | Click sinistro / Spazio: spara | Stick destro spinto oltre il cerchio tratteggiato: spara |
-| F3: overlay di debug | |
+| F3: overlay di debug · F4: arma successiva (debug) | |
 
 La modalità (desktop/touch) cambia automaticamente in base all'ultimo input usato.
 Su mobile, al primo tocco il gioco prova ad andare a schermo intero e a bloccare l'orientamento in landscape;
@@ -33,7 +33,8 @@ dove non è supportato (es. iOS Safari) in portrait compare un overlay "ruota il
 ```
 index.html, css/style.css, manifest.webmanifest
 config/
-  game.json            parametri generali (display, player, arma, input, camera, audio)
+  game.json            parametri generali (display, player, input, camera, audio)
+  weapons.json         armi (statistiche, sprite, suoni)
   assets.json          sprite, tileset e suoni
   effects.json         impatti dei colpi (buchi, fumo, scintille, schegge)
   levels/level01.json  livello di test
@@ -41,7 +42,7 @@ config/
 js/
   main.js              bootstrap
   engine/              display, input, touch (joystick), assets, placeholder, tilemap, camera, audio, loader, i18n
-  game/                game (loop, proiettili, render), player, effects (decal e particelle)
+  game/                game (loop, proiettili, render), player, weapons (catalogo armi), effects (decal e particelle)
 tools/serve.mjs        server statico di sviluppo (solo moduli Node built-in)
 ```
 
@@ -81,9 +82,14 @@ sono le gambe, che ruotano verso la direzione di marcia con animazioni `idle` e 
 rispetto alla mira (oltre `backpedalAngleDeg`) le gambe restano allineate al busto e il passo va al contrario.
 Senza `legsSprite` si usa un unico sprite con le proprie animazioni `idle`/`walk`.
 
-**Placeholder**: `placeholder.shape` sceglie il disegno procedurale (`soldier_body`, `soldier_legs`, `bullet`,
-`hole`, `crosshair`, `circle`, `rect`, ...); i colori sono parametri nel JSON. `autoOutline` aggiunge un contorno
-di 1px del colore indicato.
+**Placeholder**: `placeholder.shape` sceglie il disegno procedurale (`soldier_body`, `soldier_legs`, `weapon`,
+`bullet`, `hole`, `crosshair`, `circle`, `rect`, ...); i colori sono parametri nel JSON. `autoOutline` aggiunge un contorno
+di 1px del colore indicato. Per `soldier_body` e `weapon`, `placeholder.weapon` sceglie l'arma disegnata
+(`rifle`, `shotgun`, `pistol`).
+
+**Ereditarietà**: uno sprite con `"extends": "altro_sprite"` eredita la definizione dell'altro (dimensioni, origin,
+animazioni; `placeholder` fuso campo per campo) tranne `src`. Esempio: `soldier_pistol` estende `soldier_rifle`
+cambiando solo `placeholder.weapon`.
 
 **Tileset**: tile quadrati di `tileSize` px; ogni tile ha `id`, `name`, `solid` e opzionalmente `index`
 (posizione nello sheet, default = `id`).
@@ -115,6 +121,25 @@ l'impatto del muro (es. `wall`, `wood`). Ogni impatto in `effects.json` definisc
   I valori numerici accettano un numero o un intervallo `[min, max]`.
 
 `maxDecals` e `maxParticles` limitano gli elementi contemporanei.
+
+### Armi (`config/weapons.json`)
+
+`defaults` contiene i valori comuni; ogni voce di `weapons` (la chiave è l'id dell'arma) li sovrascrive:
+
+| Campo | Significato |
+|---|---|
+| `name` | chiave di traduzione del nome (es. `weapons.rifle`) |
+| `bodySprite` | busto del soldato che impugna quest'arma (default: `player.sprite`) |
+| `pickupSprite` | sprite dell'arma a terra (per la futura raccolta) |
+| `bulletSprite`, `sound` | sprite del proiettile e suono dello sparo |
+| `auto` | `true` = automatica (spara finché tieni premuto), `false` = un colpo per pressione |
+| `fireRate` | colpi al secondo |
+| `pellets` | proiettili per colpo (> 1 per il fucile a pompa) |
+| `bulletSpeed`, `spreadDeg`, `rangeJitter`, `minRange`, `maxRange`, `screenMargin` | vedi "Colpi ed effetti" |
+| `muzzleOffset` | distanza in px della volata dal centro del giocatore |
+
+Da codice: `player.equip(id)` impugna un'arma e restituisce l'id di quella lasciata
+(da console: `BAF2D.player.equip('shotgun')`).
 
 ### Livelli (`config/levels/*.json`)
 
@@ -162,12 +187,13 @@ verificarsi prima che i file lingua siano disponibili (es. gioco aperto senza se
 - `display.targetHeight`: altezza virtuale in pixel di gioco.
 - `player.speed` (px/s), `player.hitbox`, `player.faceMoveWhenIdle` (su touch, senza mira, il personaggio guarda dove cammina),
   `player.legsSprite`, `player.legsTurnSpeed`, `player.backpedalAngleDeg`.
-- `player.weapon`: `fireRate` (colpi/s), `bulletSpeed`, `spreadDeg`, `rangeJitter`, `minRange`, `maxRange`,
-  `screenMargin`, `muzzleOffset`, `sound`.
-- `input.keyboard`: mappatura azioni → `KeyboardEvent.code`.
+- `player.weapon`: id dell'arma iniziale (vedi `config/weapons.json`); `player.sprite` è il busto di riserva
+  per le armi senza `bodySprite`.
+- `input.keyboard`: mappatura azioni → `KeyboardEvent.code` (`debugNextWeapon`, default F4: arma successiva).
 - `input.touch`: `radius` (frazione del lato corto dello schermo), `deadZone`,
   `moveCurve` (risposta dello stick sinistro: la velocità è proporzionale allo spostamento; 1 = lineare,
   > 1 più precisione alle basse velocità), `fireThreshold`
-  (frazione del raggio oltre la quale si spara), `dynamic` (lo stick nasce dove appoggi il dito), `opacity`.
+  (frazione del raggio oltre la quale si spara), `holdToRepeat` (tenendo lo stick oltre la soglia anche le armi
+  semiautomatiche continuano a sparare), `dynamic` (lo stick nasce dove appoggi il dito), `opacity`.
 - `camera.smoothing`, `camera.lookAhead` (px di anticipo nella direzione di mira).
 - `mobile.requestFullscreen`, `mobile.lockLandscape`.

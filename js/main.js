@@ -5,6 +5,7 @@ import { Assets } from './engine/assets.js';
 import { AudioManager } from './engine/audio.js';
 import { Input } from './engine/input.js';
 import { Game } from './game/game.js';
+import { Weapons } from './game/weapons.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -44,11 +45,13 @@ async function boot() {
     i18n.applyToDOM();
     showMessage(i18n.t('loading'));
 
-    const [assetsCfg, level, effectsCfg] = await Promise.all([
+    const [assetsCfg, level, effectsCfg, weaponsCfg] = await Promise.all([
       loadJSON(config.assets),
       loadJSON(config.startLevel),
       loadJSON(config.effects),
+      loadJSON(config.weapons),
     ]);
+    const weapons = new Weapons(weaponsCfg);
 
     const display = new Display($('game'), $('ui'), config.display);
     const assets = new Assets();
@@ -58,7 +61,7 @@ async function boot() {
     await audio.load();
 
     const input = new Input(display, config.input);
-    const game = new Game({ config, assets, audio, display, input, level, effectsCfg, i18n });
+    const game = new Game({ config, assets, audio, display, input, level, effectsCfg, weapons, i18n });
     game.start();
 
     hideMessage();

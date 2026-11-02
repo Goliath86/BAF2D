@@ -1,12 +1,13 @@
 {
   "sprites": {
-    "soldier_body": {
+    "soldier_rifle": {
       "src": null,
       "frameWidth": 24,
       "frameHeight": 24,
       "origin": [12, 12],
       "placeholder": {
         "shape": "soldier_body",
+        "weapon": "rifle",
         "autoOutline": "#0d0f08",
         "uniform": "#5b6b3a",
         "camo": "#47552c",
@@ -15,9 +16,11 @@
         "vestDark": "#2c3419",
         "pack": "#4a5530",
         "packDark": "#333b20",
-        "rifle": "#262626",
-        "rifleLight": "#4d4d4d",
-        "rifleDark": "#121212",
+        "gun": "#262626",
+        "gunLight": "#4d4d4d",
+        "gunDark": "#121212",
+        "wood": "#7a4e26",
+        "woodDark": "#4f3216",
         "glove": "#a08c5c",
         "helmet": "#8a7a50",
         "helmetDark": "#5a4e33",
@@ -26,6 +29,42 @@
       "animations": {
         "idle": { "frames": [0], "fps": 1 }
       }
+    },
+    "soldier_pistol": {
+      "extends": "soldier_rifle",
+      "src": null,
+      "placeholder": { "weapon": "pistol" }
+    },
+    "soldier_shotgun": {
+      "extends": "soldier_rifle",
+      "src": null,
+      "placeholder": { "weapon": "shotgun" }
+    },
+    "pickup_rifle": {
+      "src": null,
+      "frameWidth": 16,
+      "frameHeight": 6,
+      "origin": [8, 3],
+      "placeholder": {
+        "shape": "weapon",
+        "weapon": "rifle",
+        "autoOutline": "#0d0f08",
+        "gun": "#262626",
+        "gunLight": "#4d4d4d",
+        "gunDark": "#121212",
+        "wood": "#7a4e26",
+        "woodDark": "#4f3216"
+      }
+    },
+    "pickup_pistol": {
+      "extends": "pickup_rifle",
+      "src": null,
+      "placeholder": { "weapon": "pistol" }
+    },
+    "pickup_shotgun": {
+      "extends": "pickup_rifle",
+      "src": null,
+      "placeholder": { "weapon": "shotgun" }
     },
     "soldier_legs": {
       "src": null,
@@ -99,10 +138,20 @@
   },
 
   "sounds": {
-    "shoot": {
+    "shoot_rifle": {
       "src": null,
       "volume": 0.25,
       "placeholder": { "wave": "square", "freqStart": 900, "freqEnd": 180, "duration": 0.08 }
+    },
+    "shoot_pistol": {
+      "src": null,
+      "volume": 0.22,
+      "placeholder": { "wave": "square", "freqStart": 1300, "freqEnd": 300, "duration": 0.06 }
+    },
+    "shoot_shotgun": {
+      "src": null,
+      "volume": 0.4,
+      "placeholder": { "wave": "noise", "duration": 0.18 }
     },
     "hit_wall": {
       "src": null,

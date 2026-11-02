@@ -2,6 +2,7 @@
   "title": "BAF2D",
   "assets": "config/assets.json",
   "effects": "config/effects.json",
+  "weapons": "config/weapons.json",
   "startLevel": "config/levels/level01.json",
 
   "i18n": {
@@ -33,25 +34,14 @@
   },
 
   "player": {
-    "sprite": "soldier_body",
+    "sprite": "soldier_rifle",
     "legsSprite": "soldier_legs",
     "legsTurnSpeed": 14,
     "backpedalAngleDeg": 100,
     "speed": 90,
     "hitbox": [10, 10],
     "faceMoveWhenIdle": true,
-    "weapon": {
-      "bulletSprite": "bullet",
-      "sound": "shoot",
-      "fireRate": 8,
-      "bulletSpeed": 300,
-      "spreadDeg": 3,
-      "rangeJitter": 0.06,
-      "minRange": 4,
-      "maxRange": 600,
-      "screenMargin": 3,
-      "muzzleOffset": 12
-    }
+    "weapon": "rifle"
   },
 
   "input": {
@@ -61,7 +51,8 @@
       "left": ["KeyA", "ArrowLeft"],
       "right": ["KeyD", "ArrowRight"],
       "fire": ["Space"],
-      "debug": ["F3"]
+      "debug": ["F3"],
+      "debugNextWeapon": ["F4"]
     },
     "mouse": {
       "fireButton": 0
@@ -71,6 +62,7 @@
       "deadZone": 0.12,
       "moveCurve": 1,
       "fireThreshold": 0.75,
+      "holdToRepeat": true,
       "dynamic": true,
       "opacity": 0.7
     }

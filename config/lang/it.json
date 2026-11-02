@@ -11,12 +11,19 @@
   "rotate": {
     "message": "Ruota il dispositivo in orizzontale"
   },
+  "weapons": {
+    "pistol": "Pistola",
+    "rifle": "Fucile d'assalto",
+    "shotgun": "Fucile a pompa"
+  },
   "errors": {
     "fetch": "Impossibile caricare \"{url}\". Il gioco va avviato tramite un server HTTP locale (es. \"node tools/serve.mjs\"), non aprendo index.html direttamente.",
     "http": "Errore {status} caricando \"{url}\"",
     "json": "JSON non valido in \"{url}\": {details}",
     "unknownSprite": "Sprite non definito in assets.json: \"{name}\"",
     "unknownTileset": "Tileset non definito in assets.json: \"{name}\"",
-    "unknownTile": "Tile \"{tile}\" non definito nel tileset \"{tileset}\""
+    "unknownTile": "Tile \"{tile}\" non definito nel tileset \"{tileset}\"",
+    "unknownWeapon": "Arma non definita in weapons.json: \"{name}\"",
+    "spriteExtendsLoop": "\"extends\" circolare nello sprite \"{name}\" (assets.json)"
   }
 }

@@ -9,7 +9,7 @@ const BULLET_SUBSTEP = 2; // px: passo massimo del controllo collisioni dei proi
 const WALL_DECAL_INSET = 3; // px: distanza del buco dalla faccia del muro colpita
 
 export class Game {
-  constructor({ config, assets, audio, display, input, level, effectsCfg, i18n }) {
+  constructor({ config, assets, audio, display, input, level, effectsCfg, weapons, i18n }) {
     this.config = config;
     this.i18n = i18n; // per i testi di HUD/menu: this.i18n.t('chiave')
     this.assets = assets;
@@ -23,11 +23,11 @@ export class Game {
 
     this.map = new TileMap(level, assets.tileset(level.tileset));
     const spawn = this.map.spawns.player || { x: this.map.pixelWidth / 2, y: this.map.pixelHeight / 2 };
-    this.player = new Player(config.player, spawn.x, spawn.y, assets);
+    this.weapons = weapons;
+    this.player = new Player(config.player, spawn.x, spawn.y, assets, weapons);
 
     this.bullets = [];
     this.effects = new Effects(effectsCfg, assets, audio);
-    this.bulletSprite = assets.sprite(config.player.weapon?.bulletSprite || 'bullet');
     this.crosshair = assets.sprites.get('crosshair') || null;
 
     this.camera = new Camera(config.camera);
@@ -81,6 +81,7 @@ export class Game {
   update(dt) {
     const { input, display } = this;
     if (input.wasPressed('debug')) this.debug = !this.debug;
+    if (input.wasPressed('debugNextWeapon')) this._cycleWeapon();
 
     this.player.update(dt, this);
     this._updateBullets(dt);
@@ -96,8 +97,15 @@ export class Game {
   // - touch (o senza mouse): fino al bordo dello schermo visibile al momento dello sparo.
   // Se prima incontra un tile solido, impatto sul muro.
 
-  spawnBullet(player) {
+  /** Un colpo dell'arma impugnata: un suono e "pellets" proiettili (>1 = fucile a pompa). */
+  fire(player) {
     const w = player.weapon;
+    if (w.sound) this.audio.play(w.sound);
+    const n = Math.max(1, Math.round(w.pellets || 1));
+    for (let i = 0; i < n; i++) this._spawnBullet(player, w);
+  }
+
+  _spawnBullet(player, w) {
     const spread = ((w.spreadDeg || 0) * Math.PI) / 180;
     const a = player.angle + (Math.random() - 0.5) * spread;
     const dx = Math.cos(a);
@@ -118,8 +126,6 @@ export class Game {
     }
     range = Math.min(w.maxRange ?? 600, Math.max(minRange, range, 0.5));
 
-    if (w.sound) this.audio.play(w.sound);
-
     // Canna dentro un muro (giocatore attaccato alla parete): impatto immediato
     if (this.map.isSolidAt(m.x, m.y)) {
       const n = Math.abs(dx) > Math.abs(dy) ? { x: -Math.sign(dx), y: 0 } : { x: 0, y: -Math.sign(dy) };
@@ -127,7 +133,15 @@ export class Game {
       return;
     }
 
-    this.bullets.push({ x: m.x, y: m.y, dx, dy, angle: a, speed: w.bulletSpeed || 300, range });
+    const sprite = this.assets.sprite(w.bulletSprite || 'bullet');
+    this.bullets.push({ x: m.x, y: m.y, dx, dy, angle: a, speed: w.bulletSpeed || 300, range, sprite });
+  }
+
+  /** Debug: passa all'arma successiva del catalogo. */
+  _cycleWeapon() {
+    const ids = this.weapons.ids;
+    const i = ids.indexOf(this.player.weapon.id);
+    this.player.equip(ids[(i + 1) % ids.length]);
   }
 
   /** Distanza lungo (dx,dy) da (x,y) al bordo dell'area visibile (meno un margine). */
@@ -223,7 +237,7 @@ export class Game {
     this.map.draw(ctx, cx, cy, W, H);
     this.effects.drawDecals(ctx);
     this.player.draw(ctx);
-    for (const b of this.bullets) drawSprite(ctx, this.bulletSprite, 0, b.x, b.y, b.angle);
+    for (const b of this.bullets) drawSprite(ctx, b.sprite, 0, b.x, b.y, b.angle);
     this.effects.drawParticles(ctx);
 
     ctx.restore();
@@ -250,6 +264,7 @@ export class Game {
       `pos ${player.x.toFixed(1)}, ${player.y.toFixed(1)}`,
       `move ${mv.x.toFixed(2)}, ${mv.y.toFixed(2)}`,
       `aim ${((player.angle * 180) / Math.PI).toFixed(0)}° fire ${input.isFiring() ? 'Y' : 'N'}`,
+      `weapon ${player.weapon.id} (F4: next)`,
       `bullets ${this.bullets.length} decals ${effects.decals.length} particles ${effects.particles.length}`,
     ];
     ui.save();

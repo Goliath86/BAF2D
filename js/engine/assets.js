@@ -14,6 +14,29 @@ async function tryLoadImage(src) {
   }
 }
 
+/**
+ * Sprite con "extends": "<altro sprite>" ereditano la definizione del genitore
+ * (frame, origin, animazioni, placeholder fuso campo per campo), tranne "src":
+ * ogni sprite ha il proprio file immagine.
+ */
+function resolveExtends(defs, name, seen = new Set()) {
+  const def = defs[name];
+  if (!def) throw new LocalizedError('errors.unknownSprite', { name });
+  if (!def.extends) return def;
+  if (seen.has(name)) {
+    throw new LocalizedError('errors.spriteExtendsLoop', { name }, `Circular "extends" in sprite "${name}"`);
+  }
+  seen.add(name);
+  const { src: _src, ...parent } = resolveExtends(defs, def.extends, seen);
+  const { extends: _ext, ...own } = def;
+  return {
+    ...parent,
+    ...own,
+    src: own.src ?? null,
+    placeholder: { ...parent.placeholder, ...own.placeholder },
+  };
+}
+
 export class Assets {
   constructor() {
     this.sprites = new Map();
@@ -22,7 +45,8 @@ export class Assets {
 
   async load(cfg) {
     const jobs = [];
-    for (const [name, def] of Object.entries(cfg.sprites || {})) jobs.push(this._loadSprite(name, def));
+    const sprites = cfg.sprites || {};
+    for (const name of Object.keys(sprites)) jobs.push(this._loadSprite(name, resolveExtends(sprites, name)));
     for (const [name, def] of Object.entries(cfg.tilesets || {})) jobs.push(this._loadTileset(name, def));
     await Promise.all(jobs);
   }
