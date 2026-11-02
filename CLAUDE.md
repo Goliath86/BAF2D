@@ -96,6 +96,8 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
 - Pulsanti touch (`input.touch.buttons`): la chiave è l'azione, `input.wasPressed(azione)` li legge insieme
   alla tastiera; posizione relativa alla posizione di riposo di uno stick; il gioco passa lo stato da disegnare
   (`label`, `progress`, `alert`) a `sticks.draw(ui, state)`. Tocco sul pulsante = niente stick.
+  Pulsanti con `debugOnly: true` solo con `?debug=1` nell'URL (main.js -> `new Input(..., { debug })`):
+  `debugHurt`/`debugHeal` sopra lo stick sinistro, per testare vita e game over su telefono.
 - HUD: disegnato sul canvas `ui` ma in unità di pixel di gioco (`u = display.cssPerPixel`, rettangoli a multipli
   di u) per restare in stile pixel-art; testi con font reale (nomi armi tradotti) e ombra di 1 pixel di gioco.
   In alto per non coprire gli stick su mobile; l'overlay F3 va sotto (`hud.topHeight()`). Vita: `player.health`,

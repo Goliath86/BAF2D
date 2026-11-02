@@ -28,7 +28,8 @@ class Stick {
 }
 
 export class TouchSticks {
-  constructor(cfg = {}) {
+  /** options.debug: mostra anche i pulsanti con "debugOnly": true (URL ?debug=1). */
+  constructor(cfg = {}, options = {}) {
     this.cfg = {
       radius: 0.16,
       deadZone: 0.12,
@@ -42,14 +43,17 @@ export class TouchSticks {
     this.right = new Stick('right');
 
     // Pulsanti tondi: il nome è l'azione che generano (input.wasPressed(nome))
-    this.buttons = Object.entries(this.cfg.buttons || {}).map(([action, b]) => ({
-      action,
-      radius: b.radius ?? 0.07,
-      anchor: b.anchor || 'right',
-      offset: b.offset || [0, -2],
-      icon: b.icon || null,
-      id: null, // pointerId che lo tiene premuto
-    }));
+    this.buttons = Object.entries(this.cfg.buttons || {})
+      .filter(([, b]) => !b.debugOnly || options.debug)
+      .map(([action, b]) => ({
+        action,
+        radius: b.radius ?? 0.07,
+        anchor: b.anchor || 'right',
+        offset: b.offset || [0, -2],
+        icon: b.icon || null,
+        color: b.color || null, // colore del bordo/icona (default bianco)
+        id: null, // pointerId che lo tiene premuto
+      }));
     this.pressed = new Set();
   }
 
@@ -194,7 +198,7 @@ export class TouchSticks {
   _drawButton(ctx, b, st) {
     const { x, y, r } = this.buttonGeometry(b);
     const down = b.id !== null;
-    const accent = st.alert ? 'rgba(255,90,70,0.95)' : 'rgba(255,255,255,0.7)';
+    const accent = st.alert ? 'rgba(255,90,70,0.95)' : b.color || 'rgba(255,255,255,0.7)';
 
     ctx.save();
     ctx.globalAlpha = this.cfg.opacity * (down ? 1 : 0.8);
@@ -228,6 +232,21 @@ export class TouchSticks {
       ctx.closePath();
       ctx.fillStyle = accent;
       ctx.fill();
+    }
+
+    if (b.icon === 'hurt' || b.icon === 'heal') {
+      // cuore con "-" (togli vita) o "+" (ridai vita)
+      const s = r * 0.5;
+      ctx.beginPath();
+      ctx.moveTo(x, y + s * 0.9);
+      ctx.bezierCurveTo(x - s * 1.4, y - s * 0.1, x - s * 0.7, y - s * 1.1, x, y - s * 0.45);
+      ctx.bezierCurveTo(x + s * 0.7, y - s * 1.1, x + s * 1.4, y - s * 0.1, x, y + s * 0.9);
+      ctx.fillStyle = accent;
+      ctx.fill();
+      ctx.fillStyle = 'rgba(0,0,0,0.85)';
+      const t = Math.max(2, r * 0.1);
+      ctx.fillRect(x - s * 0.45, y - s * 0.1 - t / 2, s * 0.9, t);
+      if (b.icon === 'heal') ctx.fillRect(x - t / 2, y - s * 0.55, t, s * 0.9);
     }
 
     if (st.label) {

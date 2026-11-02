@@ -216,7 +216,11 @@ verificarsi prima che i file lingua siano disponibili (es. gioco aperto senza se
   (frazione del raggio oltre la quale si spara), `holdToRepeat` (tenendo lo stick oltre la soglia anche le armi
   semiautomatiche continuano a sparare), `dynamic` (lo stick nasce dove appoggi il dito), `opacity`,
   `buttons` (pulsanti tondi; la chiave è l'azione generata, es. `reload`: `anchor` = stick di riferimento,
-  `offset` = spostamento in raggi di stick dalla sua posizione di riposo, `radius` = frazione del lato corto, `icon`).
+  `offset` = spostamento in raggi di stick dalla sua posizione di riposo, `radius` = frazione del lato corto, `icon`,
+  `color`; `debugOnly: true` = visibile solo aprendo il gioco con `?debug=1`).
+
+**Debug su mobile**: aprendo il gioco con `?debug=1` (es. `http://192.168.1.10:8080/?debug=1`) compaiono sopra
+lo stick sinistro due pulsanti a forma di cuore: "−" toglie vita (come F5), "+" la ridà (come F6).
 - `player.maxHealth`: punti vita (da codice `player.damage(n)` / `player.heal(n)`; F5/F6 in debug, quantità `debugDamage`).
 - Morte: `player.deadSprite` (corpo a terra, testa a sinistra), `player.deadOffset` (px di cui il corpo cade
   all'indietro), `player.deathSound`.

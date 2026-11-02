@@ -60,7 +60,9 @@ async function boot() {
     const audio = new AudioManager(assetsCfg.sounds, config.audio);
     await audio.load();
 
-    const input = new Input(display, config.input);
+    // ?debug=1 nell'URL: mostra i pulsanti touch di debug (es. togli/ridai vita)
+    const urlDebug = new URLSearchParams(location.search).get('debug') === '1';
+    const input = new Input(display, config.input, { debug: urlDebug });
     const game = new Game({ config, assets, audio, display, input, level, effectsCfg, weapons, i18n });
     game.start();
 

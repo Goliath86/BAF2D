@@ -4,7 +4,8 @@
 import { TouchSticks } from './touch.js';
 
 export class Input {
-  constructor(display, cfg = {}) {
+  /** options.debug: abilita i pulsanti touch di debug (vedi TouchSticks). */
+  constructor(display, cfg = {}, options = {}) {
     this.display = display;
     this.cfg = cfg;
     this.enabled = false;
@@ -21,7 +22,7 @@ export class Input {
     this.keys = new Set();
     this.pressed = new Set();
     this.mouse = { x: 0, y: 0, buttons: 0, seen: false };
-    this.sticks = new TouchSticks(cfg.touch);
+    this.sticks = new TouchSticks(cfg.touch, { debug: !!options.debug });
 
     document.body.classList.toggle('is-touch', this.isTouchDevice);
     this._applyModeClass();
