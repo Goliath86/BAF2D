@@ -23,7 +23,11 @@ Apri `http://localhost:8080/`. Per provarlo su un telefono collegato alla stessa
 | Mouse: mira | Stick destro: mira |
 | Click sinistro / Spazio: spara | Stick destro spinto oltre il cerchio tratteggiato: spara |
 | R: ricarica | Pulsante tondo sopra lo stick destro: ricarica |
-| F3: overlay di debug · F4: arma successiva (debug) | |
+| F3: overlay di debug · F4: arma successiva · F5/F6: togli/ridai vita (debug) | |
+
+**HUD**: in alto a sinistra la vita (cuore, barra con scia del danno, valore; lampeggia quando è bassa),
+in alto a destra l'arma in uso (nome tradotto, icona), i colpi (`12/30` e tacche), la barra di ricarica e gli avvisi
+"RICARICA" / "SCARICO".
 
 La modalità (desktop/touch) cambia automaticamente in base all'ultimo input usato.
 Su mobile, al primo tocco il gioco prova ad andare a schermo intero e a bloccare l'orientamento in landscape;
@@ -43,7 +47,7 @@ config/
 js/
   main.js              bootstrap
   engine/              display, input, touch (joystick), assets, placeholder, tilemap, camera, audio, loader, i18n
-  game/                game (loop, proiettili, render), player, weapons (catalogo armi), effects (decal e particelle)
+  game/                game (loop, proiettili, render), player, weapons (catalogo armi), hud, effects (decal e particelle)
 tools/serve.mjs        server statico di sviluppo (solo moduli Node built-in)
 ```
 
@@ -210,5 +214,10 @@ verificarsi prima che i file lingua siano disponibili (es. gioco aperto senza se
   semiautomatiche continuano a sparare), `dynamic` (lo stick nasce dove appoggi il dito), `opacity`,
   `buttons` (pulsanti tondi; la chiave è l'azione generata, es. `reload`: `anchor` = stick di riferimento,
   `offset` = spostamento in raggi di stick dalla sua posizione di riposo, `radius` = frazione del lato corto, `icon`).
+- `player.maxHealth`: punti vita (da codice `player.damage(n)` / `player.heal(n)`; F5/F6 in debug, quantità `debugDamage`).
+- `hud`: misure in pixel di gioco (`margin`, `fontSize`, `font`) e colori. `hud.health`: barra della vita
+  (`width`, `height`, `showValue`, colori, `lowThreshold` = frazione sotto cui lampeggia, `trailDelay`/`trailSpeed`
+  = scia chiara della vita persa). `hud.weapon`: `iconScale` (icona = `pickupSprite` dell'arma), `ammoFontSize`,
+  `pipsWidth`/`pipHeight` (tacche dei colpi; caricatori più grandi diventano una barra), colori.
 - `camera.smoothing`, `camera.lookAhead` (px di anticipo nella direzione di mira).
 - `mobile.requestFullscreen`, `mobile.lockLandscape`.

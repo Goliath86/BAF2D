@@ -11,6 +11,10 @@
   "rotate": {
     "message": "Ruota il dispositivo in orizzontale"
   },
+  "hud": {
+    "reloading": "RICARICA",
+    "empty": "SCARICO"
+  },
   "weapons": {
     "pistol": "Pistola",
     "rifle": "Fucile d'assalto",

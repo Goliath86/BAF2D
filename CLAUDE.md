@@ -63,6 +63,7 @@ js/game/
   game.js             loop a timestep fisso 60 Hz, proiettili (gittata + impatti), render, HUD debug
   player.js           movimento, mira, fuoco (auto/semiauto), animazione, equip(id) dell'arma
   weapons.js          Weapons: catalogo da weapons.json (defaults + voce), get(id)/ids
+  hud.js              Hud: vita (alto sx) + arma/munizioni/ricarica (alto dx) sul canvas ui
   effects.js          Effects: decal con fade (buchi) e particelle (fumo/scintille/schegge), impact(type, ...)
 config/
   game.json           parametri generali (display, i18n, player + id arma iniziale, input, camera, audio, mobile)
@@ -95,6 +96,10 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
 - Pulsanti touch (`input.touch.buttons`): la chiave è l'azione, `input.wasPressed(azione)` li legge insieme
   alla tastiera; posizione relativa alla posizione di riposo di uno stick; il gioco passa lo stato da disegnare
   (`label`, `progress`, `alert`) a `sticks.draw(ui, state)`. Tocco sul pulsante = niente stick.
+- HUD: disegnato sul canvas `ui` ma in unità di pixel di gioco (`u = display.cssPerPixel`, rettangoli a multipli
+  di u) per restare in stile pixel-art; testi con font reale (nomi armi tradotti) e ombra di 1 pixel di gioco.
+  In alto per non coprire gli stick su mobile; l'overlay F3 va sotto (`hud.topHeight()`). Vita: `player.health`,
+  `maxHealth`, `damage(n)`, `heal(n)`, `dead` (la morte non ha ancora conseguenze). F5/F6 = danno/cura (debug).
 - Sprite con `extends`: ereditano tutto tranne `src`, `placeholder` fuso campo per campo.
 - Movimento touch analogico: lunghezza vettore stick SX (dopo deadzone, elevata a `moveCurve`) × `speed`.
 - `Animator.update(dt)` accetta dt negativo (animazione all'indietro).
@@ -117,6 +122,6 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
 - Fatto: base rendering, movimento, collisioni, camera, controlli desktop/mobile, proiettili con gittata
   (mirino su desktop, bordo schermo su touch) e impatti (buchi con fade, fumo, scintille, schegge),
   placeholder grafici e sonori, localizzazione en/it, catalogo armi (pistola, fucile, pompa) con cambio arma,
-  caricatore e ricarica (R / pulsante touch), danno per arma.
-- Non ancora presenti: raccolta armi da terra, riserva di munizioni (ora infinita), HUD munizioni su desktop, nemici, danni/vita, HUD di gioco, menu, selettore lingua in-game, asset grafici reali.
+  caricatore e ricarica (R / pulsante touch), danno per arma, vita del giocatore, HUD (vita, arma, munizioni).
+- Non ancora presenti: raccolta armi da terra, riserva di munizioni (ora infinita), nemici, morte/game over, menu, selettore lingua in-game, asset grafici reali.
 - Controlli touch (stick + pulsante ricarica) verificati dall'utente su un dispositivo reale (2026-11-02).

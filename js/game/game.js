@@ -3,6 +3,7 @@ import { drawSprite } from '../engine/assets.js';
 import { TileMap } from '../engine/tilemap.js';
 import { Player } from './player.js';
 import { Effects } from './effects.js';
+import { Hud } from './hud.js';
 
 const STEP = 1 / 60; // update a timestep fisso
 const BULLET_SUBSTEP = 2; // px: passo massimo del controllo collisioni dei proiettili
@@ -29,6 +30,7 @@ export class Game {
     this.bullets = [];
     this.effects = new Effects(effectsCfg, assets, audio);
     this.crosshair = assets.sprites.get('crosshair') || null;
+    this.hud = new Hud(config.hud, i18n, assets);
 
     this.camera = new Camera(config.camera);
     this.camera.snap(this.player.x, this.player.y, 0, display.width, display.height, this.map);
@@ -82,8 +84,11 @@ export class Game {
     const { input, display } = this;
     if (input.wasPressed('debug')) this.debug = !this.debug;
     if (input.wasPressed('debugNextWeapon')) this._cycleWeapon();
+    if (input.wasPressed('debugHurt')) this.player.damage(this.config.debugDamage ?? 10);
+    if (input.wasPressed('debugHeal')) this.player.heal(this.config.debugDamage ?? 10);
 
     this.player.update(dt, this);
+    this.hud.update(dt, this.player);
     this._updateBullets(dt);
     this.effects.update(dt);
 
@@ -257,6 +262,7 @@ export class Game {
         reload: { label: String(p.ammo), progress: p.reloadProgress, alert: p.ammo === 0 && !p.reloading },
       });
     }
+    if (this.running) this.hud.draw(ui, display, this.player);
     if (this.debug) this._drawDebug(ui);
   }
 
@@ -272,15 +278,18 @@ export class Game {
       `aim ${((player.angle * 180) / Math.PI).toFixed(0)}° fire ${input.isFiring() ? 'Y' : 'N'}`,
       `weapon ${player.weapon.id} (F4: next) dmg ${player.weapon.damage}`,
       `ammo ${player.ammo}/${player.weapon.magazine}${player.reloading ? ` reloading ${Math.round(player.reloadProgress * 100)}%` : ''}`,
+      `health ${player.health}/${player.maxHealth} (F5: hurt, F6: heal)`,
       `bullets ${this.bullets.length} decals ${effects.decals.length} particles ${effects.particles.length}`,
     ];
+    const top = Math.round(this.hud.topHeight(display)); // sotto l'HUD
     ui.save();
     ui.font = '12px monospace';
     ui.textBaseline = 'top';
+    ui.textAlign = 'left';
     ui.fillStyle = 'rgba(0,0,0,0.5)';
-    ui.fillRect(4, 4, 300, lines.length * 14 + 8);
+    ui.fillRect(4, top, 300, lines.length * 14 + 8);
     ui.fillStyle = '#9f9';
-    lines.forEach((l, i) => ui.fillText(l, 10, 9 + i * 14));
+    lines.forEach((l, i) => ui.fillText(l, 10, top + 5 + i * 14));
     ui.restore();
   }
 }

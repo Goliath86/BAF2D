@@ -11,6 +11,10 @@
   "rotate": {
     "message": "Rotate your device to landscape"
   },
+  "hud": {
+    "reloading": "RELOADING",
+    "empty": "EMPTY"
+  },
   "weapons": {
     "pistol": "Pistol",
     "rifle": "Assault rifle",

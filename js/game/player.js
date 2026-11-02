@@ -21,6 +21,8 @@ export class Player {
     this.speed = cfg.speed ?? 90;
     this.hw = (cfg.hitbox?.[0] ?? 10) / 2;
     this.hh = (cfg.hitbox?.[1] ?? 10) / 2;
+    this.maxHealth = cfg.maxHealth ?? 100;
+    this.health = this.maxHealth;
     this.cooldown = 0;
     this.triggerHeld = false; // per le armi semiautomatiche (un colpo per pressione)
     this.shotQueued = false;
@@ -61,6 +63,24 @@ export class Player {
     // appena impugnata non spara finché non si rilascia
     this.shotQueued = false;
     return previous;
+  }
+
+  get dead() {
+    return this.health <= 0;
+  }
+
+  /** Subisce "amount" danni; restituisce i danni effettivamente applicati. */
+  damage(amount) {
+    const before = this.health;
+    this.health = Math.max(0, this.health - Math.max(0, amount));
+    return before - this.health;
+  }
+
+  /** Recupera "amount" punti vita (fino al massimo); restituisce quanto recuperato. */
+  heal(amount) {
+    const before = this.health;
+    this.health = Math.min(this.maxHealth, this.health + Math.max(0, amount));
+    return this.health - before;
   }
 
   get reloading() {

@@ -28,6 +28,40 @@
     "lockLandscape": true
   },
 
+  "hud": {
+    "margin": 5,
+    "font": "\"Courier New\", monospace",
+    "fontSize": 7,
+    "shadow": "#000000",
+    "text": "#e8e8f0",
+    "health": {
+      "width": 60,
+      "height": 5,
+      "showValue": true,
+      "color": "#d23c3c",
+      "colorLight": "#f06a5a",
+      "lowColor": "#ff2a2a",
+      "lowThreshold": 0.3,
+      "back": "#2a1414",
+      "border": "#0b0b12",
+      "trailColor": "#f4e2b0",
+      "trailDelay": 0.35,
+      "trailSpeed": 0.8,
+      "icon": "#d23c3c"
+    },
+    "weapon": {
+      "iconScale": 2,
+      "ammoFontSize": 10,
+      "pipsWidth": 60,
+      "pipHeight": 3,
+      "ammoColor": "#ffd36b",
+      "spentColor": "#4a4436",
+      "emptyColor": "#ff4a3a",
+      "reloadColor": "#ffd36b",
+      "reloadBack": "#2a2618"
+    }
+  },
+
   "camera": {
     "smoothing": 10,
     "lookAhead": 24
@@ -39,6 +73,7 @@
     "legsTurnSpeed": 14,
     "backpedalAngleDeg": 100,
     "speed": 90,
+    "maxHealth": 100,
     "hitbox": [10, 10],
     "faceMoveWhenIdle": true,
     "weapon": "rifle"
@@ -53,7 +88,9 @@
       "fire": ["Space"],
       "reload": ["KeyR"],
       "debug": ["F3"],
-      "debugNextWeapon": ["F4"]
+      "debugNextWeapon": ["F4"],
+      "debugHurt": ["F5"],
+      "debugHeal": ["F6"]
     },
     "mouse": {
       "fireButton": 0
@@ -72,5 +109,6 @@
     }
   },
 
-  "debug": false
+  "debug": false,
+  "debugDamage": 10
 }
