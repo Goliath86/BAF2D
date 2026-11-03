@@ -70,7 +70,7 @@ config/
   game.json           parametri generali (display, i18n, player + id arma iniziale, input, camera, audio, mobile)
   weapons.json        armi: "defaults" + "weapons" { id: { name, bodySprite, pickupSprite, auto, pellets, ... } }
   assets.json         sprites (anche "extends") / tilesets (con "impact" per tile) / sounds
-  effects.json        tipi di impatto (decal + emitters + sound) e tipi di bossolo ("casings")
+  effects.json        tipi di impatto (decal + emitters + sound), di bossolo ("casings") e di vampata ("muzzles")
   levels/*.json       livelli
   lang/*.json         testi
 tools/serve.mjs       server statico (solo moduli Node built-in)
@@ -127,6 +127,11 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
   Stesso sistema per il caricatore che cade in ricarica: `reloadDrop` (tipo in `casings`, es. `mag_rifle`),
   `reloadDropAt` (frazione della ricarica; fucile 0.3 = quando sparisce dallo sprite), `reloadDropPort`.
   `Player._eject(game, type, port)` è il punto unico di uscita degli oggetti dall'arma.
+- Vampata di volata: arma con `muzzleFlash` (tipo in `effects.json` -> `muzzles`): `sprite` (procedurale
+  `muzzle_flash`, volata = bordo sinistro a metà altezza, 3 varianti), `life` (pochi centesimi di s), `glow`
+  (alone additivo a `bands` dischi concentrici: `color`, `alpha`, `radius`, `offset`) ed `emitters` (fumo/scintille,
+  diretti lungo la canna con `spreadDeg`). Creata in `Game.fire()` al `player.muzzle`, non se la canna è in un muro.
+  Disegnata sopra proiettili, sotto le particelle.
 - `input.endFrame()` va chiamato a fine di ogni tick di update (azzera i `wasPressed`).
 - Su touch in portrait il gioco è in pausa e compare l'overlay "ruota il dispositivo" (CSS + `Game.paused`).
 - Il click/tocco di avvio fa `stopPropagation` per non sparare subito; fullscreen + lock landscape solo su touch.
@@ -138,6 +143,6 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
 - Fatto: base rendering, movimento, collisioni, camera, controlli desktop/mobile, proiettili con gittata
   (mirino su desktop, bordo schermo su touch) e impatti (buchi con fade, fumo, scintille, schegge),
   placeholder grafici e sonori, localizzazione en/it, catalogo armi (pistola, fucile, pompa) con cambio arma,
-  caricatore e ricarica (R / pulsante touch), bossoli espulsi e caricatori che cadono in ricarica, danno per arma, vita del giocatore, HUD (vita, arma, munizioni), morte con schermata di game over e riavvio.
+  caricatore e ricarica (R / pulsante touch), bossoli espulsi e caricatori che cadono in ricarica, vampata di volata con fumo, danno per arma, vita del giocatore, HUD (vita, arma, munizioni), morte con schermata di game over e riavvio.
 - Non ancora presenti: raccolta armi da terra, riserva di munizioni (ora infinita), nemici, menu, selettore lingua in-game, asset grafici reali.
 - Controlli touch (stick + pulsante ricarica) verificati dall'utente su un dispositivo reale (2026-11-02).

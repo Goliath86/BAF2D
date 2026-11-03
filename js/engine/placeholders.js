@@ -405,6 +405,26 @@ const SPRITE_SHAPES = {
     rect(g, 0, 0, base, h, p.baseColor || p.color || '#9c7424');
   },
 
+  /**
+   * Vampata di volata, orientata a destra: la volata è il bordo sinistro, a metà altezza.
+   * Getto principale lungo l'asse, due punte a 45° e nucleo chiaro vicino alla canna.
+   * Ogni frame è una variante (lunghezza del getto e delle punte casuali ma stabili).
+   */
+  muzzle_flash(g, w, h, p, frame) {
+    const r = rng(frame * 13 + 7);
+    const cy = Math.floor(h / 2);
+    const len = w - Math.floor(r() * 3);
+    rect(g, 0, cy - 1, len, 2, p.outer); // getto principale
+    rect(g, 0, cy - 2, 2, 4, p.outer); // allargamento alla volata
+    for (const side of [-1, 1]) {
+      const s = 1 + Math.floor(r() * Math.max(1, cy - 1));
+      const x0 = 1 + Math.floor(r() * 2);
+      for (let k = 1; k <= s; k++) rect(g, x0 + k, side < 0 ? cy - 1 - k : cy + k, 1, 1, p.outer);
+    }
+    rect(g, 0, cy - 1, Math.ceil(len * 0.6), 2, p.mid);
+    rect(g, 0, cy - 1, Math.max(2, Math.floor(len * 0.3)), 2, p.core);
+  },
+
   /** Foro di proiettile (decal). Ogni frame è una variante diversa. */
   hole(g, w, h, p, frame) {
     const r = rng(frame * 7 + 3);

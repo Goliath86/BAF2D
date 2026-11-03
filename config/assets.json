@@ -138,6 +138,27 @@
       "origin": [2, 1],
       "placeholder": { "shape": "casing", "color": "#a8322a", "light": "#c8483c", "base": 1, "baseColor": "#d9b04a" }
     },
+    "muzzle_rifle": {
+      "src": null,
+      "frameWidth": 8,
+      "frameHeight": 6,
+      "origin": [0, 3],
+      "placeholder": { "shape": "muzzle_flash", "frames": 3, "outer": "#ff8a1f", "mid": "#ffd36b", "core": "#fff8dc" }
+    },
+    "muzzle_pistol": {
+      "src": null,
+      "frameWidth": 6,
+      "frameHeight": 4,
+      "origin": [0, 2],
+      "placeholder": { "shape": "muzzle_flash", "frames": 3, "outer": "#ff8a1f", "mid": "#ffd36b", "core": "#fff8dc" }
+    },
+    "muzzle_shotgun": {
+      "src": null,
+      "frameWidth": 11,
+      "frameHeight": 8,
+      "origin": [0, 4],
+      "placeholder": { "shape": "muzzle_flash", "frames": 3, "outer": "#ff7a1a", "mid": "#ffc94d", "core": "#fff8dc" }
+    },
     "mag_rifle": {
       "src": null,
       "frameWidth": 5,

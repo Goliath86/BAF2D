@@ -3,6 +3,73 @@
   "maxParticles": 600,
   "maxCasings": 150,
 
+  "muzzles": {
+    "rifle": {
+      "sprite": "muzzle_rifle",
+      "life": [0.04, 0.06],
+      "glow": { "color": "#ffb627", "alpha": 0.3, "radius": 9, "offset": 3 },
+      "emitters": [
+        {
+          "count": [2, 3],
+          "colors": ["#a0a0a0", "#8a8a8a", "#b4b4b4"],
+          "speed": [12, 30],
+          "life": [0.4, 0.8],
+          "size": [1, 4],
+          "drag": 4,
+          "rise": [4, 9],
+          "spreadDeg": 40,
+          "alpha": 0.35
+        }
+      ]
+    },
+    "pistol": {
+      "sprite": "muzzle_pistol",
+      "life": [0.035, 0.05],
+      "glow": { "color": "#ffb627", "alpha": 0.24, "radius": 7, "offset": 2 },
+      "emitters": [
+        {
+          "count": [1, 2],
+          "colors": ["#a0a0a0", "#8a8a8a", "#b4b4b4"],
+          "speed": [8, 22],
+          "life": [0.35, 0.7],
+          "size": [1, 3],
+          "drag": 4,
+          "rise": [4, 8],
+          "spreadDeg": 45,
+          "alpha": 0.3
+        }
+      ]
+    },
+    "shotgun": {
+      "sprite": "muzzle_shotgun",
+      "life": [0.06, 0.08],
+      "glow": { "color": "#ff9a2a", "alpha": 0.36, "radius": 13, "offset": 4 },
+      "emitters": [
+        {
+          "count": [5, 7],
+          "colors": ["#a0a0a0", "#8a8a8a", "#b4b4b4", "#c4c4c4"],
+          "speed": [15, 45],
+          "life": [0.6, 1.2],
+          "size": [1, 6],
+          "drag": 3.5,
+          "rise": [5, 10],
+          "spreadDeg": 50,
+          "alpha": 0.4
+        },
+        {
+          "count": [2, 4],
+          "colors": ["#fff4c2", "#ffd36b", "#ffb627"],
+          "speed": [60, 120],
+          "life": [0.05, 0.12],
+          "size": [1, 1],
+          "drag": 6,
+          "spreadDeg": 30,
+          "fade": false
+        }
+      ]
+    }
+  },
+
   "casings": {
     "rifle": {
       "sprite": "casing_rifle",

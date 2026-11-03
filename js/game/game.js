@@ -196,6 +196,9 @@ export class Game {
   fire(player) {
     const w = player.weapon;
     if (w.sound) this.audio.play(w.sound);
+    // vampata e fumo alla volata (non se la canna è dentro un muro)
+    const m = player.muzzle;
+    if (w.muzzleFlash && !this.map.isSolidAt(m.x, m.y)) this.effects.muzzle(w.muzzleFlash, m.x, m.y, player.angle);
     const n = Math.max(1, Math.round(w.pellets || 1));
     for (let i = 0; i < n; i++) this._spawnBullet(player, w);
   }
@@ -337,6 +340,7 @@ export class Game {
     this.player.draw(ctx);
     this.effects.drawCasings(ctx, true); // bossoli in volo
     for (const b of this.bullets) drawSprite(ctx, b.sprite, 0, b.x, b.y, b.angle);
+    this.effects.drawFlashes(ctx);
     this.effects.drawParticles(ctx);
 
     ctx.restore();
@@ -372,7 +376,7 @@ export class Game {
       `weapon ${player.weapon.id} (F4: next) dmg ${player.weapon.damage}`,
       `ammo ${player.ammo}/${player.weapon.magazine}${player.reloading ? ` reloading ${Math.round(player.reloadProgress * 100)}%` : ''}`,
       `health ${player.health}/${player.maxHealth} (F5: hurt, F6: heal)`,
-      `bullets ${this.bullets.length} decals ${effects.decals.length} particles ${effects.particles.length} casings ${effects.casings.length}`,
+      `bullets ${this.bullets.length} decals ${effects.decals.length} particles ${effects.particles.length} casings ${effects.casings.length} flashes ${effects.flashes.length}`,
     ];
     const top = Math.round(this.hud.topHeight(display)); // sotto l'HUD
     ui.save();

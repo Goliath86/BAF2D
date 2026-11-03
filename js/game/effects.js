@@ -1,5 +1,5 @@
 // Effetti visivi: decal (buchi su terreno/muri che svaniscono), particelle (fumo, scintille, schegge)
-// e bossoli espulsi dalle armi.
+// bossoli espulsi dalle armi e vampate di volata (muzzle flash) con fumo.
 // Tutto definito in config/effects.json: ogni "impact" ha un decal, emettitori di particelle e un suono;
 // ogni tipo in "casings" descrive sprite, espulsione, rimbalzi e suono di un bossolo.
 
@@ -27,9 +27,39 @@ export class Effects {
     this.maxParticles = cfg.maxParticles ?? 600;
     this.casingTypes = cfg.casings || {};
     this.maxCasings = cfg.maxCasings ?? 150;
+    this.muzzleTypes = cfg.muzzles || {};
     this.decals = [];
     this.particles = [];
     this.casings = [];
+    this.flashes = [];
+  }
+
+  /**
+   * Effetto di volata di tipo "type" (chiave di muzzles) nel punto (x, y), sparando verso "angle":
+   * vampata (sprite ruotato, dura pochi centesimi di secondo) con alone di luce ed emettitori
+   * di particelle (fumo, scintille) diretti lungo la canna.
+   */
+  muzzle(type, x, y, angle) {
+    const d = this.muzzleTypes[type];
+    if (!d) {
+      console.warn(`Muzzle type not defined in effects.json: "${type}"`);
+      return;
+    }
+    if (d.sprite) {
+      const sprite = this.assets.sprite(d.sprite);
+      this.flashes.push({
+        sprite,
+        frame: Math.floor(Math.random() * sprite.frameCount),
+        x,
+        y,
+        angle,
+        life: range(d.life, 0.05),
+        glow: d.glow || null,
+      });
+    }
+    const nx = Math.cos(angle);
+    const ny = Math.sin(angle);
+    for (const em of d.emitters || []) this.emit(em, x, y, nx, ny);
   }
 
   /**
@@ -131,11 +161,16 @@ export class Effects {
     this.decals.length = 0;
     this.particles.length = 0;
     this.casings.length = 0;
+    this.flashes.length = 0;
   }
 
   /** map: TileMap per far rimbalzare i bossoli sui tile solidi (opzionale). */
   update(dt, map) {
     this._updateCasings(dt, map);
+    for (let i = this.flashes.length - 1; i >= 0; i--) {
+      this.flashes[i].life -= dt;
+      if (this.flashes[i].life <= 0) this.flashes.splice(i, 1);
+    }
     for (let i = this.decals.length - 1; i >= 0; i--) {
       const d = this.decals[i];
       d.life -= dt;
@@ -222,6 +257,33 @@ export class Effects {
       drawSprite(ctx, c.sprite, c.frame, c.x, c.y - c.z, c.rot);
     }
     ctx.globalAlpha = 1;
+  }
+
+  /** Vampate di volata: prima l'alone di luce (additivo), poi lo sprite della fiamma. */
+  drawFlashes(ctx) {
+    for (const f of this.flashes) {
+      const g = f.glow;
+      if (g) {
+        // alone centrato poco davanti alla volata: "bands" dischi concentrici sovrapposti,
+        // più luminoso al centro e sfumato a gradini verso il bordo (stile pixel-art)
+        const ahead = g.offset ?? 2;
+        const gx = Math.round(f.x + Math.cos(f.angle) * ahead);
+        const gy = Math.round(f.y + Math.sin(f.angle) * ahead);
+        const bands = Math.max(1, g.bands ?? 3);
+        const radius = g.radius ?? 8;
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = (g.alpha ?? 0.25) / bands;
+        ctx.fillStyle = g.color || '#ffb627';
+        for (let b = 0; b < bands; b++) {
+          ctx.beginPath();
+          ctx.arc(gx, gy, Math.max(1, Math.round((radius * (bands - b)) / bands)), 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+      drawSprite(ctx, f.sprite, f.frame, f.x, f.y, f.angle);
+    }
   }
 
   drawDecals(ctx) {
