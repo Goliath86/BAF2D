@@ -23,7 +23,10 @@
     "muzzleOffset": 12,
     "casing": null,
     "casingPort": [4, 1],
-    "casingDelay": 0
+    "casingDelay": 0,
+    "reloadDrop": null,
+    "reloadDropAt": 0.3,
+    "reloadDropPort": [4, 2]
   },
 
   "weapons": {
@@ -45,7 +48,10 @@
       "maxRange": 400,
       "muzzleOffset": 11,
       "casing": "pistol",
-      "casingPort": [8, 1]
+      "casingPort": [8, 1],
+      "reloadDrop": "mag_pistol",
+      "reloadDropAt": 0.25,
+      "reloadDropPort": [6, 1]
     },
     "rifle": {
       "name": "weapons.rifle",
@@ -65,7 +71,10 @@
       "maxRange": 600,
       "muzzleOffset": 12,
       "casing": "rifle",
-      "casingPort": [3, 1]
+      "casingPort": [3, 1],
+      "reloadDrop": "mag_rifle",
+      "reloadDropAt": 0.3,
+      "reloadDropPort": [3, 2]
     },
     "shotgun": {
       "name": "weapons.shotgun",

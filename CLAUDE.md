@@ -124,6 +124,9 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
   Quota `z` simulata (gravità, rimbalzi, attrito, rimbalzo sui tile solidi), eredita parte della velocità del giocatore
   (`inherit`), suono al primo contatto col suolo, poi fermo e svanisce (`life`/`fade`). Disegno in due passate:
   a terra sotto il giocatore, in volo sopra (con ombra di 1 px). Sprite procedurali `casing` in `placeholders.js`.
+  Stesso sistema per il caricatore che cade in ricarica: `reloadDrop` (tipo in `casings`, es. `mag_rifle`),
+  `reloadDropAt` (frazione della ricarica; fucile 0.3 = quando sparisce dallo sprite), `reloadDropPort`.
+  `Player._eject(game, type, port)` è il punto unico di uscita degli oggetti dall'arma.
 - `input.endFrame()` va chiamato a fine di ogni tick di update (azzera i `wasPressed`).
 - Su touch in portrait il gioco è in pausa e compare l'overlay "ruota il dispositivo" (CSS + `Game.paused`).
 - Il click/tocco di avvio fa `stopPropagation` per non sparare subito; fullscreen + lock landscape solo su touch.
@@ -135,6 +138,6 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
 - Fatto: base rendering, movimento, collisioni, camera, controlli desktop/mobile, proiettili con gittata
   (mirino su desktop, bordo schermo su touch) e impatti (buchi con fade, fumo, scintille, schegge),
   placeholder grafici e sonori, localizzazione en/it, catalogo armi (pistola, fucile, pompa) con cambio arma,
-  caricatore e ricarica (R / pulsante touch), bossoli espulsi, danno per arma, vita del giocatore, HUD (vita, arma, munizioni), morte con schermata di game over e riavvio.
+  caricatore e ricarica (R / pulsante touch), bossoli espulsi e caricatori che cadono in ricarica, danno per arma, vita del giocatore, HUD (vita, arma, munizioni), morte con schermata di game over e riavvio.
 - Non ancora presenti: raccolta armi da terra, riserva di munizioni (ora infinita), nemici, menu, selettore lingua in-game, asset grafici reali.
 - Controlli touch (stick + pulsante ricarica) verificati dall'utente su un dispositivo reale (2026-11-02).

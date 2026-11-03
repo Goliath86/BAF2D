@@ -138,6 +138,20 @@
       "origin": [2, 1],
       "placeholder": { "shape": "casing", "color": "#a8322a", "light": "#c8483c", "base": 1, "baseColor": "#d9b04a" }
     },
+    "mag_rifle": {
+      "src": null,
+      "frameWidth": 5,
+      "frameHeight": 2,
+      "origin": [2.5, 1],
+      "placeholder": { "shape": "casing", "color": "#5a5a5a", "light": "#8a8a8a", "base": 1, "baseColor": "#262626" }
+    },
+    "mag_pistol": {
+      "src": null,
+      "frameWidth": 3,
+      "frameHeight": 1,
+      "origin": [1.5, 0.5],
+      "placeholder": { "shape": "casing", "color": "#6a6a6a", "base": 1, "baseColor": "#262626" }
+    },
     "hole_ground": {
       "src": null,
       "frameWidth": 7,
@@ -231,6 +245,11 @@
       "src": null,
       "volume": 0.08,
       "placeholder": { "wave": "triangle", "freqStart": 900, "freqEnd": 450, "duration": 0.04, "at": [0, 0.09] }
+    },
+    "mag_drop": {
+      "src": null,
+      "volume": 0.14,
+      "placeholder": { "wave": "triangle", "freqStart": 380, "freqEnd": 140, "duration": 0.05, "at": [0, 0.08] }
     },
     "hit_wall": {
       "src": null,

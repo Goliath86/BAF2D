@@ -112,15 +112,21 @@ export class Player {
   startReload(game) {
     const w = this.weapon;
     if (this.reload || this.ammo >= w.magazine) return false;
-    this.reload = { time: 0, duration: Math.max(0.01, w.reloadTime), sound: null };
+    this.reload = { time: 0, duration: Math.max(0.01, w.reloadTime), sound: null, dropped: false };
     this.shotQueued = false;
     if (w.reloadSound) this.reload.sound = game.audio.play(w.reloadSound);
     return true;
   }
 
-  _updateReload(dt) {
+  _updateReload(dt, game) {
     if (!this.reload) return;
     this.reload.time += dt;
+    // il caricatore vuoto cade a terra a una frazione della ricarica (reloadDropAt)
+    const w = this.weapon;
+    if (w.reloadDrop && !this.reload.dropped && this.reloadProgress >= (w.reloadDropAt ?? 0.3)) {
+      this.reload.dropped = true;
+      this._eject(game, w.reloadDrop, w.reloadDropPort);
+    }
     if (this.reload.time >= this.reload.duration) {
       this.ammo = this.weapon.magazine;
       this.reload = null;
@@ -133,7 +139,7 @@ export class Player {
     const w = this.weapon;
 
     // Ricarica: avanza il tempo, avvio manuale (R / pulsante touch)
-    this._updateReload(dt);
+    this._updateReload(dt, game);
     if (input.wasPressed('reload')) this.startReload(game);
 
     // Movimento (spazio schermo: su/giù/strafe sx/dx, indipendente dalla mira).
@@ -170,7 +176,7 @@ export class Player {
       this.casingTimer -= dt;
       if (this.casingTimer <= 0) {
         this.casingTimer = null;
-        this._ejectCasing(game);
+        this._eject(game, w.casing, w.casingPort);
       }
     }
     // Una pressione durante il cooldown resta "in coda" e parte appena l'arma è pronta.
@@ -195,7 +201,7 @@ export class Player {
         // bossolo: subito, o dopo casingDelay (es. azione della pompa)
         if (w.casing) {
           if (w.casingDelay > 0) this.casingTimer = w.casingDelay;
-          else this._ejectCasing(game);
+          else this._eject(game, w.casing, w.casingPort);
         }
       }
     }
@@ -245,13 +251,13 @@ export class Player {
   }
 
   /**
-   * Espelle il bossolo dell'arma dalla finestra di espulsione "casingPort" = [avanti, lato]
-   * in pixel nel sistema dello sprite (lato positivo = destra del soldato, che guarda a destra).
+   * Fa uscire dall'arma un oggetto di tipo "type" (casings in effects.json: bossolo, caricatore...)
+   * dal punto "port" = [avanti, lato] in pixel nel sistema dello sprite
+   * (lato positivo = destra del soldato, che guarda a destra).
    */
-  _ejectCasing(game) {
-    const w = this.weapon;
-    if (!w.casing) return;
-    const [f, s] = w.casingPort || [4, 1];
+  _eject(game, type, port) {
+    if (!type) return;
+    const [f, s] = port || [4, 1];
     const c = Math.cos(this.angle);
     const sn = Math.sin(this.angle);
     let x = this.x + c * f - sn * s;
@@ -261,7 +267,7 @@ export class Player {
       x = this.x;
       y = this.y;
     }
-    game.effects.casing(w.casing, x, y, this.angle, this.vx, this.vy);
+    game.effects.casing(type, x, y, this.angle, this.vx, this.vy);
   }
 
   get muzzle() {
