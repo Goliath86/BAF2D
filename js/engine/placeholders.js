@@ -394,6 +394,17 @@ const SPRITE_SHAPES = {
     rect(g, 2, 1, w - 3, h - 2, p.core);
   },
 
+  /**
+   * Bossolo visto dall'alto, orientato a destra: fondello ("base" px, baseColor) a sinistra,
+   * corpo (color) e riga di luce in alto (light, solo se alto almeno 2 px).
+   */
+  casing(g, w, h, p) {
+    const base = Math.min(w, p.base ?? 1);
+    rect(g, 0, 0, w, h, p.color || '#d9b04a');
+    if (p.light && h > 1) rect(g, base, 0, w - base, 1, p.light);
+    rect(g, 0, 0, base, h, p.baseColor || p.color || '#9c7424');
+  },
+
   /** Foro di proiettile (decal). Ogni frame è una variante diversa. */
   hole(g, w, h, p, frame) {
     const r = rng(frame * 7 + 3);

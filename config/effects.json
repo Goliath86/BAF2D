@@ -1,6 +1,70 @@
 {
   "maxDecals": 120,
   "maxParticles": 600,
+  "maxCasings": 150,
+
+  "casings": {
+    "rifle": {
+      "sprite": "casing_rifle",
+      "sound": "casing_brass",
+      "ejectDeg": [95, 115],
+      "spreadDeg": 20,
+      "speed": [45, 75],
+      "inherit": 0.6,
+      "height": 4,
+      "lift": [30, 55],
+      "gravity": 420,
+      "bounce": 0.35,
+      "minBounce": 15,
+      "friction": 0.55,
+      "groundDrag": 7,
+      "wallBounce": 0.4,
+      "spinDeg": [720, 1440],
+      "shadow": "#101216",
+      "life": 8,
+      "fade": 2
+    },
+    "pistol": {
+      "sprite": "casing_pistol",
+      "sound": "casing_brass",
+      "ejectDeg": [90, 110],
+      "spreadDeg": 20,
+      "speed": [35, 60],
+      "inherit": 0.6,
+      "height": 4,
+      "lift": [25, 45],
+      "gravity": 420,
+      "bounce": 0.35,
+      "minBounce": 15,
+      "friction": 0.55,
+      "groundDrag": 7,
+      "wallBounce": 0.4,
+      "spinDeg": [720, 1440],
+      "shadow": "#101216",
+      "life": 8,
+      "fade": 2
+    },
+    "shotgun": {
+      "sprite": "casing_shell",
+      "sound": "casing_shell",
+      "ejectDeg": [95, 110],
+      "spreadDeg": 15,
+      "speed": [25, 45],
+      "inherit": 0.6,
+      "height": 4,
+      "lift": [20, 35],
+      "gravity": 420,
+      "bounce": 0.25,
+      "minBounce": 15,
+      "friction": 0.5,
+      "groundDrag": 9,
+      "wallBounce": 0.3,
+      "spinDeg": [360, 900],
+      "shadow": "#101216",
+      "life": 10,
+      "fade": 2
+    }
+  },
 
   "impacts": {
     "ground": {

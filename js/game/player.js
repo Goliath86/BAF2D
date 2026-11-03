@@ -27,6 +27,9 @@ export class Player {
     this.triggerHeld = false; // per le armi semiautomatiche (un colpo per pressione)
     this.shotQueued = false;
     this.moving = false;
+    this.vx = 0; // velocità effettiva (px/s), ereditata in parte dai bossoli espulsi
+    this.vy = 0;
+    this.casingTimer = null; // secondi all'espulsione ritardata del bossolo (es. pompa)
 
     // Busto: lo sprite dipende dall'arma impugnata (vedi equip)
     this.weapon = null;
@@ -63,6 +66,7 @@ export class Player {
     this.sprite = this.assets.sprite(weapon.bodySprite || this.cfg.sprite);
     this.anim = new Animator(this.sprite, 'idle');
     this.cooldown = 0;
+    this.casingTimer = null;
     // triggerHeld resta quello reale: se si stava tenendo premuto, una semiautomatica
     // appena impugnata non spara finché non si rilascia
     this.shotQueued = false;
@@ -143,6 +147,8 @@ export class Player {
     }
     const mag = Math.min(1, Math.hypot(move.x, move.y));
     const p = map.moveAndCollide(this.x, this.y, this.hw, this.hh, move.x * this.speed * dt, move.y * this.speed * dt);
+    this.vx = (p.x - this.x) / dt;
+    this.vy = (p.y - this.y) / dt;
     this.x = p.x;
     this.y = p.y;
     this.moving = mag > 0.05;
@@ -160,6 +166,13 @@ export class Player {
     // Fuoco: automatico finché si tiene premuto, semiautomatico un colpo per pressione
     // (su touch le semiautomatiche possono ripetere tenendo lo stick, vedi input.touch.holdToRepeat)
     this.cooldown = Math.max(0, this.cooldown - dt);
+    if (this.casingTimer !== null) {
+      this.casingTimer -= dt;
+      if (this.casingTimer <= 0) {
+        this.casingTimer = null;
+        this._ejectCasing(game);
+      }
+    }
     // Una pressione durante il cooldown resta "in coda" e parte appena l'arma è pronta.
     // Durante la ricarica non si spara; a caricatore vuoto il grilletto fa "click"
     // (e, se l'arma ha autoReload, parte la ricarica).
@@ -179,6 +192,11 @@ export class Player {
         this.shotQueued = false;
         this.ammo--;
         game.fire(this);
+        // bossolo: subito, o dopo casingDelay (es. azione della pompa)
+        if (w.casing) {
+          if (w.casingDelay > 0) this.casingTimer = w.casingDelay;
+          else this._ejectCasing(game);
+        }
       }
     }
     this.triggerHeld = firing;
@@ -224,6 +242,26 @@ export class Player {
       this.legsAnim.play('idle');
       this.legsAnim.update(dt);
     }
+  }
+
+  /**
+   * Espelle il bossolo dell'arma dalla finestra di espulsione "casingPort" = [avanti, lato]
+   * in pixel nel sistema dello sprite (lato positivo = destra del soldato, che guarda a destra).
+   */
+  _ejectCasing(game) {
+    const w = this.weapon;
+    if (!w.casing) return;
+    const [f, s] = w.casingPort || [4, 1];
+    const c = Math.cos(this.angle);
+    const sn = Math.sin(this.angle);
+    let x = this.x + c * f - sn * s;
+    let y = this.y + sn * f + c * s;
+    // attaccato a un muro: il bossolo parte dal centro del giocatore invece che dentro il tile
+    if (game.map.isSolidAt(x, y)) {
+      x = this.x;
+      y = this.y;
+    }
+    game.effects.casing(w.casing, x, y, this.angle, this.vx, this.vy);
   }
 
   get muzzle() {

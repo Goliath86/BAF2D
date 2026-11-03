@@ -64,12 +64,13 @@ js/game/
   player.js           movimento, mira, fuoco (auto/semiauto), animazione, equip(id) dell'arma
   weapons.js          Weapons: catalogo da weapons.json (defaults + voce), get(id)/ids
   hud.js              Hud: vita (alto sx) + arma/munizioni/ricarica (alto dx) sul canvas ui
-  effects.js          Effects: decal con fade (buchi) e particelle (fumo/scintille/schegge), impact(type, ...)
+  effects.js          Effects: decal con fade (buchi), particelle (fumo/scintille/schegge), impact(type, ...),
+                      bossoli espulsi casing(type, ...)
 config/
   game.json           parametri generali (display, i18n, player + id arma iniziale, input, camera, audio, mobile)
   weapons.json        armi: "defaults" + "weapons" { id: { name, bodySprite, pickupSprite, auto, pellets, ... } }
   assets.json         sprites (anche "extends") / tilesets (con "impact" per tile) / sounds
-  effects.json        tipi di impatto: decal + emitters + sound
+  effects.json        tipi di impatto (decal + emitters + sound) e tipi di bossolo ("casings")
   levels/*.json       livelli
   lang/*.json         testi
 tools/serve.mjs       server statico (solo moduli Node built-in)
@@ -118,6 +119,11 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
   touch o senza mouse = fino al bordo schermo di quel momento (`screenMargin`). Fine corsa = impatto del tile a terra;
   tile solido prima = impatto muro (buco spostato di `WALL_DECAL_INSET` px dentro la faccia colpita, particelle lungo la normale).
   I proiettili avanzano a sotto-passi da 2px per non attraversare i muri.
+- Bossoli: arma con `casing` (tipo in `effects.json` -> `casings`), `casingPort` = [avanti, lato] in px dello sprite
+  (lato + = destra del soldato), `casingDelay` (pompa: espulsione dopo lo sparo, annullata da `equip`).
+  Quota `z` simulata (gravità, rimbalzi, attrito, rimbalzo sui tile solidi), eredita parte della velocità del giocatore
+  (`inherit`), suono al primo contatto col suolo, poi fermo e svanisce (`life`/`fade`). Disegno in due passate:
+  a terra sotto il giocatore, in volo sopra (con ombra di 1 px). Sprite procedurali `casing` in `placeholders.js`.
 - `input.endFrame()` va chiamato a fine di ogni tick di update (azzera i `wasPressed`).
 - Su touch in portrait il gioco è in pausa e compare l'overlay "ruota il dispositivo" (CSS + `Game.paused`).
 - Il click/tocco di avvio fa `stopPropagation` per non sparare subito; fullscreen + lock landscape solo su touch.
@@ -129,6 +135,6 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
 - Fatto: base rendering, movimento, collisioni, camera, controlli desktop/mobile, proiettili con gittata
   (mirino su desktop, bordo schermo su touch) e impatti (buchi con fade, fumo, scintille, schegge),
   placeholder grafici e sonori, localizzazione en/it, catalogo armi (pistola, fucile, pompa) con cambio arma,
-  caricatore e ricarica (R / pulsante touch), danno per arma, vita del giocatore, HUD (vita, arma, munizioni), morte con schermata di game over e riavvio.
+  caricatore e ricarica (R / pulsante touch), bossoli espulsi, danno per arma, vita del giocatore, HUD (vita, arma, munizioni), morte con schermata di game over e riavvio.
 - Non ancora presenti: raccolta armi da terra, riserva di munizioni (ora infinita), nemici, menu, selettore lingua in-game, asset grafici reali.
 - Controlli touch (stick + pulsante ricarica) verificati dall'utente su un dispositivo reale (2026-11-02).

@@ -20,7 +20,10 @@
     "minRange": 4,
     "maxRange": 600,
     "screenMargin": 3,
-    "muzzleOffset": 12
+    "muzzleOffset": 12,
+    "casing": null,
+    "casingPort": [4, 1],
+    "casingDelay": 0
   },
 
   "weapons": {
@@ -40,7 +43,9 @@
       "spreadDeg": 2,
       "rangeJitter": 0.05,
       "maxRange": 400,
-      "muzzleOffset": 11
+      "muzzleOffset": 11,
+      "casing": "pistol",
+      "casingPort": [8, 1]
     },
     "rifle": {
       "name": "weapons.rifle",
@@ -58,7 +63,9 @@
       "spreadDeg": 3,
       "rangeJitter": 0.06,
       "maxRange": 600,
-      "muzzleOffset": 12
+      "muzzleOffset": 12,
+      "casing": "rifle",
+      "casingPort": [3, 1]
     },
     "shotgun": {
       "name": "weapons.shotgun",
@@ -77,7 +84,10 @@
       "spreadDeg": 16,
       "rangeJitter": 0.25,
       "maxRange": 170,
-      "muzzleOffset": 12
+      "muzzleOffset": 12,
+      "casing": "shotgun",
+      "casingPort": [3, 1],
+      "casingDelay": 0.3
     }
   }
 }

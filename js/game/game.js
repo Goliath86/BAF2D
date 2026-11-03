@@ -123,7 +123,7 @@ export class Game {
     if (this.over) this._updateGameOver(dt);
     this.hud.update(dt, this.player);
     this._updateBullets(dt);
-    this.effects.update(dt);
+    this.effects.update(dt, this.map);
 
     this.camera.follow(this.player.x, this.player.y, this.player.angle, display.width, display.height, this.map, dt);
     input.endFrame();
@@ -332,8 +332,10 @@ export class Game {
 
     this.map.draw(ctx, cx, cy, W, H);
     this.effects.drawDecals(ctx);
+    this.effects.drawCasings(ctx, false); // bossoli a terra
     this._drawDeathProps(ctx);
     this.player.draw(ctx);
+    this.effects.drawCasings(ctx, true); // bossoli in volo
     for (const b of this.bullets) drawSprite(ctx, b.sprite, 0, b.x, b.y, b.angle);
     this.effects.drawParticles(ctx);
 
@@ -370,7 +372,7 @@ export class Game {
       `weapon ${player.weapon.id} (F4: next) dmg ${player.weapon.damage}`,
       `ammo ${player.ammo}/${player.weapon.magazine}${player.reloading ? ` reloading ${Math.round(player.reloadProgress * 100)}%` : ''}`,
       `health ${player.health}/${player.maxHealth} (F5: hurt, F6: heal)`,
-      `bullets ${this.bullets.length} decals ${effects.decals.length} particles ${effects.particles.length}`,
+      `bullets ${this.bullets.length} decals ${effects.decals.length} particles ${effects.particles.length} casings ${effects.casings.length}`,
     ];
     const top = Math.round(this.hud.topHeight(display)); // sotto l'HUD
     ui.save();

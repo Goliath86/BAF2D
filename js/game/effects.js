@@ -1,5 +1,7 @@
-// Effetti visivi: decal (buchi su terreno/muri che svaniscono) e particelle (fumo, scintille, schegge).
-// Tutto definito in config/effects.json: ogni "impact" ha un decal, emettitori di particelle e un suono.
+// Effetti visivi: decal (buchi su terreno/muri che svaniscono), particelle (fumo, scintille, schegge)
+// e bossoli espulsi dalle armi.
+// Tutto definito in config/effects.json: ogni "impact" ha un decal, emettitori di particelle e un suono;
+// ogni tipo in "casings" descrive sprite, espulsione, rimbalzi e suono di un bossolo.
 
 import { drawSprite } from '../engine/assets.js';
 
@@ -23,8 +25,45 @@ export class Effects {
     this.impacts = cfg.impacts || {};
     this.maxDecals = cfg.maxDecals ?? 120;
     this.maxParticles = cfg.maxParticles ?? 600;
+    this.casingTypes = cfg.casings || {};
+    this.maxCasings = cfg.maxCasings ?? 150;
     this.decals = [];
     this.particles = [];
+    this.casings = [];
+  }
+
+  /**
+   * Espelle un bossolo di tipo "type" (chiave di casings) dal punto (x, y).
+   * angle = direzione della mira; (vx, vy) = velocità del tiratore (in parte ereditata).
+   * Il bossolo ha una quota z simulata: vola, rimbalza a terra e sui muri, poi resta fermo e svanisce.
+   */
+  casing(type, x, y, angle, vx = 0, vy = 0) {
+    const d = this.casingTypes[type];
+    if (!d) {
+      console.warn(`Casing type not defined in effects.json: "${type}"`);
+      return;
+    }
+    const a = angle + (range(d.ejectDeg, 100) + (Math.random() - 0.5) * (d.spreadDeg ?? 30)) * DEG;
+    const sp = range(d.speed, 50);
+    const inherit = d.inherit ?? 0.5;
+    const sprite = this.assets.sprite(d.sprite);
+    this.casings.push({
+      def: d,
+      sprite,
+      frame: Math.floor(Math.random() * sprite.frameCount),
+      x,
+      y,
+      z: d.height ?? 4,
+      vx: Math.cos(a) * sp + vx * inherit,
+      vy: Math.sin(a) * sp + vy * inherit,
+      vz: range(d.lift, 40),
+      rot: angle,
+      spin: range(d.spinDeg, 900) * DEG * (Math.random() < 0.5 ? -1 : 1),
+      landed: false,
+      resting: false,
+      life: d.life ?? 6,
+    });
+    if (this.casings.length > this.maxCasings) this.casings.shift();
   }
 
   /**
@@ -87,13 +126,16 @@ export class Effects {
     }
   }
 
-  /** Rimuove tutti i decal e le particelle (es. nuova partita). */
+  /** Rimuove tutti i decal, le particelle e i bossoli (es. nuova partita). */
   clear() {
     this.decals.length = 0;
     this.particles.length = 0;
+    this.casings.length = 0;
   }
 
-  update(dt) {
+  /** map: TileMap per far rimbalzare i bossoli sui tile solidi (opzionale). */
+  update(dt, map) {
+    this._updateCasings(dt, map);
     for (let i = this.decals.length - 1; i >= 0; i--) {
       const d = this.decals[i];
       d.life -= dt;
@@ -109,6 +151,77 @@ export class Effects {
       p.life -= dt;
       if (p.life <= 0) this.particles.splice(i, 1);
     }
+  }
+
+  _updateCasings(dt, map) {
+    for (let i = this.casings.length - 1; i >= 0; i--) {
+      const c = this.casings[i];
+      const d = c.def;
+      c.life -= dt;
+      if (c.life <= 0) {
+        this.casings.splice(i, 1);
+        continue;
+      }
+      if (c.resting) continue;
+
+      if (c.z > 0 || c.vz > 0) {
+        // in aria: gravità sulla quota; toccando terra rimbalza perdendo velocità
+        c.vz -= (d.gravity ?? 400) * dt;
+        c.z += c.vz * dt;
+        if (c.z <= 0) {
+          c.z = 0;
+          if (!c.landed) {
+            c.landed = true;
+            if (d.sound) this.audio.play(d.sound);
+          }
+          const f = d.friction ?? 0.6;
+          c.vx *= f;
+          c.vy *= f;
+          c.spin *= f;
+          const up = -c.vz * (d.bounce ?? 0.35);
+          c.vz = up > (d.minBounce ?? 15) ? up : 0;
+        }
+      } else {
+        // a terra: scivola e rallenta fino a fermarsi
+        const k = Math.exp(-(d.groundDrag ?? 8) * dt);
+        c.vx *= k;
+        c.vy *= k;
+        c.spin *= k;
+        if (Math.hypot(c.vx, c.vy) < 2 && Math.abs(c.spin) < 1) c.resting = true;
+      }
+
+      // spostamento asse per asse con rimbalzo sui tile solidi
+      const wb = d.wallBounce ?? 0.4;
+      const nx = c.x + c.vx * dt;
+      if (map?.isSolidAt(nx, c.y)) {
+        c.vx = -c.vx * wb;
+        c.spin = -c.spin;
+      } else c.x = nx;
+      const ny = c.y + c.vy * dt;
+      if (map?.isSolidAt(c.x, ny)) {
+        c.vy = -c.vy * wb;
+        c.spin = -c.spin;
+      } else c.y = ny;
+      c.rot += c.spin * dt;
+    }
+  }
+
+  /**
+   * Bossoli: airborne = false -> quelli a terra (sotto i personaggi),
+   * true -> quelli in volo (sopra), con un'ombra di 1 pixel sul terreno.
+   */
+  drawCasings(ctx, airborne) {
+    for (const c of this.casings) {
+      if ((c.z > 0) !== airborne) continue;
+      const d = c.def;
+      ctx.globalAlpha = Math.min(1, c.life / (d.fade ?? 1.5));
+      if (airborne && d.shadow) {
+        ctx.fillStyle = d.shadow;
+        ctx.fillRect(Math.round(c.x), Math.round(c.y), 1, 1);
+      }
+      drawSprite(ctx, c.sprite, c.frame, c.x, c.y - c.z, c.rot);
+    }
+    ctx.globalAlpha = 1;
   }
 
   drawDecals(ctx) {
