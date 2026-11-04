@@ -12,6 +12,20 @@ export class AudioManager {
       this.master = this.ctx.createGain();
       this.master.gain.value = cfg.masterVolume ?? 0.6;
       this.master.connect(this.ctx.destination);
+      this._autoUnlock();
+    }
+  }
+
+  /**
+   * I browser attivano l'audio solo dentro un gesto "valido": click, pointerup, touchend, keydown.
+   * Un pointerdown da touch NON lo è (per questo su mobile il tocco di avvio non bastava).
+   * Si riprova a ogni gesto: copre anche iOS, che sospende il contesto ("interrupted")
+   * dopo una chiamata o tornando dal background.
+   */
+  _autoUnlock() {
+    const handler = () => this.unlock();
+    for (const ev of ['pointerup', 'touchend', 'click', 'keydown']) {
+      window.addEventListener(ev, handler, { capture: true, passive: true });
     }
   }
 
@@ -32,7 +46,14 @@ export class AudioManager {
 
   /** I browser richiedono un gesto utente prima di riprodurre audio. */
   unlock() {
-    if (this.ctx && this.ctx.state !== 'running') this.ctx.resume();
+    const ctx = this.ctx;
+    if (!ctx || ctx.state === 'running') return;
+    ctx.resume().catch(() => {});
+    // buffer muto di 1 campione: su iOS "sblocca" davvero l'uscita audio dentro il gesto
+    const src = ctx.createBufferSource();
+    src.buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+    src.connect(ctx.destination);
+    src.start(0);
   }
 
   /** Riproduce un suono; restituisce { stop() } per interromperlo (es. ricarica annullata). */
