@@ -201,7 +201,7 @@ export class TouchSticks {
     const accent = st.alert ? 'rgba(255,90,70,0.95)' : b.color || 'rgba(255,255,255,0.7)';
 
     ctx.save();
-    ctx.globalAlpha = this.cfg.opacity * (down ? 1 : 0.8);
+    ctx.globalAlpha = this.cfg.opacity * (down ? 1 : 0.8) * (st.disabled ? 0.4 : 1);
 
     ctx.beginPath();
     ctx.arc(x, y, r, 0, TAU);
@@ -247,6 +247,46 @@ export class TouchSticks {
       const t = Math.max(2, r * 0.1);
       ctx.fillRect(x - s * 0.45, y - s * 0.1 - t / 2, s * 0.9, t);
       if (b.icon === 'heal') ctx.fillRect(x - t / 2, y - s * 0.55, t, s * 0.9);
+    }
+
+    if (b.icon === 'grenade') {
+      // granata: corpo ovale, spoletta in alto e leva sul lato
+      const s = r * 0.32;
+      ctx.beginPath();
+      ctx.ellipse(x, y + s * 0.35, s, s * 1.2, 0, 0, TAU);
+      ctx.fillStyle = accent;
+      ctx.fill();
+      ctx.fillRect(x - s * 0.45, y - s * 1.35, s * 0.9, s * 0.6);
+      ctx.beginPath();
+      ctx.moveTo(x + s * 0.4, y - s * 1.2);
+      ctx.lineTo(x + s * 1.1, y - s * 0.5);
+      ctx.lineTo(x + s * 1.1, y + s * 0.4);
+      ctx.lineWidth = Math.max(2, r * 0.08);
+      ctx.strokeStyle = accent;
+      ctx.stroke();
+      ctx.beginPath(); // anello della sicura
+      ctx.arc(x - s * 0.9, y - s * 1.2, s * 0.35, 0, TAU);
+      ctx.lineWidth = Math.max(1.5, r * 0.05);
+      ctx.stroke();
+    }
+
+    if (st.badge) {
+      // numero piccolo in basso a destra (es. granate rimaste)
+      const bx = x + r * 0.62;
+      const by = y + r * 0.62;
+      const br = r * 0.36;
+      ctx.beginPath();
+      ctx.arc(bx, by, br, 0, TAU);
+      ctx.fillStyle = 'rgba(0,0,0,0.7)';
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = accent;
+      ctx.stroke();
+      ctx.font = `bold ${Math.round(br * 1.25)}px monospace`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = accent;
+      ctx.fillText(st.badge, bx, by + 1);
     }
 
     if (st.label) {

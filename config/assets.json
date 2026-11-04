@@ -173,6 +173,57 @@
       "origin": [1.5, 0.5],
       "placeholder": { "shape": "casing", "color": "#6a6a6a", "base": 1, "baseColor": "#262626" }
     },
+    "grenade": {
+      "src": null,
+      "frameWidth": 8,
+      "frameHeight": 8,
+      "origin": [4, 4],
+      "placeholder": {
+        "shape": "grenade",
+        "autoOutline": "#0d0f08",
+        "body": "#4f5e33",
+        "dark": "#3a4626",
+        "light": "#7a8a52",
+        "metal": "#8a8a8a",
+        "metalLight": "#c8c8c8"
+      }
+    },
+    "scorch": {
+      "src": null,
+      "frameWidth": 36,
+      "frameHeight": 36,
+      "origin": [18, 18],
+      "placeholder": { "shape": "scorch", "frames": 3, "dark": "#060606", "mid": "#121110", "edge": "#1e1c1a", "ash": "#34302c" }
+    },
+    "explosion": {
+      "src": null,
+      "frameWidth": 40,
+      "frameHeight": 40,
+      "origin": [20, 20],
+      "placeholder": {
+        "shape": "explosion",
+        "frames": 9,
+        "core": "#fffbe6",
+        "mid": "#ffd36b",
+        "outer": "#ff7a1a",
+        "smoke": "#6a625a",
+        "smokeDark": "#3e3a36"
+      }
+    },
+    "debris_stone": {
+      "src": null,
+      "frameWidth": 3,
+      "frameHeight": 3,
+      "origin": [1, 1],
+      "placeholder": { "shape": "debris", "frames": 4, "colors": ["#5a6070", "#3a3f4c", "#4a505e"] }
+    },
+    "debris_metal": {
+      "src": null,
+      "frameWidth": 3,
+      "frameHeight": 3,
+      "origin": [1, 1],
+      "placeholder": { "shape": "debris", "frames": 4, "colors": ["#3a4626", "#262626", "#4f5e33"] }
+    },
     "hole_ground": {
       "src": null,
       "frameWidth": 7,
@@ -271,6 +322,25 @@
       "src": null,
       "volume": 0.14,
       "placeholder": { "wave": "triangle", "freqStart": 380, "freqEnd": 140, "duration": 0.05, "at": [0, 0.08] }
+    },
+    "grenade_throw": {
+      "src": null,
+      "volume": 0.08,
+      "placeholder": { "wave": "noise", "duration": 0.12 }
+    },
+    "grenade_bounce": {
+      "src": null,
+      "volume": 0.12,
+      "placeholder": { "wave": "triangle", "freqStart": 1200, "freqEnd": 600, "duration": 0.04 }
+    },
+    "explosion": {
+      "src": null,
+      "volume": 0.55,
+      "placeholder": [
+        { "wave": "noise", "duration": 0.9 },
+        { "wave": "sine", "freqStart": 120, "freqEnd": 30, "duration": 0.7, "volume": 1.4 },
+        { "wave": "square", "freqStart": 70, "freqEnd": 25, "duration": 0.35, "volume": 0.4 }
+      ]
     },
     "hit_wall": {
       "src": null,

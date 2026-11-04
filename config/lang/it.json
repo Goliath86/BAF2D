@@ -4,8 +4,8 @@
   },
   "loading": "Caricamento...",
   "start": {
-    "hintDesktop": "WASD / frecce: muovi · Mouse: mira · Click / Spazio: spara · R: ricarica · F3: debug",
-    "hintTouch": "Stick SX: muovi · Stick DX: mira · Pulsante tondo: ricarica\n(spingi lo stick DX oltre il cerchio tratteggiato per sparare)",
+    "hintDesktop": "WASD / frecce: muovi · Mouse: mira · Click / Spazio: spara · R: ricarica · G: granata · F3: debug",
+    "hintTouch": "Stick SX: muovi · Stick DX: mira · Pulsanti tondi: ricarica, granata\n(spingi lo stick DX oltre il cerchio tratteggiato per sparare)",
     "tapToStart": "Clicca / tocca per iniziare"
   },
   "rotate": {
@@ -19,12 +19,14 @@
   },
   "hud": {
     "reloading": "RICARICA",
-    "empty": "SCARICO"
+    "empty": "SCARICO",
+    "grenades": "x{count}"
   },
   "weapons": {
     "pistol": "Pistola",
     "rifle": "Fucile d'assalto",
-    "shotgun": "Fucile a pompa"
+    "shotgun": "Fucile a pompa",
+    "grenade": "Granata a frammentazione"
   },
   "errors": {
     "fetch": "Impossibile caricare \"{url}\". Il gioco va avviato tramite un server HTTP locale (es. \"node tools/serve.mjs\"), non aprendo index.html direttamente.",
@@ -34,6 +36,7 @@
     "unknownTileset": "Tileset non definito in assets.json: \"{name}\"",
     "unknownTile": "Tile \"{tile}\" non definito nel tileset \"{tileset}\"",
     "unknownWeapon": "Arma non definita in weapons.json: \"{name}\"",
+    "unknownGrenade": "Granata non definita in weapons.json: \"{name}\"",
     "spriteExtendsLoop": "\"extends\" circolare nello sprite \"{name}\" (assets.json)"
   }
 }

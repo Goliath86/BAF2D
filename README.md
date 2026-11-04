@@ -23,9 +23,10 @@ Apri `http://localhost:8080/`. Per provarlo su un telefono collegato alla stessa
 | Mouse: mira | Stick destro: mira |
 | Click sinistro / Spazio: spara | Stick destro spinto oltre il cerchio tratteggiato: spara |
 | R: ricarica | Pulsante tondo sopra lo stick destro: ricarica |
-| F3: overlay di debug · F4: arma successiva · F5/F6: togli/ridai vita (debug) | |
+| G: lancia una granata (verso il mirino) | Pulsante con la granata, a sinistra dello stick destro |
+| F3: overlay di debug · F4: arma successiva · F5/F6: togli/ridai vita · F7: +1 granata (debug) | |
 
-**HUD**: in alto a sinistra la vita (cuore, barra con scia del danno, valore; lampeggia quando è bassa),
+**HUD**: in alto a sinistra la vita (cuore, barra con scia del danno, valore; lampeggia quando è bassa) e le granate rimaste,
 in alto a destra l'arma in uso (nome tradotto, icona), i colpi (`12/30` e tacche), la barra di ricarica e gli avvisi
 "RICARICA" / "SCARICO".
 
@@ -42,15 +43,15 @@ dove non è supportato (es. iOS Safari) in portrait compare un overlay "ruota il
 index.html, css/style.css, manifest.webmanifest
 config/
   game.json            parametri generali (display, player, input, camera, audio)
-  weapons.json         armi (statistiche, sprite, suoni)
+  weapons.json         armi (statistiche, sprite, suoni) e granate
   assets.json          sprite, tileset e suoni
-  effects.json         impatti dei colpi (buchi, fumo, scintille, schegge)
+  effects.json         impatti dei colpi (buchi, fumo, scintille, schegge), bossoli, vampate, esplosioni
   levels/level01.json  livello di test
   lang/                testi localizzati (en.json = default, it.json)
 js/
   main.js              bootstrap
   engine/              display, input, touch (joystick), assets, placeholder, tilemap, camera, audio, loader, i18n
-  game/                game (loop, proiettili, render), player, weapons (catalogo armi), hud, effects (decal e particelle)
+  game/                game (loop, proiettili, render), player, weapons (catalogo armi), grenades, hud, effects (decal e particelle)
 tools/serve.mjs        server statico di sviluppo (solo moduli Node built-in)
 ```
 
@@ -105,7 +106,8 @@ cambiando solo `placeholder.weapon`.
 
 **Suoni**: `src` (wav/mp3/ogg) e `volume`; il placeholder è un suono sintetizzato
 (`wave`: `square`/`sine`/`triangle`/`sawtooth`/`noise`, `freqStart`, `freqEnd`, `duration`; `at` = lista di istanti
-in secondi in cui ripeterlo, es. i "clack" della ricarica).
+in secondi in cui ripeterlo, es. i "clack" della ricarica). `placeholder` può anche essere una **lista di strati**
+suonati insieme, ognuno con il proprio `volume` relativo (es. `explosion` = rumore + boom grave).
 
 Ogni tile può avere `"impact"`: il tipo di effetto (in `effects.json`) quando viene colpito da un proiettile
 (default `"wall"` per i tile solidi, `"ground"` per gli altri).
@@ -128,7 +130,16 @@ l'impatto del muro (es. `wall`, `wood`). Ogni impatto in `effects.json` definisc
 - `emitters`: lista di emettitori di particelle (fumo, scintille, schegge, polvere) con
   `count`, `colors`, `speed`, `life`, `size` ([iniziale, finale]), `drag`, `rise` (deriva verso l'alto, per il fumo),
   `spreadDeg` (cono attorno alla normale della superficie; sul terreno l'emissione è a 360°), `alpha`, `fade`.
-  I valori numerici accettano un numero o un intervallo `[min, max]`.
+  I valori numerici accettano un numero o un intervallo `[min, max]`. Opzioni extra: `round` (disco pixelato
+  invece del quadrato, per il fumo grosso), `streak` (scia lunga velocità × `streak` px, per le schegge),
+  `collide` (la particella sparisce entrando in un tile solido).
+
+Decal: `alpha` (opacità massima) e `clipSolid` (la parte che cade sui tile solidi viene cancellata).
+
+`explosions` (usate dalle granate) definisce per tipo: `decal` (bruciatura a terra, `clipSolid`),
+`fireball` (`sprite` animato i cui frame scorrono in `duration` secondi), `glow` (alone additivo:
+`color`, `alpha`, `radius`, `bands`, `life`), `emitters` (emessi a 360°), `debris` (lista di `{ type, count }`:
+tipi di `casings` lanciati in tutte le direzioni, che volano, rimbalzano e restano a terra) e `sound`.
 
 `maxDecals` e `maxParticles` limitano gli elementi contemporanei.
 
@@ -160,6 +171,29 @@ cambiare arma la interrompe.
 
 Da codice: `player.equip(id, ammo)` impugna un'arma (con `ammo` colpi, default caricatore pieno) e restituisce
 `{ id, ammo }` di quella lasciata (da console: `BAF2D.player.equip('shotgun')`).
+
+### Granate (`config/weapons.json` → `grenades`)
+
+`grenadeDefaults` contiene i valori comuni, ogni voce di `grenades` li sovrascrive. Si lanciano con **G** o con il
+pulsante touch; non durante la ricarica.
+
+| Campo | Significato |
+|---|---|
+| `sprite`, `shadow`, `blinkColor` | sprite (ruota in volo), ombra a terra in volo, spia che lampeggia (più veloce a fine spoletta) |
+| `fuse`, `throwCooldown` | secondi dalla partenza all'esplosione; attesa minima tra due lanci |
+| `minRange`, `maxRange`, `defaultRange` | desktop con mouse: il primo contatto col suolo è sotto il mirino (limitato a min/max); touch: `defaultRange` px |
+| `hand` | punto di lancio `[avanti, lato]` in px rispetto al giocatore |
+| `height`, `lift`, `gravity` | quota di partenza, spinta verso l'alto, gravità (px, px/s, px/s²) |
+| `inherit` | frazione della velocità del giocatore ereditata |
+| `bounce`, `minBounce`, `friction` | rimbalzo sul pavimento: frazione della velocità verticale, soglia sotto cui smette, velocità orizzontale conservata |
+| `groundDrag`, `wallBounce`, `radius` | attrito mentre rotola; rimbalzo sui tile solidi; raggio di collisione |
+| `throwSound`, `bounceSound`, `bounceSoundMin` | suoni di lancio e rimbalzo (solo per urti oltre la soglia in px/s) |
+| `explosion` | tipo in `effects.json` → `explosions` |
+| `damage`, `blastRadius`, `minDamageFactor`, `hurtsPlayer` | danno al centro, raggio, frazione del danno sul bordo; i muri riparano |
+| `shake` | scossa della camera `{ amount (px), time (s) }` |
+
+In `game.json`: `player.grenade` (tipo), `player.grenades` (scorta iniziale, default 2), `player.maxGrenades`.
+Da codice: `player.addGrenades(n)`.
 
 ### Livelli (`config/levels/*.json`)
 
@@ -231,5 +265,6 @@ lo stick sinistro due pulsanti a forma di cuore: "−" toglie vita (come F5), "+
   (`width`, `height`, `showValue`, colori, `lowThreshold` = frazione sotto cui lampeggia, `trailDelay`/`trailSpeed`
   = scia chiara della vita persa). `hud.weapon`: `iconScale` (icona = `pickupSprite` dell'arma), `ammoFontSize`,
   `pipsWidth`/`pipHeight` (tacche dei colpi; caricatori più grandi diventano una barra), colori.
+  `hud.grenades`: `show`, `icon` (sprite), `iconScale`, `emptyColor`.
 - `camera.smoothing`, `camera.lookAhead` (px di anticipo nella direzione di mira).
 - `mobile.requestFullscreen`, `mobile.lockLandscape`.

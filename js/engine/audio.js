@@ -54,9 +54,12 @@ export class AudioManager {
       src.start();
       sources = [src];
     } else if (def.placeholder) {
+      // "placeholder" può essere una lista di strati suonati insieme (es. esplosione = rumore + boom grave);
       // "at": istanti (s) di partenza delle ripetizioni del suono sintetizzato (default [0])
-      const at = def.placeholder.at || [0];
-      sources = at.map((delay) => this._synth(def.placeholder, vol, delay));
+      const layers = Array.isArray(def.placeholder) ? def.placeholder : [def.placeholder];
+      for (const p of layers) {
+        for (const delay of p.at || [0]) sources.push(this._synth(p, vol * (p.volume ?? 1), delay));
+      }
     }
     return {
       stop() {

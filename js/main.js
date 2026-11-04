@@ -6,6 +6,7 @@ import { AudioManager } from './engine/audio.js';
 import { Input } from './engine/input.js';
 import { Game } from './game/game.js';
 import { Weapons } from './game/weapons.js';
+import { GrenadeTypes } from './game/grenades.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -52,6 +53,7 @@ async function boot() {
       loadJSON(config.weapons),
     ]);
     const weapons = new Weapons(weaponsCfg);
+    const grenadeTypes = new GrenadeTypes(weaponsCfg);
 
     const display = new Display($('game'), $('ui'), config.display);
     const assets = new Assets();
@@ -63,7 +65,7 @@ async function boot() {
     // ?debug=1 nell'URL: mostra i pulsanti touch di debug (es. togli/ridai vita)
     const urlDebug = new URLSearchParams(location.search).get('debug') === '1';
     const input = new Input(display, config.input, { debug: urlDebug });
-    const game = new Game({ config, assets, audio, display, input, level, effectsCfg, weapons, i18n });
+    const game = new Game({ config, assets, audio, display, input, level, effectsCfg, weapons, grenadeTypes, i18n });
     game.start();
 
     hideMessage();

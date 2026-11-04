@@ -58,6 +58,12 @@
       "trailSpeed": 0.8,
       "icon": "#d23c3c"
     },
+    "grenades": {
+      "show": true,
+      "icon": "grenade",
+      "iconScale": 1,
+      "emptyColor": "#77706a"
+    },
     "weapon": {
       "iconScale": 2,
       "ammoFontSize": 10,
@@ -88,7 +94,10 @@
     "deathSound": "player_death",
     "hitbox": [10, 10],
     "faceMoveWhenIdle": true,
-    "weapon": "rifle"
+    "weapon": "rifle",
+    "grenade": "frag",
+    "grenades": 2,
+    "maxGrenades": 9
   },
 
   "input": {
@@ -99,11 +108,13 @@
       "right": ["KeyD", "ArrowRight"],
       "fire": ["Space"],
       "reload": ["KeyR"],
+      "grenade": ["KeyG"],
       "confirm": ["Enter", "NumpadEnter"],
       "debug": ["F3"],
       "debugNextWeapon": ["F4"],
       "debugHurt": ["F5"],
-      "debugHeal": ["F6"]
+      "debugHeal": ["F6"],
+      "debugGrenade": ["F7"]
     },
     "mouse": {
       "fireButton": 0
@@ -118,6 +129,7 @@
       "opacity": 0.7,
       "buttons": {
         "reload": { "anchor": "right", "offset": [0, -2.1], "radius": 0.07, "icon": "reload" },
+        "grenade": { "anchor": "right", "offset": [-1.9, -1.3], "radius": 0.065, "icon": "grenade" },
         "debugHurt": { "anchor": "left", "offset": [-0.6, -2.1], "radius": 0.055, "icon": "hurt", "color": "rgba(255,110,200,0.9)", "debugOnly": true },
         "debugHeal": { "anchor": "left", "offset": [0.6, -2.1], "radius": 0.055, "icon": "heal", "color": "rgba(120,255,160,0.9)", "debugOnly": true }
       }

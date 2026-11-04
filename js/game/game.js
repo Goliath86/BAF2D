@@ -4,13 +4,14 @@ import { TileMap } from '../engine/tilemap.js';
 import { Player } from './player.js';
 import { Effects } from './effects.js';
 import { Hud } from './hud.js';
+import { Grenades } from './grenades.js';
 
 const STEP = 1 / 60; // update a timestep fisso
 const BULLET_SUBSTEP = 2; // px: passo massimo del controllo collisioni dei proiettili
 const WALL_DECAL_INSET = 3; // px: distanza del buco dalla faccia del muro colpita
 
 export class Game {
-  constructor({ config, assets, audio, display, input, level, effectsCfg, weapons, i18n }) {
+  constructor({ config, assets, audio, display, input, level, effectsCfg, weapons, grenadeTypes, i18n }) {
     this.config = config;
     this.i18n = i18n; // per i testi di HUD/menu: this.i18n.t('chiave')
     this.assets = assets;
@@ -25,8 +26,11 @@ export class Game {
     this.map = new TileMap(level, assets.tileset(level.tileset));
     this.spawn = this.map.spawns.player || { x: this.map.pixelWidth / 2, y: this.map.pixelHeight / 2 };
     this.weapons = weapons;
+    this.grenadeTypes = grenadeTypes;
 
     this.bullets = [];
+    this.grenades = new Grenades(assets, audio);
+    this.shake = { time: 0, duration: 0, amount: 0 }; // scossa della camera (esplosioni)
     this.effects = new Effects(effectsCfg, assets, audio);
     this.crosshair = assets.sprites.get('crosshair') || null;
     this.camera = new Camera(config.camera);
@@ -43,9 +47,11 @@ export class Game {
   /** Stato di una nuova partita: giocatore allo spawn, niente proiettili/effetti. */
   _reset() {
     const { config, assets, weapons, display } = this;
-    this.player = new Player(config.player, this.spawn.x, this.spawn.y, assets, weapons);
+    this.player = new Player(config.player, this.spawn.x, this.spawn.y, assets, weapons, this.grenadeTypes);
     this.hud = new Hud(config.hud, this.i18n, assets);
     this.bullets.length = 0;
+    this.grenades.clear();
+    this.shake.time = 0;
     this.effects.clear();
     this.over = null; // { time, shown, pool, drop } dopo la morte del giocatore
     this.camera.snap(this.player.x, this.player.y, 0, display.width, display.height, this.map);
@@ -117,16 +123,75 @@ export class Game {
     if (input.wasPressed('debugNextWeapon')) this._cycleWeapon();
     if (input.wasPressed('debugHurt')) this.player.damage(this.config.debugDamage ?? 10);
     if (input.wasPressed('debugHeal')) this.player.heal(this.config.debugDamage ?? 10);
+    if (input.wasPressed('debugGrenade')) this.player.addGrenades(1);
 
     this.player.update(dt, this);
     if (this.player.dead && !this.over) this._startGameOver();
     if (this.over) this._updateGameOver(dt);
     this.hud.update(dt, this.player);
     this._updateBullets(dt);
+    this.grenades.update(dt, this.map, (g) => this.explode(g.def, g.x, g.y));
     this.effects.update(dt, this.map);
+    this.shake.time = Math.max(0, this.shake.time - dt);
 
     this.camera.follow(this.player.x, this.player.y, this.player.angle, display.width, display.height, this.map, dt);
     input.endFrame();
+  }
+
+  // ---------- Granate ----------
+
+  /**
+   * Lancia una granata di "player" verso la mira. Desktop con mouse: tocca terra la prima volta
+   * sotto il mirino (tra minRange e maxRange); touch o senza mouse: a defaultRange px.
+   */
+  throwGrenade(player) {
+    const def = player.grenadeType;
+    let dist = def.defaultRange ?? 90;
+    if (this.input.mode === 'desktop' && this.input.mouse.seen) {
+      const m = this.input.mouseGame;
+      dist = Math.hypot(m.x + Math.round(this.camera.x) - player.x, m.y + Math.round(this.camera.y) - player.y);
+    }
+    dist = Math.min(def.maxRange ?? 150, Math.max(def.minRange ?? 20, dist));
+
+    // punto di lancio: la mano ([avanti, lato]); se è dentro un muro, il centro del giocatore
+    const [f, s] = def.hand || [6, -3];
+    const c = Math.cos(player.angle);
+    const sn = Math.sin(player.angle);
+    let x = player.x + c * f - sn * s;
+    let y = player.y + sn * f + c * s;
+    if (this.map.isSolidAt(x, y)) {
+      x = player.x;
+      y = player.y;
+    }
+    this.grenades.spawn(def, x, y, player.angle, dist, player.vx, player.vy);
+  }
+
+  /** Esplosione della granata "def" in (x, y): effetti, scossa della camera, danni. */
+  explode(def, x, y) {
+    if (def.explosion) this.effects.explosion(def.explosion, x, y, this.map);
+    if (def.shake) {
+      this.shake.amount = def.shake.amount ?? 3;
+      this.shake.duration = def.shake.time ?? 0.4;
+      this.shake.time = this.shake.duration;
+    }
+    // danno al giocatore: decresce con la distanza fino a minDamageFactor sul bordo, i muri riparano
+    const p = this.player;
+    const radius = def.blastRadius ?? 40;
+    const d = Math.hypot(p.x - x, p.y - y);
+    if (def.hurtsPlayer !== false && d < radius && this._lineOfSight(x, y, p.x, p.y)) {
+      const k = 1 - (d / radius) * (1 - (def.minDamageFactor ?? 0.2));
+      p.damage(Math.round((def.damage ?? 80) * k));
+    }
+  }
+
+  /** true se il segmento (x0,y0)-(x1,y1) non attraversa tile solidi (passi da 2 px). */
+  _lineOfSight(x0, y0, x1, y1) {
+    const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 2);
+    for (let i = 1; i < n; i++) {
+      const t = i / n;
+      if (this.map.isSolidAt(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t)) return false;
+    }
+    return true;
   }
 
   // ---------- Morte e game over ----------
@@ -328,20 +393,32 @@ export class Game {
     ctx.fillStyle = this.background;
     ctx.fillRect(0, 0, W, H);
 
-    const cx = Math.round(this.camera.x);
-    const cy = Math.round(this.camera.y);
+    // scossa della camera: spostamento casuale di pixel interi, si attenua fino a zero
+    let sx = 0;
+    let sy = 0;
+    const sh = this.shake;
+    if (sh.time > 0 && this.running) {
+      const a = sh.amount * (sh.time / sh.duration);
+      sx = Math.round((Math.random() * 2 - 1) * a);
+      sy = Math.round((Math.random() * 2 - 1) * a);
+    }
+    const cx = Math.round(this.camera.x) + sx;
+    const cy = Math.round(this.camera.y) + sy;
     ctx.save();
     ctx.translate(-cx, -cy);
 
     this.map.draw(ctx, cx, cy, W, H);
     this.effects.drawDecals(ctx);
     this.effects.drawCasings(ctx, false); // bossoli a terra
+    this.grenades.draw(ctx, false); // granate a terra
     this._drawDeathProps(ctx);
     this.player.draw(ctx);
     this.effects.drawCasings(ctx, true); // bossoli in volo
+    this.grenades.draw(ctx, true); // granate in volo
     for (const b of this.bullets) drawSprite(ctx, b.sprite, 0, b.x, b.y, b.angle);
     this.effects.drawFlashes(ctx);
     this.effects.drawParticles(ctx);
+    this.effects.drawBlasts(ctx); // sopra il fumo, altrimenti ne coprirebbe il nucleo
 
     ctx.restore();
 
@@ -357,6 +434,7 @@ export class Game {
       const p = this.player;
       input.sticks.draw(ui, {
         reload: { label: String(p.ammo), progress: p.reloadProgress, alert: p.ammo === 0 && !p.reloading },
+        grenade: { badge: String(p.grenades), disabled: p.grenades <= 0 },
       });
     }
     if (this.running) this.hud.draw(ui, display, this.player);
@@ -376,6 +454,7 @@ export class Game {
       `weapon ${player.weapon.id} (F4: next) dmg ${player.weapon.damage}`,
       `ammo ${player.ammo}/${player.weapon.magazine}${player.reloading ? ` reloading ${Math.round(player.reloadProgress * 100)}%` : ''}`,
       `health ${player.health}/${player.maxHealth} (F5: hurt, F6: heal)`,
+      `grenades ${player.grenades} (G: throw, F7: +1) live ${this.grenades.list.length} blasts ${effects.blasts.length}`,
       `bullets ${this.bullets.length} decals ${effects.decals.length} particles ${effects.particles.length} casings ${effects.casings.length} flashes ${effects.flashes.length}`,
     ];
     const top = Math.round(this.hud.topHeight(display)); // sotto l'HUD

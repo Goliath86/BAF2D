@@ -102,5 +102,45 @@
       "casingPort": [3, 1],
       "casingDelay": 0.3
     }
+  },
+
+  "grenadeDefaults": {
+    "sprite": "grenade",
+    "fuse": 2.2,
+    "throwCooldown": 0.6,
+    "minRange": 20,
+    "maxRange": 150,
+    "defaultRange": 90,
+    "hand": [6, -3],
+    "height": 8,
+    "lift": 70,
+    "gravity": 300,
+    "inherit": 0.4,
+    "bounce": 0.35,
+    "minBounce": 20,
+    "friction": 0.5,
+    "groundDrag": 5,
+    "wallBounce": 0.6,
+    "radius": 2,
+    "spinDeg": [540, 900],
+    "shadow": "#101216",
+    "blinkColor": "#ff3a2a",
+    "throwSound": "grenade_throw",
+    "bounceSound": "grenade_bounce",
+    "bounceSoundMin": 25,
+    "explosion": null,
+    "damage": 80,
+    "blastRadius": 40,
+    "minDamageFactor": 0.2,
+    "hurtsPlayer": true,
+    "shake": null
+  },
+
+  "grenades": {
+    "frag": {
+      "name": "weapons.grenade",
+      "explosion": "frag",
+      "shake": { "amount": 3, "time": 0.4 }
+    }
   }
 }

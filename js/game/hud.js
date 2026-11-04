@@ -1,4 +1,4 @@
-// HUD di gioco: vita (in alto a sinistra), arma e munizioni (in alto a destra).
+// HUD di gioco: vita e granate (in alto a sinistra), arma e munizioni (in alto a destra).
 // Disegnato sul canvas "ui" ma allineato alla griglia dei pixel di gioco (unità u = px CSS
 // per pixel di gioco), così resta nitido e coerente con la pixel-art. Parametri in game.json -> "hud".
 
@@ -51,8 +51,31 @@ export class Hud {
     ui.save();
     ui.imageSmoothingEnabled = false;
     this._drawHealth(ui, u, player);
+    this._drawGrenades(ui, u, player);
     this._drawWeapon(ui, u, display.cssWidth, player);
     ui.restore();
+  }
+
+  /** Granate rimaste: icona + "x2" sotto la barra della vita (grigio a scorta finita). */
+  _drawGrenades(ui, u, player) {
+    const gc = this.cfg.grenades || {};
+    if (gc.show === false) return;
+    const m = this.cfg.margin ?? 5;
+    const size = this.cfg.fontSize ?? 7;
+    const y = m + (this.hc.height ?? 5) + 4;
+    const empty = player.grenades <= 0;
+    let x = m;
+    const icon = gc.icon && this.assets.sprites.get(gc.icon);
+    if (icon) {
+      const s = gc.iconScale ?? 1;
+      const iy = y + (size - icon.fh * s) / 2;
+      ui.save();
+      if (empty) ui.globalAlpha = 0.4;
+      ui.drawImage(icon.image, 0, 0, icon.fw, icon.fh, x * u, Math.round(iy) * u, icon.fw * s * u, icon.fh * s * u);
+      ui.restore();
+      x += icon.fw * s + 1;
+    }
+    this._text(ui, u, this.i18n.t('hud.grenades', { count: player.grenades }), x, y, size, empty ? gc.emptyColor || '#777' : this.cfg.text || '#fff');
   }
 
   // ---------- Disegno a "pixel di gioco" ----------

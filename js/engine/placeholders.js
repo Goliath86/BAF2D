@@ -425,6 +425,107 @@ const SPRITE_SHAPES = {
     rect(g, 0, cy - 1, Math.max(2, Math.floor(len * 0.3)), 2, p.core);
   },
 
+  /**
+   * Granata a frammentazione vista dall'alto, orientata a destra: corpo tondo (body/dark/light),
+   * spoletta a destra e leva lungo il lato (metal, metalLight). Lasciare 1 px di bordo per autoOutline.
+   */
+  grenade(g, w, h, p) {
+    const cy = Math.floor(h / 2);
+    disc(g, 3.5, cy + 0.5, 2.5, p.body);
+    rect(g, 3, cy + 2, 2, 1, p.dark); // ombra in basso
+    rect(g, 4, cy + 1, 1, 1, p.dark);
+    rect(g, 2, cy - 1, 1, 1, p.light); // riflesso
+    rect(g, 6, cy - 1, 1, 3, p.metal); // spoletta
+    rect(g, 2, cy - 2, 4, 1, p.metal); // leva
+    rect(g, 6, cy - 1, 1, 1, p.metalLight);
+  },
+
+  /**
+   * Bruciatura di un'esplosione (decal): macchia irregolare scura con centro più nero, raggi
+   * di fuliggine e bordo "sgranato". Ogni frame è una variante.
+   */
+  scorch(g, w, h, p, frame) {
+    const r = rng(frame * 31 + 9);
+    const cx = w / 2;
+    const cy = h / 2;
+    const R = Math.min(w, h) / 2 - 3;
+    // raggi di fuliggine che escono dalla macchia
+    const rays = 7 + Math.floor(r() * 4);
+    for (let i = 0; i < rays; i++) {
+      const a = (i / rays) * Math.PI * 2 + r() * 0.5;
+      const len = R * (0.9 + r() * 0.5);
+      line(g, Math.round(cx), Math.round(cy), Math.round(cx + Math.cos(a) * len), Math.round(cy + Math.sin(a) * len), p.edge);
+    }
+    // bordo sgranato: pixel sparsi poco oltre la macchia
+    for (let i = 0; i < R * 10; i++) {
+      const a = r() * Math.PI * 2;
+      const d = R * (0.7 + r() * 0.55);
+      rect(g, Math.floor(cx + Math.cos(a) * d), Math.floor(cy + Math.sin(a) * d), 1, 1, r() < 0.5 ? p.edge : p.mid);
+    }
+    // macchia = unione di dischi, poi centro più scuro
+    const blobs = [[0, 0, 0.75]];
+    for (let i = 0; i < 5; i++) {
+      const a = r() * Math.PI * 2;
+      blobs.push([Math.cos(a) * 0.35, Math.sin(a) * 0.35, 0.35 + r() * 0.25]);
+    }
+    for (const [ox, oy, s] of blobs) disc(g, cx + ox * R, cy + oy * R, R * s, p.mid);
+    disc(g, cx + (r() - 0.5) * 2, cy + (r() - 0.5) * 2, R * 0.45, p.dark);
+    for (let i = 0; i < 6; i++) rect(g, Math.floor(cx + (r() - 0.5) * R), Math.floor(cy + (r() - 0.5) * R), 1, 1, p.ash || p.edge);
+  },
+
+  /**
+   * Palla di fuoco: frame 0..frames-1 = dall'esplosione (nucleo bianco, fiamme) al fumo che si dissolve.
+   * Unione di dischi con offset fissi che si allargano, cambiano colore e si assottigliano.
+   */
+  explosion(g, w, h, p, frame) {
+    const n = p.frames || 8;
+    const t = n > 1 ? frame / (n - 1) : 1;
+    const cx = w / 2;
+    const cy = h / 2;
+    const maxR = Math.min(w, h) / 2 - 1;
+    const r = rng(17);
+    const blobs = [[0, 0, 0.7]];
+    for (let i = 0; i < 7; i++) {
+      const a = (i / 7) * Math.PI * 2 + r() * 0.6;
+      blobs.push([Math.cos(a) * (0.3 + r() * 0.25), Math.sin(a) * (0.3 + r() * 0.25), 0.35 + r() * 0.2]);
+    }
+    const R = maxR * (0.45 + 0.55 * Math.sqrt(t)); // si allarga in fretta, poi rallenta
+    const shrink = t > 0.5 ? 1 - ((t - 0.5) / 0.5) * 0.65 : 1; // nel finale le nuvole si assottigliano
+    const spread = 1 + t * 0.6; // e si allontanano dal centro
+    const layer = (scale, color) => {
+      for (const [ox, oy, s] of blobs) {
+        const rad = R * s * scale * shrink;
+        if (rad >= 0.6) disc(g, cx + ox * R * spread, cy + oy * R * spread, rad, color);
+      }
+    };
+    if (t < 0.4) {
+      layer(1, p.outer);
+      layer(0.72, p.mid);
+      layer(0.45, p.core);
+    } else if (t < 0.65) {
+      layer(1, p.smoke);
+      layer(0.75, p.outer);
+      layer(0.45, p.mid);
+    } else {
+      layer(1, p.smokeDark || p.smoke);
+      layer(0.6, p.smoke);
+      if (t < 0.8) layer(0.3, p.outer);
+    }
+  },
+
+  /** Detrito (scheggia/sasso) di 1..4 pixel; ogni frame è una forma diversa. */
+  debris(g, w, h, p, frame) {
+    const r = rng(frame * 5 + 2);
+    const colors = p.colors || ['#555'];
+    const cx = Math.floor(w / 2);
+    const cy = Math.floor(h / 2);
+    rect(g, cx, cy, 1, 1, colors[0]);
+    const n = 1 + Math.floor(r() * 3);
+    for (let i = 0; i < n; i++) {
+      rect(g, cx + Math.floor(r() * 3) - 1, cy + Math.floor(r() * 3) - 1, 1, 1, colors[Math.floor(r() * colors.length)]);
+    }
+  },
+
   /** Foro di proiettile (decal). Ogni frame è una variante diversa. */
   hole(g, w, h, p, frame) {
     const r = rng(frame * 7 + 3);

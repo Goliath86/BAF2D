@@ -63,14 +63,17 @@ js/game/
   game.js             loop a timestep fisso 60 Hz, proiettili (gittata + impatti), render, HUD debug
   player.js           movimento, mira, fuoco (auto/semiauto), animazione, equip(id) dell'arma
   weapons.js          Weapons: catalogo da weapons.json (defaults + voce), get(id)/ids
-  hud.js              Hud: vita (alto sx) + arma/munizioni/ricarica (alto dx) sul canvas ui
+  grenades.js         GrenadeTypes (catalogo da weapons.json) + Grenades: volo con quota z, rimbalzi, spoletta
+  hud.js              Hud: vita + granate (alto sx) + arma/munizioni/ricarica (alto dx) sul canvas ui
   effects.js          Effects: decal con fade (buchi), particelle (fumo/scintille/schegge), impact(type, ...),
-                      bossoli espulsi casing(type, ...)
+                      bossoli espulsi casing(type, ...), esplosioni explosion(type, x, y, map)
 config/
   game.json           parametri generali (display, i18n, player + id arma iniziale, input, camera, audio, mobile)
-  weapons.json        armi: "defaults" + "weapons" { id: { name, bodySprite, pickupSprite, auto, pellets, ... } }
+  weapons.json        armi: "defaults" + "weapons" { id: { name, bodySprite, pickupSprite, auto, pellets, ... } };
+                      granate: "grenadeDefaults" + "grenades" { id: { fuse, lift, bounce, damage, explosion, ... } }
   assets.json         sprites (anche "extends") / tilesets (con "impact" per tile) / sounds
-  effects.json        tipi di impatto (decal + emitters + sound), di bossolo ("casings") e di vampata ("muzzles")
+  effects.json        tipi di impatto (decal + emitters + sound), di bossolo ("casings"), di vampata ("muzzles")
+                      e di esplosione ("explosions")
   levels/*.json       livelli
   lang/*.json         testi
 tools/serve.mjs       server statico (solo moduli Node built-in)
@@ -132,6 +135,18 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
   (alone additivo a `bands` dischi concentrici: `color`, `alpha`, `radius`, `offset`) ed `emitters` (fumo/scintille,
   diretti lungo la canna con `spreadDeg`). Creata in `Game.fire()` al `player.muzzle`, non se la canna è in un muro.
   Disegnata sopra proiettili, sotto le particelle.
+- Granate: azione `grenade` (G / pulsante touch con `badge` = scorta e `disabled`), `player.grenades` (iniziale
+  `player.grenades` = 2, `maxGrenades`, `addGrenades(n)`, F7 = +1 debug), niente lancio in ricarica né durante
+  `throwCooldown`. `Game.throwGrenade()`: su desktop con mouse la velocità è calcolata perché il primo contatto col
+  suolo sia sotto il mirino (`Grenades.flightTime`), su touch a `defaultRange`. Fisica come i bossoli (quota z,
+  `bounce`/`friction` a terra, `wallBounce` sui tile solidi con `radius`), spia `blinkColor`. Allo scadere di `fuse`
+  `Game.explode()`: `effects.explosion()`, scossa camera (`shake`, offset intero applicato in render), danno al
+  giocatore con decadimento lineare in `blastRadius` e linea di vista (`_lineOfSight`, i muri riparano).
+- Esplosioni (`effects.json` -> `explosions`): `decal` con `clipSolid` (bruciatura pre-ruotata su canvas proprio e
+  cancellata sui tile solidi), `fireball` (sprite procedurale `explosion`, frame lungo `duration`), `glow`,
+  `emitters` a 360° (particelle con `round`, `streak`, `collide`), `debris` = tipi di `casings` lanciati a 360°
+  (`ejectDeg`/`spreadDeg` 0). Disegno: palle di fuoco sopra le particelle (il fumo non copre il nucleo).
+- Suoni: `placeholder` può essere una lista di strati (ognuno con `volume` relativo).
 - `input.endFrame()` va chiamato a fine di ogni tick di update (azzera i `wasPressed`).
 - Su touch in portrait il gioco è in pausa e compare l'overlay "ruota il dispositivo" (CSS + `Game.paused`).
 - Il click/tocco di avvio fa `stopPropagation` per non sparare subito; fullscreen + lock landscape solo su touch.
@@ -143,6 +158,6 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
 - Fatto: base rendering, movimento, collisioni, camera, controlli desktop/mobile, proiettili con gittata
   (mirino su desktop, bordo schermo su touch) e impatti (buchi con fade, fumo, scintille, schegge),
   placeholder grafici e sonori, localizzazione en/it, catalogo armi (pistola, fucile, pompa) con cambio arma,
-  caricatore e ricarica (R / pulsante touch), bossoli espulsi e caricatori che cadono in ricarica, vampata di volata con fumo, danno per arma, vita del giocatore, HUD (vita, arma, munizioni), morte con schermata di game over e riavvio.
-- Non ancora presenti: raccolta armi da terra, riserva di munizioni (ora infinita), nemici, menu, selettore lingua in-game, asset grafici reali.
+  caricatore e ricarica (R / pulsante touch), bossoli espulsi e caricatori che cadono in ricarica, vampata di volata con fumo, danno per arma, vita del giocatore, HUD (vita, granate, arma, munizioni), morte con schermata di game over e riavvio, granate (rimbalzi, esplosione con bruciatura, fumo, schegge, detriti, scossa, danno).
+- Non ancora presenti: raccolta armi/granate da terra, riserva di munizioni (ora infinita), nemici, menu, selettore lingua in-game, asset grafici reali.
 - Controlli touch (stick + pulsante ricarica) verificati dall'utente su un dispositivo reale (2026-11-02).

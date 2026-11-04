@@ -11,10 +11,16 @@ function angleDiff(a, b) {
 }
 
 export class Player {
-  constructor(cfg, x, y, assets, weapons) {
+  constructor(cfg, x, y, assets, weapons, grenadeTypes) {
     this.cfg = cfg;
     this.assets = assets;
     this.weapons = weapons;
+
+    // Granate: tipo (weapons.json -> grenades), scorta iniziale e massima
+    this.grenadeType = grenadeTypes.get(cfg.grenade || 'frag');
+    this.maxGrenades = cfg.maxGrenades ?? 9;
+    this.grenades = Math.min(this.maxGrenades, cfg.grenades ?? 2);
+    this.throwCooldown = 0;
     this.x = x;
     this.y = y;
     this.angle = 0; // mira (busto)
@@ -99,6 +105,22 @@ export class Player {
     return this.health - before;
   }
 
+  /** Aggiunge granate alla scorta (fino a maxGrenades); restituisce quante ne ha prese. */
+  addGrenades(n) {
+    const before = this.grenades;
+    this.grenades = Math.min(this.maxGrenades, this.grenades + Math.max(0, n));
+    return this.grenades - before;
+  }
+
+  /** Lancia una granata se ce ne sono, l'arma non è in ricarica e il cooldown è finito. */
+  throwGrenade(game) {
+    if (this.grenades <= 0 || this.reload || this.throwCooldown > 0) return false;
+    this.grenades--;
+    this.throwCooldown = this.grenadeType.throwCooldown ?? 0.6;
+    game.throwGrenade(this);
+    return true;
+  }
+
   get reloading() {
     return this.reload !== null;
   }
@@ -168,6 +190,10 @@ export class Player {
     } else if (this.cfg.faceMoveWhenIdle && input.mode === 'touch' && this.moving) {
       this.angle = Math.atan2(move.y, move.x);
     }
+
+    // Granata (G / pulsante touch), verso la mira appena aggiornata
+    this.throwCooldown = Math.max(0, this.throwCooldown - dt);
+    if (input.wasPressed('grenade')) this.throwGrenade(game);
 
     // Fuoco: automatico finché si tiene premuto, semiautomatico un colpo per pressione
     // (su touch le semiautomatiche possono ripetere tenendo lo stick, vedi input.touch.holdToRepeat)

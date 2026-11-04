@@ -4,8 +4,8 @@
   },
   "loading": "Loading...",
   "start": {
-    "hintDesktop": "WASD / arrows: move · Mouse: aim · Click / Space: fire · R: reload · F3: debug",
-    "hintTouch": "Left stick: move · Right stick: aim · Round button: reload\n(push the right stick past the dashed circle to fire)",
+    "hintDesktop": "WASD / arrows: move · Mouse: aim · Click / Space: fire · R: reload · G: grenade · F3: debug",
+    "hintTouch": "Left stick: move · Right stick: aim · Round buttons: reload, grenade\n(push the right stick past the dashed circle to fire)",
     "tapToStart": "Click / tap to start"
   },
   "rotate": {
@@ -19,12 +19,14 @@
   },
   "hud": {
     "reloading": "RELOADING",
-    "empty": "EMPTY"
+    "empty": "EMPTY",
+    "grenades": "x{count}"
   },
   "weapons": {
     "pistol": "Pistol",
     "rifle": "Assault rifle",
-    "shotgun": "Shotgun"
+    "shotgun": "Shotgun",
+    "grenade": "Frag grenade"
   },
   "errors": {
     "fetch": "Unable to load \"{url}\". The game must be run through a local HTTP server (e.g. \"node tools/serve.mjs\"), not by opening index.html directly.",
@@ -34,6 +36,7 @@
     "unknownTileset": "Tileset not defined in assets.json: \"{name}\"",
     "unknownTile": "Tile \"{tile}\" is not defined in tileset \"{tileset}\"",
     "unknownWeapon": "Weapon not defined in weapons.json: \"{name}\"",
+    "unknownGrenade": "Grenade not defined in weapons.json: \"{name}\"",
     "spriteExtendsLoop": "Circular \"extends\" in sprite \"{name}\" (assets.json)"
   }
 }
