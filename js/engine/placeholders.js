@@ -181,6 +181,14 @@ function reloadPose(frame, n, cycles) {
   return { t, pull, reach: Math.sin(Math.PI * c), returning: c >= 0.5 };
 }
 
+/** Striscia di squadra sull'elmetto (centro hx,hy), da spalla a spalla. */
+function teamStripe(g, hx, hy, p) {
+  rect(g, hx, hy - 3, 1, 7, p.team);
+  rect(g, hx, hy - 3, 1, 1, p.teamDark);
+  rect(g, hx, hy + 3, 1, 1, p.teamDark);
+  rect(g, hx, hy - 1, 1, 1, p.teamLight);
+}
+
 // ---------- Sprite ----------
 // Convenzione: gli sprite orientabili guardano verso DESTRA (angolo 0).
 
@@ -240,6 +248,14 @@ const SPRITE_SHAPES = {
     line(g, R.shoulder[0], R.shoulder[1], rHand[0], rHand[1], p.uniform, 2);
     line(g, L.shoulder[0], L.shoulder[1], lHand[0], lHand[1], p.uniform, 2);
 
+    // mostrine di squadra sulle spalle (solo nelle varianti "@squadra", vedi teamColored)
+    if (p.team) {
+      rect(g, bx - 1, cy - 6, 2, 2, p.team);
+      rect(g, bx - 1, cy + 4, 2, 2, p.team);
+      rect(g, bx - 1, cy - 5, 2, 1, p.teamDark);
+      rect(g, bx - 1, cy + 5, 2, 1, p.teamDark);
+    }
+
     // arma (canna centrata sull'asse dello sprite); il caricatore manca a metà ricarica
     const noMag = grip.hidesMag && pose.t > 0.3 && pose.t < 0.75;
     GUNS[kind].draw(g, grip.gunX - pull, cy, p, noMag);
@@ -258,6 +274,7 @@ const SPRITE_SHAPES = {
     rect(g, bx - 2, cy - 2, 2, 1, p.helmetLight);
     rect(g, bx - 2, cy - 1, 1, 1, p.helmetLight);
     rect(g, bx + 2, cy - 1, 1, 2, p.helmetDark); // bordo frontale
+    if (p.team) teamStripe(g, bx, cy, p);
   },
 
   /**
@@ -354,10 +371,17 @@ const SPRITE_SHAPES = {
     rect(g, tx - 1, cy - 3, 1, 2, p.vestDark);
     rect(g, tx + 1, cy + 1, 1, 2, p.vestDark);
 
+    // mostrine di squadra sulle spalle
+    if (p.team) {
+      rect(g, tx - 3, cy - 5, 2, 2, p.team);
+      rect(g, tx - 3, cy + 3, 2, 2, p.team);
+    }
+
     // elmetto
     disc(g, tx - 6, cy, 3.5, p.helmetDark);
     disc(g, tx - 6, cy, 2.7, p.helmet);
     rect(g, tx - 7, cy - 2, 2, 1, p.helmetLight);
+    if (p.team) teamStripe(g, tx - 6, cy, p);
   },
 
   /**

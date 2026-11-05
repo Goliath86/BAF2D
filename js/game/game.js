@@ -5,6 +5,7 @@ import { Player } from './player.js';
 import { Effects } from './effects.js';
 import { Hud } from './hud.js';
 import { Grenades } from './grenades.js';
+import { Ctf } from './ctf.js';
 
 const STEP = 1 / 60; // update a timestep fisso
 const BULLET_SUBSTEP = 2; // px: passo massimo del controllo collisioni dei proiettili
@@ -24,8 +25,12 @@ export class Game {
     this.background = config.display?.background || '#000';
 
     this.map = new TileMap(level, assets.tileset(level.tileset));
-    this.spawn = this.map.spawns.player || { x: this.map.pixelWidth / 2, y: this.map.pixelHeight / 2 };
     this.weapons = weapons;
+
+    // Modalità Capture The Flag: squadre, bandiere, ticket (game.json -> teams / ctf)
+    this.teams = config.teams || {};
+    this.ctf = new Ctf(config.ctf, this.teams, this.map, level);
+    this.playerTeam = this.teams[config.player.team] ? config.player.team : this.ctf.teamIds[0] || null;
     this.grenadeTypes = grenadeTypes;
 
     this.bullets = [];
@@ -35,44 +40,55 @@ export class Game {
     this.crosshair = assets.sprites.get('crosshair') || null;
     this.camera = new Camera(config.camera);
 
-    // Game over: callback impostati da main.js per mostrare/nascondere la schermata (DOM)
-    this.gameOverCfg = config.gameOver || {};
-    this.onGameOver = null;
+    // Morte e rientro (game.json -> death), fine partita (matchEnd).
+    // onMatchEnd(outcome) / onRestart: callback impostati da main.js per la schermata (DOM).
+    this.deathCfg = config.death || {};
+    this.matchCfg = config.matchEnd || {};
+    this.onMatchEnd = null;
     this.onRestart = null;
+    this.corpses = [];
 
     this._fps = { value: 0, frames: 0, time: 0 };
     this._reset();
   }
 
-  /** Stato di una nuova partita: giocatore allo spawn, niente proiettili/effetti. */
+  /** Stato di una nuova partita: ticket e bandiere iniziali, giocatore alla base, niente proiettili/effetti. */
   _reset() {
-    const { config, assets, weapons, display } = this;
-    this.player = new Player(config.player, this.spawn.x, this.spawn.y, assets, weapons, this.grenadeTypes);
-    this.hud = new Hud(config.hud, this.i18n, assets);
+    const { display } = this;
+    this.ctf.reset();
+    const base = this.ctf.spawnPoint(this.playerTeam, null);
+    this._spawnPlayer(base.x, base.y);
+    this.hud = new Hud(this.config.hud, this.i18n, this.assets);
     this.bullets.length = 0;
     this.grenades.clear();
     this.shake.time = 0;
     this.effects.clear();
-    this.over = null; // { time, shown, pool, drop } dopo la morte del giocatore
+    this.corpses.length = 0;
+    this.respawn = null; // { time, delay, x, y } mentre il giocatore è morto
+    this.ended = null; // { time, shown, outcome } a partita finita
     this.camera.snap(this.player.x, this.player.y, 0, display.width, display.height, this.map);
   }
 
-  /** Ricomincia la partita (dalla schermata di game over). */
+  _spawnPlayer(x, y) {
+    this.player = new Player(this.config.player, x, y, this.assets, this.weapons, this.grenadeTypes, this.playerTeam);
+  }
+
+  /** Nuova partita (dalla schermata di fine partita). */
   restart() {
     if (!this.canRestart) return;
     this._reset();
     this.onRestart?.();
   }
 
-  get isGameOver() {
-    return this.over !== null;
+  get isMatchOver() {
+    return this.ended !== null;
   }
 
-  /** La schermata di game over è visibile da almeno restartDelay secondi. */
+  /** La schermata di fine partita è visibile da almeno restartDelay secondi. */
   get canRestart() {
-    const o = this.over;
-    const g = this.gameOverCfg;
-    return !!o && o.shown && o.time >= (g.delay ?? 1.5) + (g.restartDelay ?? 0.8);
+    const e = this.ended;
+    const m = this.matchCfg;
+    return !!e && e.shown && e.time >= (m.delay ?? 2) + (m.restartDelay ?? 0.8);
   }
 
   get paused() {
@@ -124,10 +140,19 @@ export class Game {
     if (input.wasPressed('debugHurt')) this.player.damage(this.config.debugDamage ?? 10);
     if (input.wasPressed('debugHeal')) this.player.heal(this.config.debugDamage ?? 10);
     if (input.wasPressed('debugGrenade')) this.player.addGrenades(1);
+    if (input.wasPressed('debugTeam')) this._cycleTeam();
 
-    this.player.update(dt, this);
-    if (this.player.dead && !this.over) this._startGameOver();
-    if (this.over) this._updateGameOver(dt);
+    if (!this.ended) {
+      this.player.update(dt, this);
+      if (this.player.dead && !this.respawn) this._onPlayerDeath();
+      if (this.respawn) this._updateRespawn(dt);
+      this.ctf.update(dt, [this.player]);
+      for (const e of this.ctf.takeEvents()) this._onFlagEvent(e);
+      if (this.ctf.result) this._endMatch();
+    } else {
+      this._updateMatchEnd(dt);
+    }
+    for (const c of this.corpses) c.time += dt;
     this.hud.update(dt, this.player);
     this._updateBullets(dt);
     this.grenades.update(dt, this.map, (g) => this.explode(g.def, g.x, g.y));
@@ -194,17 +219,45 @@ export class Game {
     return true;
   }
 
-  // ---------- Morte e game over ----------
+  // ---------- Morte, rientro e fine partita ----------
 
-  _startGameOver() {
+  /** Il giocatore è appena morto: cadavere a terra, ticket in meno, conto alla rovescia per il rientro. */
+  _onPlayerDeath() {
     const p = this.player;
-    const g = this.gameOverCfg;
+    this.corpses.push(this._makeCorpse(p));
+    const max = this.deathCfg.maxCorpses ?? 12;
+    while (this.corpses.length > max) this.corpses.shift();
+    this.ctf.onDeath(p.team);
+    this.respawn = { time: 0, delay: this.deathCfg.respawnDelay ?? 5, x: p.x, y: p.y };
+  }
+
+  _updateRespawn(dt) {
+    const r = this.respawn;
+    r.time += dt;
+    if (r.time < r.delay) return;
+    // rientro alla bandiera della squadra più vicina al punto della morte, o alla base
+    const p = this.player;
+    const pos = this.ctf.spawnPoint(this.playerTeam, r, p.hw, p.hh);
+    this._spawnPlayer(pos.x, pos.y);
+    this.respawn = null;
+    if (this.deathCfg.respawnSound) this.audio.play(this.deathCfg.respawnSound);
+    const { display } = this;
+    this.camera.snap(pos.x, pos.y, 0, display.width, display.height, this.map);
+  }
+
+  /** Cadavere del soldato p: corpo, pozza che si allarga e arma caduta. */
+  _makeCorpse(p) {
+    const g = this.deathCfg;
     const a = p.deathAngle;
     if (p.cfg.deathSound) this.audio.play(p.cfg.deathSound);
 
+    // corpo: lo sprite ha la testa a sinistra, quindi ruotato come la mira la testa finisce
+    // dietro (caduto all'indietro), i piedi restano dov'era il soldato
+    const back = p.cfg.deadOffset ?? 4;
+    const body = p.deadSprite ? { sprite: p.deadSprite, x: p.x - Math.cos(a) * back, y: p.y - Math.sin(a) * back, angle: a } : null;
+
     // pozza sotto il corpo (si allarga in poolTime secondi)
     const poolSprite = g.poolSprite && this.assets.sprites.get(g.poolSprite);
-    const back = p.cfg.deadOffset ?? 4;
     const pool = poolSprite
       ? { sprite: poolSprite, x: p.x - Math.cos(a) * back, y: p.y - Math.sin(a) * back, angle: Math.floor(Math.random() * 4) * (Math.PI / 2) }
       : null;
@@ -226,29 +279,69 @@ export class Game {
       }
     }
 
-    this.over = { time: 0, shown: false, pool, drop };
+    return { time: 0, body, pool, drop };
   }
 
-  _updateGameOver(dt) {
-    const o = this.over;
-    o.time += dt;
-    if (!o.shown && o.time >= (this.gameOverCfg.delay ?? 1.5)) {
-      o.shown = true;
-      this.onGameOver?.();
+  _drawCorpses(ctx) {
+    const poolTime = this.deathCfg.poolTime ?? 2.5;
+    for (const c of this.corpses) {
+      if (c.pool) {
+        // frame della pozza in base al tempo: si allarga fino all'ultimo frame
+        const k = Math.min(1, c.time / poolTime);
+        const frame = Math.min(c.pool.sprite.frameCount - 1, Math.floor(k * c.pool.sprite.frameCount));
+        drawSprite(ctx, c.pool.sprite, frame, c.pool.x, c.pool.y, c.pool.angle);
+      }
+    }
+    for (const c of this.corpses) {
+      if (c.drop) drawSprite(ctx, c.drop.sprite, 0, c.drop.x, c.drop.y, c.drop.angle);
+      if (c.body) drawSprite(ctx, c.body.sprite, 0, c.body.x, c.body.y, c.body.angle);
+    }
+  }
+
+  /** Cattura/neutralizzazione di una bandiera: suono e messaggio dal punto di vista del giocatore. */
+  _onFlagEvent(e) {
+    const c = this.config.ctf || {};
+    const mine = e.team === this.playerTeam;
+    const flag = e.flag.id;
+    let key;
+    let sound;
+    let team;
+    if (e.type === 'captured') {
+      key = mine ? 'hud.flag.captured' : 'hud.flag.enemyCaptured';
+      sound = mine ? c.capturedSound : c.lostSound;
+      team = e.team;
+    } else {
+      key = mine ? 'hud.flag.lost' : 'hud.flag.neutralized';
+      sound = mine ? c.lostSound : c.neutralizedSound;
+      team = e.by;
+    }
+    if (sound) this.audio.play(sound);
+    this.hud.notify(this.i18n.t(key, { flag }), this.teams[team]?.color);
+  }
+
+  _endMatch() {
+    const w = this.ctf.result.winner;
+    const outcome = w === null ? 'draw' : w === this.playerTeam ? 'victory' : 'defeat';
+    this.ended = { time: 0, shown: false, outcome };
+    this.respawn = null;
+  }
+
+  _updateMatchEnd(dt) {
+    const e = this.ended;
+    e.time += dt;
+    if (!e.shown && e.time >= (this.matchCfg.delay ?? 2)) {
+      e.shown = true;
+      this.onMatchEnd?.(e.outcome);
     }
     if (this.canRestart && this.input.wasPressed('confirm')) this.restart();
   }
 
-  _drawDeathProps(ctx) {
-    const o = this.over;
-    if (!o) return;
-    if (o.pool) {
-      // frame della pozza in base al tempo: si allarga fino all'ultimo frame
-      const k = Math.min(1, o.time / (this.gameOverCfg.poolTime ?? 2.5));
-      const frame = Math.min(o.pool.sprite.frameCount - 1, Math.floor(k * o.pool.sprite.frameCount));
-      drawSprite(ctx, o.pool.sprite, frame, o.pool.x, o.pool.y, o.pool.angle);
-    }
-    if (o.drop) drawSprite(ctx, o.drop.sprite, 0, o.drop.x, o.drop.y, o.drop.angle);
+  /** Debug: passa il giocatore alla squadra successiva. */
+  _cycleTeam() {
+    const ids = this.ctf.teamIds;
+    if (!ids.length) return;
+    this.playerTeam = ids[(ids.indexOf(this.playerTeam) + 1) % ids.length];
+    this.player.setTeam(this.playerTeam);
   }
 
   // ---------- Proiettili ----------
@@ -409,10 +502,15 @@ export class Game {
 
     this.map.draw(ctx, cx, cy, W, H);
     this.effects.drawDecals(ctx);
+    this.ctf.drawZones(ctx);
     this.effects.drawCasings(ctx, false); // bossoli a terra
     this.grenades.draw(ctx, false); // granate a terra
-    this._drawDeathProps(ctx);
+    this._drawCorpses(ctx);
+    // pennoni: quelli "dietro" il giocatore (più in alto sullo schermo) prima di lui, gli altri dopo
+    const py = this.player.y;
+    for (const f of this.ctf.flags) if (f.y <= py) this.ctf.drawFlag(ctx, f);
     this.player.draw(ctx);
+    for (const f of this.ctf.flags) if (f.y > py) this.ctf.drawFlag(ctx, f);
     this.effects.drawCasings(ctx, true); // bossoli in volo
     this.grenades.draw(ctx, true); // granate in volo
     for (const b of this.bullets) drawSprite(ctx, b.sprite, 0, b.x, b.y, b.angle);
@@ -422,7 +520,8 @@ export class Game {
 
     ctx.restore();
 
-    if (this.running && !this.over && input.mode === 'desktop' && input.mouse.seen && this.crosshair) {
+    const playing = this.running && !this.ended && !this.player.dead;
+    if (playing && input.mode === 'desktop' && input.mouse.seen && this.crosshair) {
       const m = input.mouseGame;
       drawSprite(ctx, this.crosshair, 0, m.x, m.y);
     }
@@ -430,14 +529,22 @@ export class Game {
     // UI ad alta risoluzione
     const ui = display.uiCtx;
     ui.clearRect(0, 0, display.cssWidth, display.cssHeight);
-    if (this.running && !this.over && input.mode === 'touch') {
+    if (playing && input.mode === 'touch') {
       const p = this.player;
       input.sticks.draw(ui, {
         reload: { label: String(p.ammo), progress: p.reloadProgress, alert: p.ammo === 0 && !p.reloading },
         grenade: { badge: String(p.grenades), disabled: p.grenades <= 0 },
       });
     }
-    if (this.running) this.hud.draw(ui, display, this.player);
+    if (this.running) {
+      const r = this.respawn;
+      this.hud.draw(ui, display, this.player, {
+        ctf: this.ctf,
+        team: this.playerTeam,
+        zone: this.ended ? null : this.ctf.zoneStatus(this.player),
+        respawnIn: r ? Math.max(0, r.delay - r.time) : null,
+      });
+    }
     if (this.debug) this._drawDebug(ui);
   }
 
@@ -455,6 +562,8 @@ export class Game {
       `ammo ${player.ammo}/${player.weapon.magazine}${player.reloading ? ` reloading ${Math.round(player.reloadProgress * 100)}%` : ''}`,
       `health ${player.health}/${player.maxHealth} (F5: hurt, F6: heal)`,
       `grenades ${player.grenades} (G: throw, F7: +1) live ${this.grenades.list.length} blasts ${effects.blasts.length}`,
+      `team ${this.playerTeam} (F8: switch) tickets ${this.ctf.teamIds.map((t) => `${t} ${this.ctf.tickets[t]}`).join(' / ')}`,
+      `flags ${this.ctf.flags.map((f) => `${f.id}:${f.owner || '-'} ${Math.round(f.progress * 100)}%`).join('  ')}`,
       `bullets ${this.bullets.length} decals ${effects.decals.length} particles ${effects.particles.length} casings ${effects.casings.length} flashes ${effects.flashes.length}`,
     ];
     const top = Math.round(this.hud.topHeight(display)); // sotto l'HUD

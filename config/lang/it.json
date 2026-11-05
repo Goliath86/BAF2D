@@ -6,21 +6,38 @@
   "start": {
     "hintDesktop": "WASD / frecce: muovi · Mouse: mira · Click / Spazio: spara · R: ricarica · G: granata · F3: debug",
     "hintTouch": "Stick SX: muovi · Stick DX: mira · Pulsanti tondi: ricarica, granata\n(spingi lo stick DX oltre il cerchio tratteggiato per sparare)",
+    "objective": "Conquista le bandiere restando vicino ad esse. Ogni morte e ogni bandiera in mano al nemico costano ticket: la squadra che li esaurisce perde.",
     "tapToStart": "Clicca / tocca per iniziare"
   },
   "rotate": {
     "message": "Ruota il dispositivo in orizzontale"
   },
-  "gameOver": {
-    "title": "GAME OVER",
-    "subtitle": "Sei stato ucciso",
-    "restartDesktop": "Clicca o premi Invio per giocare ancora",
-    "restartTouch": "Tocca per giocare ancora"
+  "matchEnd": {
+    "victory": "VITTORIA",
+    "defeat": "SCONFITTA",
+    "draw": "PAREGGIO",
+    "victorySubtitle": "La squadra nemica ha esaurito i ticket",
+    "defeatSubtitle": "La tua squadra ha esaurito i ticket",
+    "drawSubtitle": "Entrambe le squadre hanno esaurito i ticket",
+    "restartDesktop": "Clicca o premi Invio per una nuova partita",
+    "restartTouch": "Tocca per una nuova partita"
   },
   "hud": {
     "reloading": "RICARICA",
     "empty": "SCARICO",
-    "grenades": "x{count}"
+    "grenades": "x{count}",
+    "killed": "SEI STATO UCCISO",
+    "respawnIn": "Rientro tra {seconds}",
+    "flag": {
+      "capturing": "CONQUISTA {flag}",
+      "securing": "RIPRISTINO {flag}",
+      "neutralizing": "NEUTRALIZZAZIONE {flag}",
+      "contested": "{flag} CONTESA",
+      "captured": "Bandiera {flag} conquistata",
+      "lost": "Bandiera {flag} persa",
+      "neutralized": "Bandiera {flag} neutralizzata",
+      "enemyCaptured": "Il nemico ha conquistato la bandiera {flag}"
+    }
   },
   "weapons": {
     "pistol": "Pistola",

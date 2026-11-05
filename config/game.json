@@ -28,13 +28,59 @@
     "lockLandscape": true
   },
 
-  "gameOver": {
-    "delay": 1.5,
-    "restartDelay": 0.8,
+  "teams": {
+    "blue": { "color": "#3d7cf0", "dark": "#1c3c8c", "light": "#a4c4ff" },
+    "red": { "color": "#e0402e", "dark": "#7a1a12", "light": "#ffa08c" }
+  },
+
+  "ctf": {
+    "tickets": 400,
+    "ticketsPerDeath": 1,
+    "bleed": { "interval": 3, "mode": "advantage", "perFlag": 1 },
+    "flag": {
+      "radius": 32,
+      "captureTime": 8,
+      "neutralizeTime": 6,
+      "extraCapturerSpeed": 0.5,
+      "requireSight": true,
+      "spawnDistance": [14, 24]
+    },
+    "capturedSound": "flag_captured",
+    "lostSound": "flag_lost",
+    "neutralizedSound": "flag_neutralized",
+    "look": {
+      "poleHeight": 22,
+      "poleColor": "#c8c8d0",
+      "finial": "#ffd36b",
+      "baseColor": "#4a4a56",
+      "baseLight": "#6a6a78",
+      "shadow": "rgba(0,0,0,0.35)",
+      "clothWidth": 9,
+      "clothHeight": 6,
+      "neutralColor": "#f0f0f0",
+      "neutralDark": "#a8a8b0",
+      "wave": 1.2,
+      "waveSpeed": 6,
+      "showZones": true,
+      "zoneAlpha": 0.4,
+      "zoneFillAlpha": 0.06,
+      "zoneDash": 4
+    }
+  },
+
+  "death": {
+    "respawnDelay": 5,
+    "respawnSound": "respawn",
+    "maxCorpses": 12,
     "poolSprite": "blood_pool",
     "poolTime": 2.5,
     "dropWeapon": true,
     "dropDistance": 9
+  },
+
+  "matchEnd": {
+    "delay": 2,
+    "restartDelay": 0.8
   },
 
   "hud": {
@@ -74,6 +120,23 @@
       "emptyColor": "#ff4a3a",
       "reloadColor": "#ffd36b",
       "reloadBack": "#2a2618"
+    },
+    "ctf": {
+      "ticketFontSize": 8,
+      "gap": 4,
+      "barWidth": 36,
+      "barHeight": 2,
+      "barBack": "#1a1a22",
+      "lowTickets": 0.1,
+      "flagGap": 4,
+      "flagFontSize": 6,
+      "zoneBarWidth": 50,
+      "zoneBarHeight": 3,
+      "contestedColor": "#ffd36b",
+      "toastTime": 2.5,
+      "respawnY": 0.7,
+      "respawnFontSize": 10,
+      "killedColor": "#e8463a"
     }
   },
 
@@ -83,6 +146,7 @@
   },
 
   "player": {
+    "team": "blue",
     "sprite": "soldier_rifle",
     "legsSprite": "soldier_legs",
     "legsTurnSpeed": 14,
@@ -114,7 +178,8 @@
       "debugNextWeapon": ["F4"],
       "debugHurt": ["F5"],
       "debugHeal": ["F6"],
-      "debugGrenade": ["F7"]
+      "debugGrenade": ["F7"],
+      "debugTeam": ["F8"]
     },
     "mouse": {
       "fireButton": 0

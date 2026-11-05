@@ -18,10 +18,18 @@ export class Hud {
     this.trailWait = 0;
     this.lastHealth = null;
     this.flash = 0; // lampeggio dopo un danno
+    this.cc = cfg.ctf || {};
+    this.toast = null; // { text, color, time } messaggio temporaneo (es. bandiera conquistata)
+  }
+
+  /** Mostra un messaggio temporaneo sotto il pannello dei ticket. */
+  notify(text, color) {
+    this.toast = { text, color: color || this.cfg.text || '#fff', time: this.cc.toastTime ?? 2.5 };
   }
 
   update(dt, player) {
     this.time += dt;
+    if (this.toast && (this.toast.time -= dt) <= 0) this.toast = null;
     const ratio = player.health / player.maxHealth;
     if (this.trail === null) this.trail = ratio;
     if (this.lastHealth !== null && player.health < this.lastHealth) {
@@ -46,14 +54,116 @@ export class Hud {
     return (m * 2 + (this.cfg.fontSize ?? 7) + (this.wc.ammoFontSize ?? 10) + 16) * u;
   }
 
-  draw(ui, display, player) {
+  /** mode (opzionale) = { ctf, team, zone, respawnIn } per la modalità Capture The Flag. */
+  draw(ui, display, player, mode) {
     const u = display.cssPerPixel;
     ui.save();
     ui.imageSmoothingEnabled = false;
     this._drawHealth(ui, u, player);
     this._drawGrenades(ui, u, player);
     this._drawWeapon(ui, u, display.cssWidth, player);
+    if (mode?.ctf) {
+      const W = Math.floor(display.cssWidth / u);
+      let y = this._drawTickets(ui, u, W, mode.ctf, mode.team, mode.zone);
+      y = this._drawZone(ui, u, W, mode.ctf, mode.zone, y);
+      if (this.toast) this._text(ui, u, this.toast.text, Math.floor(W / 2), y + 2, this.cfg.fontSize ?? 7, this.toast.color, 'center');
+      if (mode.respawnIn !== null && mode.respawnIn !== undefined) this._drawRespawn(ui, u, W, Math.floor(display.cssHeight / u), mode.respawnIn);
+    }
     ui.restore();
+  }
+
+  // ---------- Capture The Flag ----------
+
+  /**
+   * In alto al centro: ticket della propria squadra (sinistra) e delle altre (destra) con barre,
+   * sotto le bandiere (pennone + drappo all'altezza e del colore attuali, lettera).
+   * Restituisce la y (pixel di gioco) sotto il pannello.
+   */
+  _drawTickets(ui, u, W, ctf, team, zone) {
+    const cc = this.cc;
+    const m = this.cfg.margin ?? 5;
+    const size = cc.ticketFontSize ?? 8;
+    const gap = cc.gap ?? 4;
+    const barW = cc.barWidth ?? 36;
+    const barH = cc.barHeight ?? 2;
+    const cx = Math.floor(W / 2);
+    const shadow = this.cfg.shadow || '#000';
+    const order = [team, ...ctf.teamIds.filter((t) => t !== team)].filter((t) => ctf.teams[t]);
+    const low = cc.lowTickets ?? 0.1;
+
+    let y = m;
+    order.slice(0, 2).forEach((t, i) => {
+      const left = i === 0;
+      const tc = ctf.teams[t];
+      const ratio = Math.max(0, ctf.tickets[t] / (ctf.startTickets[t] || 1));
+      // ticket quasi finiti: il numero lampeggia
+      const blink = ratio <= low && Math.floor(this.time * 3) % 2 === 0;
+      const color = blink ? this.cfg.text || '#fff' : tc.color;
+      this._text(ui, u, String(ctf.tickets[t]), left ? cx - gap : cx + gap, y, size, color, left ? 'right' : 'left');
+      const by = y + size + 2;
+      const bx = left ? cx - gap - barW : cx + gap;
+      const fill = Math.round(barW * ratio);
+      this._px(ui, u, bx - 1, by - 1, barW + 2, barH + 2, shadow);
+      this._px(ui, u, bx, by, barW, barH, cc.barBack || '#1a1a22');
+      if (fill > 0) this._px(ui, u, left ? bx + barW - fill : bx, by, fill, barH, tc.color);
+    });
+    y += size + 2 + barH + 4;
+
+    // bandiere
+    const flags = ctf.flags;
+    if (!flags.length) return y;
+    const iw = 7; // pennone + drappo di 5 px + spazio
+    const ih = 8;
+    const fgap = cc.flagGap ?? 4;
+    const total = flags.length * iw + (flags.length - 1) * fgap;
+    let x = cx - Math.floor(total / 2);
+    const letter = cc.flagFontSize ?? 6;
+    for (const f of flags) {
+      const { color, dark } = ctf.flagColors(f);
+      const blink = f.contested && Math.floor(this.time * 4) % 2 === 0;
+      this._px(ui, u, x + 1, y + 1, 1, ih, shadow);
+      this._px(ui, u, x, y, 1, ih, ctf.look.poleColor || '#c8c8d0');
+      const fy = y + Math.round((1 - f.progress) * (ih - 4));
+      this._px(ui, u, x + 2, fy + 1, 5, 3, shadow);
+      this._px(ui, u, x + 1, fy, 5, 3, blink ? '#ffffff' : color);
+      this._px(ui, u, x + 1, fy + 2, 5, 1, blink ? '#ffffff' : dark);
+      // lettera; sottolineata se il giocatore è nella sua area
+      const lc = f.owner ? ctf.teams[f.owner].color : this.cfg.text || '#fff';
+      this._text(ui, u, f.id, x + 3, y + ih + 1, letter, lc, 'center');
+      if (zone?.flag === f) this._px(ui, u, x, y + ih + letter + 2, iw - 1, 1, lc);
+      x += iw + fgap;
+    }
+    return y + ih + letter + 4;
+  }
+
+  /** Stato della cattura se il giocatore è nell'area di una bandiera: testo + barra dell'altezza del drappo. */
+  _drawZone(ui, u, W, ctf, zone, y) {
+    if (!zone || zone.state === 'held') return y;
+    const cc = this.cc;
+    const size = this.cfg.fontSize ?? 7;
+    const cx = Math.floor(W / 2);
+    const f = zone.flag;
+    const { color } = ctf.flagColors(f);
+    const contested = zone.state === 'contested';
+    this._text(ui, u, this.i18n.t(`hud.flag.${zone.state}`, { flag: f.id }), cx, y, size, contested ? cc.contestedColor || '#ffd36b' : this.cfg.text || '#fff', 'center');
+    y += size + 2;
+    const bw = cc.zoneBarWidth ?? 50;
+    const bh = cc.zoneBarHeight ?? 3;
+    const bx = cx - Math.floor(bw / 2);
+    this._px(ui, u, bx - 1, y - 1, bw + 2, bh + 2, this.cfg.shadow || '#000');
+    this._px(ui, u, bx, y, bw, bh, cc.barBack || '#1a1a22');
+    this._px(ui, u, bx, y, Math.round(bw * f.progress), bh, color);
+    return y + bh + 3;
+  }
+
+  /** Da morto: scritta al centro e conto alla rovescia del rientro. */
+  _drawRespawn(ui, u, W, H, seconds) {
+    const cc = this.cc;
+    const cx = Math.floor(W / 2);
+    const y = Math.floor(H * (cc.respawnY ?? 0.7));
+    const big = cc.respawnFontSize ?? 10;
+    this._text(ui, u, this.i18n.t('hud.killed'), cx, y, big, cc.killedColor || '#e8463a', 'center');
+    this._text(ui, u, this.i18n.t('hud.respawnIn', { seconds: Math.ceil(seconds) }), cx, y + big + 3, this.cfg.fontSize ?? 7, this.cfg.text || '#fff', 'center');
   }
 
   /** Granate rimaste: icona + "x2" sotto la barra della vita (grigio a scorta finita). */

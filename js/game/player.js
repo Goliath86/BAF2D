@@ -11,10 +11,11 @@ function angleDiff(a, b) {
 }
 
 export class Player {
-  constructor(cfg, x, y, assets, weapons, grenadeTypes) {
+  constructor(cfg, x, y, assets, weapons, grenadeTypes, team = null) {
     this.cfg = cfg;
     this.assets = assets;
     this.weapons = weapons;
+    this.team = team; // id della squadra (game.json -> teams): sceglie le varianti "sprite@squadra"
 
     // Granate: tipo (weapons.json -> grenades), scorta iniziale e massima
     this.grenadeType = grenadeTypes.get(cfg.grenade || 'frag');
@@ -51,10 +52,18 @@ export class Player {
     this.legsAngle = 0;
     this.legsTurnSpeed = cfg.legsTurnSpeed ?? 14;
 
-    // Corpo a terra dopo la morte (opzionale)
-    this.deadSprite = cfg.deadSprite ? assets.sprite(cfg.deadSprite) : null;
+    // Corpo a terra dopo la morte (opzionale, lo disegna Game come cadavere)
+    this.deadSprite = cfg.deadSprite ? assets.sprite(cfg.deadSprite, team) : null;
     this.deathAngle = 0;
     this.backpedal = (cfg.backpedalAngleDeg ?? 100) * DEG;
+  }
+
+  /** Cambia squadra (debug): aggiorna gli sprite di busto e corpo. */
+  setTeam(team) {
+    this.team = team;
+    this.sprite = this.assets.sprite(this.weapon.bodySprite || this.cfg.sprite, team);
+    this.anim.sprite = this.sprite;
+    if (this.cfg.deadSprite) this.deadSprite = this.assets.sprite(this.cfg.deadSprite, team);
   }
 
   /**
@@ -69,7 +78,7 @@ export class Player {
     this.ammo = Math.max(0, Math.min(weapon.magazine, ammo ?? weapon.magazine));
     this.reload?.sound?.stop(); // il cambio arma interrompe la ricarica (e il suo suono)
     this.reload = null;
-    this.sprite = this.assets.sprite(weapon.bodySprite || this.cfg.sprite);
+    this.sprite = this.assets.sprite(weapon.bodySprite || this.cfg.sprite, this.team);
     this.anim = new Animator(this.sprite, 'idle');
     this.cooldown = 0;
     this.casingTimer = null;
@@ -302,15 +311,7 @@ export class Player {
   }
 
   draw(ctx) {
-    if (this.dead && this.deadSprite) {
-      // corpo a terra: lo sprite ha la testa a sinistra, quindi ruotato come la mira
-      // la testa finisce dietro (caduto all'indietro), i piedi restano dov'era il giocatore
-      const back = this.cfg.deadOffset ?? 4;
-      const x = this.x - Math.cos(this.deathAngle) * back;
-      const y = this.y - Math.sin(this.deathAngle) * back;
-      drawSprite(ctx, this.deadSprite, 0, x, y, this.deathAngle);
-      return;
-    }
+    if (this.dead) return; // il corpo a terra è un cadavere di Game (resta dopo il rientro)
     if (this.legs) drawSprite(ctx, this.legs, this.legsAnim.frame, this.x, this.y, this.legsAngle);
     drawSprite(ctx, this.sprite, this.anim.frame, this.x, this.y, this.angle);
   }

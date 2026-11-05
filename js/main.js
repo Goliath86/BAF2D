@@ -57,7 +57,7 @@ async function boot() {
 
     const display = new Display($('game'), $('ui'), config.display);
     const assets = new Assets();
-    await assets.load(assetsCfg);
+    await assets.load(assetsCfg, config.teams); // + varianti di squadra degli sprite "teamColored"
 
     const audio = new AudioManager(assetsCfg.sounds, config.audio);
     await audio.load();
@@ -85,20 +85,24 @@ async function boot() {
       { once: true }
     );
 
-    // Game over: la scena si desatura e compare la schermata; clic/tocco (o Invio) per ricominciare
-    const gameOverOverlay = $('overlay-gameover');
-    game.onGameOver = () => {
-      document.body.classList.add('game-over');
-      gameOverOverlay.classList.remove('hidden');
+    // Fine partita (una squadra senza ticket): schermata di vittoria/sconfitta/pareggio,
+    // in sconfitta la scena si desatura; clic/tocco (o Invio) per una nuova partita
+    const endOverlay = $('overlay-matchend');
+    game.onMatchEnd = (outcome) => {
+      $('matchend-title').textContent = i18n.t(`matchEnd.${outcome}`);
+      $('matchend-subtitle').textContent = i18n.t(`matchEnd.${outcome}Subtitle`);
+      endOverlay.dataset.outcome = outcome;
+      document.body.classList.add('match-over', `match-${outcome}`);
+      endOverlay.classList.remove('hidden');
     };
     game.onRestart = () => {
-      document.body.classList.remove('game-over');
-      gameOverOverlay.classList.add('hidden');
+      document.body.classList.remove('match-over', 'match-victory', 'match-defeat', 'match-draw');
+      endOverlay.classList.add('hidden');
     };
-    gameOverOverlay.addEventListener('pointerdown', (e) => {
+    endOverlay.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       e.stopPropagation(); // il clic per ricominciare non deve sparare
-      game.restart(); // ignorato finché non è trascorso gameOver.restartDelay
+      game.restart(); // ignorato finché non è trascorso matchEnd.restartDelay
     });
 
     window.BAF2D = game; // comodo per il debug da console

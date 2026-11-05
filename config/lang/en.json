@@ -6,21 +6,38 @@
   "start": {
     "hintDesktop": "WASD / arrows: move · Mouse: aim · Click / Space: fire · R: reload · G: grenade · F3: debug",
     "hintTouch": "Left stick: move · Right stick: aim · Round buttons: reload, grenade\n(push the right stick past the dashed circle to fire)",
+    "objective": "Capture the flags by staying close to them. Every death and every flag held by the enemy costs tickets: the team that runs out loses.",
     "tapToStart": "Click / tap to start"
   },
   "rotate": {
     "message": "Rotate your device to landscape"
   },
-  "gameOver": {
-    "title": "GAME OVER",
-    "subtitle": "You have been killed",
-    "restartDesktop": "Click or press Enter to play again",
-    "restartTouch": "Tap to play again"
+  "matchEnd": {
+    "victory": "VICTORY",
+    "defeat": "DEFEAT",
+    "draw": "DRAW",
+    "victorySubtitle": "The enemy team has run out of tickets",
+    "defeatSubtitle": "Your team has run out of tickets",
+    "drawSubtitle": "Both teams have run out of tickets",
+    "restartDesktop": "Click or press Enter for a new match",
+    "restartTouch": "Tap for a new match"
   },
   "hud": {
     "reloading": "RELOADING",
     "empty": "EMPTY",
-    "grenades": "x{count}"
+    "grenades": "x{count}",
+    "killed": "KILLED IN ACTION",
+    "respawnIn": "Respawning in {seconds}",
+    "flag": {
+      "capturing": "CAPTURING {flag}",
+      "securing": "SECURING {flag}",
+      "neutralizing": "NEUTRALIZING {flag}",
+      "contested": "{flag} CONTESTED",
+      "captured": "Flag {flag} captured",
+      "lost": "Flag {flag} lost",
+      "neutralized": "Flag {flag} neutralized",
+      "enemyCaptured": "The enemy captured flag {flag}"
+    }
   },
   "weapons": {
     "pistol": "Pistol",

@@ -43,10 +43,28 @@ export class Assets {
     this.tilesets = new Map();
   }
 
-  async load(cfg) {
+  /**
+   * teams (opzionale, da game.json -> "teams"): { id: { color, dark, light } }. Ogni sprite con
+   * "teamColored": true genera anche una variante "nome@id" per squadra: il placeholder riceve
+   * team/teamDark/teamLight e un "{team}" nel src viene sostituito con l'id della squadra.
+   */
+  async load(cfg, teams = {}) {
     const jobs = [];
     const sprites = cfg.sprites || {};
-    for (const name of Object.keys(sprites)) jobs.push(this._loadSprite(name, resolveExtends(sprites, name)));
+    for (const name of Object.keys(sprites)) {
+      const def = resolveExtends(sprites, name);
+      jobs.push(this._loadSprite(name, def));
+      if (!def.teamColored) continue;
+      for (const [team, t] of Object.entries(teams)) {
+        jobs.push(
+          this._loadSprite(`${name}@${team}`, {
+            ...def,
+            src: def.src ? def.src.replaceAll('{team}', team) : null,
+            placeholder: { ...def.placeholder, team: t.color, teamDark: t.dark || t.color, teamLight: t.light || t.color },
+          })
+        );
+      }
+    }
     for (const [name, def] of Object.entries(cfg.tilesets || {})) jobs.push(this._loadTileset(name, def));
     await Promise.all(jobs);
   }
@@ -95,7 +113,12 @@ export class Assets {
     });
   }
 
-  sprite(name) {
+  /** Sprite "name"; con "team" la sua variante di squadra ("name@team") se esiste. */
+  sprite(name, team) {
+    if (team) {
+      const v = this.sprites.get(`${name}@${team}`);
+      if (v) return v;
+    }
     const s = this.sprites.get(name);
     if (!s) throw new LocalizedError('errors.unknownSprite', { name });
     return s;

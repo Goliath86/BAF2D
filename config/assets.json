@@ -2,6 +2,7 @@
   "sprites": {
     "soldier_rifle": {
       "src": null,
+      "teamColored": true,
       "frameWidth": 24,
       "frameHeight": 24,
       "origin": [12, 12],
@@ -341,6 +342,32 @@
         { "wave": "sine", "freqStart": 120, "freqEnd": 30, "duration": 0.7, "volume": 1.4 },
         { "wave": "square", "freqStart": 70, "freqEnd": 25, "duration": 0.35, "volume": 0.4 }
       ]
+    },
+    "flag_captured": {
+      "src": null,
+      "volume": 0.18,
+      "placeholder": [
+        { "wave": "square", "freqStart": 660, "freqEnd": 660, "duration": 0.09 },
+        { "wave": "square", "freqStart": 990, "freqEnd": 990, "duration": 0.16, "at": [0.1] }
+      ]
+    },
+    "flag_lost": {
+      "src": null,
+      "volume": 0.18,
+      "placeholder": [
+        { "wave": "square", "freqStart": 520, "freqEnd": 520, "duration": 0.09 },
+        { "wave": "square", "freqStart": 350, "freqEnd": 330, "duration": 0.18, "at": [0.1] }
+      ]
+    },
+    "flag_neutralized": {
+      "src": null,
+      "volume": 0.14,
+      "placeholder": { "wave": "triangle", "freqStart": 700, "freqEnd": 420, "duration": 0.12 }
+    },
+    "respawn": {
+      "src": null,
+      "volume": 0.14,
+      "placeholder": { "wave": "sine", "freqStart": 300, "freqEnd": 900, "duration": 0.18 }
     },
     "hit_wall": {
       "src": null,

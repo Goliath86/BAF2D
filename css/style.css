@@ -106,33 +106,60 @@ body.is-touch .hint-desktop {
   display: none;
 }
 
-/* ---------- Game over ---------- */
+.panel p.objective {
+  max-width: 560px;
+  margin-left: auto;
+  margin-right: auto;
+  font-size: 13px;
+  opacity: 0.85;
+}
 
-/* La scena di gioco si desatura e scurisce; l'HUD (canvas ui) resta leggibile */
+/* ---------- Fine partita ---------- */
+
+/* In sconfitta/pareggio la scena si desatura e scurisce; l'HUD (canvas ui) resta leggibile */
 #game {
   transition: filter 1.2s ease-out;
 }
 
-body.game-over #game {
+body.match-defeat #game,
+body.match-draw #game {
   filter: grayscale(0.85) brightness(0.55);
 }
 
-/* testo nel terzo inferiore: il corpo (al centro dello schermo) resta visibile */
-#overlay-gameover {
-  background: rgba(30, 0, 0, 0.35);
+body.match-victory #game {
+  filter: brightness(0.8);
+}
+
+/* testo nel terzo inferiore: il centro dello schermo resta visibile */
+#overlay-matchend {
+  background: rgba(5, 5, 10, 0.35);
   animation: fade-in 0.8s ease-out;
   align-items: flex-end;
   padding-bottom: 8vh;
 }
 
-#overlay-gameover .gameover-title {
+#overlay-matchend[data-outcome="defeat"] {
+  background: rgba(30, 0, 0, 0.35);
+}
+
+#overlay-matchend .matchend-title {
+  color: #e8e8f0;
+  text-shadow: 4px 4px 0 #2a2a36;
+}
+
+#overlay-matchend[data-outcome="victory"] .matchend-title {
+  color: #ffd36b;
+  text-shadow: 4px 4px 0 #4a3608;
+}
+
+#overlay-matchend[data-outcome="defeat"] .matchend-title {
   color: #e8463a;
   text-shadow: 4px 4px 0 #3a0a08;
 }
 
 /* il cursore torna visibile per cliccare */
-body.game-over #app,
-body.game-over #overlay-gameover {
+body.match-over #app,
+body.match-over #overlay-matchend {
   cursor: pointer;
 }
 

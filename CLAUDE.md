@@ -67,8 +67,10 @@ js/game/
   hud.js              Hud: vita + granate (alto sx) + arma/munizioni/ricarica (alto dx) sul canvas ui
   effects.js          Effects: decal con fade (buchi), particelle (fumo/scintille/schegge), impact(type, ...),
                       bossoli espulsi casing(type, ...), esplosioni explosion(type, x, y, map)
+  ctf.js              Ctf: modalità Capture The Flag (bandiere, catture, ticket, punti di rientro, disegno pennoni)
 config/
-  game.json           parametri generali (display, i18n, player + id arma iniziale, input, camera, audio, mobile)
+  game.json           parametri generali (display, i18n, player + squadra e arma iniziale, input, camera, audio,
+                      mobile, teams, ctf, death, matchEnd, hud)
   weapons.json        armi: "defaults" + "weapons" { id: { name, bodySprite, pickupSprite, auto, pellets, ... } };
                       granate: "grenadeDefaults" + "grenades" { id: { fuse, lift, bounce, damage, explosion, ... } }
   assets.json         sprites (anche "extends") / tilesets (con "impact" per tile) / sounds
@@ -106,17 +108,36 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
   di u) per restare in stile pixel-art; testi con font reale (nomi armi tradotti) e ombra di 1 pixel di gioco.
   In alto per non coprire gli stick su mobile; l'overlay F3 va sotto (`hud.topHeight()`). Vita: `player.health`,
   `maxHealth`, `damage(n)`, `heal(n)` (non resuscita), `dead`. F5/F6 = danno/cura (debug).
-- Morte: `Player.update` non fa nulla da morto, `draw` usa `deadSprite` ruotato di `deathAngle`. `Game` crea
-  `this.over` (pozza `blood_pool` + arma caduta), dopo `gameOver.delay` chiama `onGameOver` (main.js mostra
-  `#overlay-gameover` e mette `body.game-over` = filtro CSS sul canvas di gioco). `restart()` (clic/tocco
-  sull'overlay o azione `confirm` = Invio) funziona solo dopo `restartDelay`; `_reset()` ricrea Player e Hud,
-  svuota proiettili/effetti e chiama `onRestart`. Game resta senza DOM: l'interfaccia HTML è in main.js.
+- Modalità principale = **Capture The Flag** (`js/game/ctf.js`, `game.json` -> `teams`/`ctf`). Squadre `blue`/`red`;
+  `player.team`, F8 = cambia squadra (debug, `Game._cycleTeam`). Bandiera: `owner` (conta per ticket e rientro),
+  `color` (null = bianca), `claimant` (chi la issa), `progress` 0..1 (altezza del drappo). Una sola squadra nell'area
+  (`radius`, linea di vista se `requireSight`): se è la claimant sale (`captureTime`, in cima diventa owner), altrimenti
+  scende col colore vecchio (`neutralizeTime`) e a terra passa alla nuova squadra (una bandiera colorata non torna
+  bianca); più squadre = contesa, ferma. Eventi `captured`/`neutralized` -> `Game._onFlagEvent` (suono + `hud.notify`
+  dal punto di vista del giocatore). Ticket: `ticketsPerDeath` (`ctf.onDeath`) + calo ogni `bleed.interval`
+  (`advantage` = differenza di bandiere, `enemyFlags`). `ctf.update(dt, units)` vuole unità `{ x, y, team, dead }`:
+  oggi solo `[player]`, pronto per i bot. Livello: legend `{ "tile", "flag": "A" }`, spawn = nome squadra, `flags`
+  = owner iniziale + override per bandiera. Pennone disegnato a runtime (vista laterale), ordinato per y col giocatore;
+  area a terra = canvas in cache per raggio/colore.
+- Squadre negli sprite: `"teamColored": true` in assets.json -> `Assets.load(cfg, teams)` genera `nome@squadra`
+  (placeholder con `team`/`teamDark`/`teamLight`, `{team}` nel src); `assets.sprite(nome, team)` sceglie la variante.
+  Soldato procedurale: striscia sull'elmetto (`teamStripe`) + mostrine sulle spalle.
+- Morte e rientro: `Player.update`/`draw` non fanno nulla da morto. `Game._onPlayerDeath` crea un cadavere in
+  `this.corpses` (corpo `deadSprite` + pozza + arma caduta, max `death.maxCorpses`), toglie i ticket e avvia
+  `this.respawn`; dopo `death.respawnDelay` un nuovo Player rientra con `ctf.spawnPoint(team, puntoMorte)` (bandiera
+  posseduta non contesa più vicina o base). HUD: ticket + bandiere in alto al centro, stato cattura, messaggi, scritta
+  di rientro.
+- Fine partita: `ctf.result` -> `Game.ended` (`outcome` victory/defeat/draw), dopo `matchEnd.delay` chiama
+  `onMatchEnd(outcome)` (main.js riempie `#overlay-matchend` e mette `body.match-over match-<outcome>` = filtro CSS).
+  `restart()` (clic/tocco sull'overlay o `confirm` = Invio) solo dopo `restartDelay`; `_reset()` azzera ctf, ricrea
+  Player e Hud, svuota proiettili/effetti/cadaveri e chiama `onRestart`. Game resta senza DOM: l'HTML è in main.js.
 - Sprite con `extends`: ereditano tutto tranne `src`, `placeholder` fuso campo per campo.
 - Movimento touch analogico: lunghezza vettore stick SX (dopo deadzone, elevata a `moveCurve`) × `speed`.
 - `Animator.update(dt)` accetta dt negativo (animazione all'indietro).
 - Spritesheet a griglia, frame numerati da sinistra a destra / dall'alto in basso; `origin` = punto di ancoraggio.
 - Tile: `id`, `name`, `solid`, `index` opzionale (posizione nello sheet). Fuori mappa = solido.
-- Livelli: `legend` mappa caratteri a nome/id del tile o a `{ "tile", "spawn" }`; `fill` completa righe corte.
+- Livelli: `legend` mappa caratteri a nome/id del tile o a `{ "tile", "spawn" }` / `{ "tile", "flag" }`
+  (`TileMap.spawns`, `TileMap.flags`); `fill` completa righe corte.
 - Collisioni: `moveAndCollide` presuppone spostamenti per tick < dimensione tile.
 - Colpi: la gittata si fissa allo sparo. Desktop con mouse = distanza dal mirino (± `rangeJitter`, angolo ± `spreadDeg`);
   touch o senza mouse = fino al bordo schermo di quel momento (`screenMargin`). Fine corsa = impatto del tile a terra;
@@ -158,6 +179,9 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
 - Fatto: base rendering, movimento, collisioni, camera, controlli desktop/mobile, proiettili con gittata
   (mirino su desktop, bordo schermo su touch) e impatti (buchi con fade, fumo, scintille, schegge),
   placeholder grafici e sonori, localizzazione en/it, catalogo armi (pistola, fucile, pompa) con cambio arma,
-  caricatore e ricarica (R / pulsante touch), bossoli espulsi e caricatori che cadono in ricarica, vampata di volata con fumo, danno per arma, vita del giocatore, HUD (vita, granate, arma, munizioni), morte con schermata di game over e riavvio, granate (rimbalzi, esplosione con bruciatura, fumo, schegge, detriti, scossa, danno).
-- Non ancora presenti: raccolta armi/granate da terra, riserva di munizioni (ora infinita), nemici, menu, selettore lingua in-game, asset grafici reali.
+  caricatore e ricarica (R / pulsante touch), bossoli espulsi e caricatori che cadono in ricarica, vampata di volata con fumo, danno per arma, vita del giocatore, HUD (vita, granate, arma, munizioni), granate (rimbalzi, esplosione con bruciatura, fumo, schegge, detriti, scossa, danno),
+  modalità Capture The Flag (squadre blu/rossa con segni sui soldati, bandiere catturabili, ticket con calo per
+  morti e bandiere, rientro alla bandiera più vicina o alla base, cadaveri persistenti, vittoria/sconfitta e nuova partita).
+- Non ancora presenti: raccolta armi/granate da terra, riserva di munizioni (ora infinita), nemici/bot (quindi la
+  squadra rossa non cattura da sola), menu, selettore lingua in-game, asset grafici reali.
 - Controlli touch (stick + pulsante ricarica) verificati dall'utente su un dispositivo reale (2026-11-02).

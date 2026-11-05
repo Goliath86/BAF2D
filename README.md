@@ -24,14 +24,32 @@ Apri `http://localhost:8080/`. Per provarlo su un telefono collegato alla stessa
 | Click sinistro / Spazio: spara | Stick destro spinto oltre il cerchio tratteggiato: spara |
 | R: ricarica | Pulsante tondo sopra lo stick destro: ricarica |
 | G: lancia una granata (verso il mirino) | Pulsante con la granata, a sinistra dello stick destro |
-| F3: overlay di debug · F4: arma successiva · F5/F6: togli/ridai vita · F7: +1 granata (debug) | |
+| F3: overlay di debug · F4: arma successiva · F5/F6: togli/ridai vita · F7: +1 granata · F8: cambia squadra (debug) | |
 
 **HUD**: in alto a sinistra la vita (cuore, barra con scia del danno, valore; lampeggia quando è bassa) e le granate rimaste,
 in alto a destra l'arma in uso (nome tradotto, icona), i colpi (`12/30` e tacche), la barra di ricarica e gli avvisi
-"RICARICA" / "SCARICO".
+"RICARICA" / "SCARICO". In alto al centro i ticket (propria squadra a sinistra) e lo stato delle bandiere.
 
-**Game over**: a vita zero il soldato cade a terra, perde l'arma e compare una pozza di sangue; dopo un attimo la
-scena si desatura e appare la schermata di game over. Clic, tocco o Invio per ricominciare.
+## Modalità: Capture The Flag
+
+Due squadre, **blu** e **rossa** (riconoscibili dalla striscia sull'elmetto e dalle mostrine sulle spalle).
+Sulla mappa ci sono delle bandiere: un pennone con un drappo che parte da terra.
+
+- **Cattura**: restando nell'area della bandiera (cerchio tratteggiato a terra, `radius`) il drappo — bianco se
+  neutro — sale fino in cima in `captureTime` secondi; in cima la bandiera diventa del colore della squadra.
+- **Riconquista**: se una squadra nemica entra nell'area di una bandiera già presa, il drappo scende
+  (in `neutralizeTime`) mantenendo il colore di prima; arrivato a terra prende il colore della squadra che lo sta
+  catturando e risale. Due squadre nell'area insieme = bandiera **contesa**, il drappo resta fermo.
+  Con più soldati della stessa squadra la cattura accelera (`extraCapturerSpeed`).
+- **Ticket**: ogni squadra parte con `tickets` (es. 400). Ogni morte costa `ticketsPerDeath`; ogni `bleed.interval`
+  secondi una squadra in svantaggio di bandiere perde `perFlag` ticket per ogni bandiera di differenza
+  (`bleed.mode: "enemyFlags"` = per ogni bandiera nemica, a prescindere dalle proprie).
+- **Rientro**: da morto (resta il corpo con la pozza e l'arma caduta), dopo `death.respawnDelay` secondi si rientra
+  alla bandiera della propria squadra (non contesa) più vicina al punto della morte, o alla base se è più vicina.
+- **Fine partita**: la squadra che arriva a 0 ticket perde; schermata di vittoria/sconfitta (pareggio se finiscono
+  insieme). Clic, tocco o Invio per una nuova partita.
+
+Per ora non ci sono nemici: per provare le catture da entrambe le parti usa F8 (cambia squadra).
 
 La modalità (desktop/touch) cambia automaticamente in base all'ultimo input usato.
 Su mobile, al primo tocco il gioco prova ad andare a schermo intero e a bloccare l'orientamento in landscape;
@@ -51,7 +69,8 @@ config/
 js/
   main.js              bootstrap
   engine/              display, input, touch (joystick), assets, placeholder, tilemap, camera, audio, loader, i18n
-  game/                game (loop, proiettili, render), player, weapons (catalogo armi), grenades, hud, effects (decal e particelle)
+  game/                game (loop, proiettili, render), player, weapons (catalogo armi), grenades, hud, effects (decal e particelle),
+                       ctf (bandiere, ticket, rientro)
 tools/serve.mjs        server statico di sviluppo (solo moduli Node built-in)
 ```
 
@@ -100,6 +119,11 @@ da usare nell'animazione `reload`).
 **Ereditarietà**: uno sprite con `"extends": "altro_sprite"` eredita la definizione dell'altro (dimensioni, origin,
 animazioni; `placeholder` fuso campo per campo) tranne `src`. Esempio: `soldier_pistol` estende `soldier_rifle`
 cambiando solo `placeholder.weapon`.
+
+**Varianti di squadra**: uno sprite con `"teamColored": true` (ereditato da chi lo estende) genera anche
+`nome@blue`, `nome@red`, ... per ogni squadra di `game.json` → `teams`: il placeholder riceve `team`, `teamDark`,
+`teamLight` (= `color`, `dark`, `light` della squadra) e un `{team}` nel `src` viene sostituito con l'id
+(es. `"src": "assets/licensed/soldier_{team}.png"`). Il giocatore usa la variante della sua squadra se esiste.
 
 **Tileset**: tile quadrati di `tileSize` px; ogni tile ha `id`, `name`, `solid` e opzionalmente `index`
 (posizione nello sheet, default = `id`).
@@ -197,16 +221,26 @@ Da codice: `player.addGrenades(n)`.
 
 ### Livelli (`config/levels/*.json`)
 
-La mappa è un array di stringhe; `legend` associa ogni carattere a un tile (per nome o id) e, opzionalmente, a uno spawn:
+La mappa è un array di stringhe; `legend` associa ogni carattere a un tile (per nome o id) e, opzionalmente, a uno
+spawn (base di una squadra: lo spawn ha il nome della squadra) o a una bandiera:
 
 ```json
 "legend": {
   ".": "floor",
   "#": "wall",
-  "P": { "tile": "floor", "spawn": "player" }
+  "b": { "tile": "floor", "spawn": "blue" },
+  "r": { "tile": "floor", "spawn": "red" },
+  "A": { "tile": "floor", "flag": "A" }
+},
+"flags": {
+  "A": { "owner": null },
+  "B": { "owner": null, "radius": 40, "captureTime": 10 },
+  "C": { "owner": "red" }
 }
 ```
 
+`flags` (opzionale) per ogni bandiera: `owner` iniziale (`null` = neutra) e override dei parametri di
+`game.json` → `ctf.flag`. L'id della bandiera (la lettera) compare nell'HUD.
 `fill` è il tile usato per completare righe più corte. Fuori dalla mappa tutto è considerato solido.
 
 ### Localizzazione (`config/lang/*.json`)
@@ -258,13 +292,26 @@ lo stick sinistro due pulsanti a forma di cuore: "−" toglie vita (come F5), "+
 - `player.maxHealth`: punti vita (da codice `player.damage(n)` / `player.heal(n)`; F5/F6 in debug, quantità `debugDamage`).
 - Morte: `player.deadSprite` (corpo a terra, testa a sinistra), `player.deadOffset` (px di cui il corpo cade
   all'indietro), `player.deathSound`.
-- `gameOver`: `delay` (secondi tra la morte e la schermata), `restartDelay` (attesa prima che clic/tocco/Invio
-  facciano ricominciare, contro i riavvii involontari), `poolSprite`/`poolTime` (pozza che si allarga sotto il corpo:
-  i frame dello sprite vanno dal più piccolo al più grande), `dropWeapon`/`dropDistance` (l'arma cade a terra).
+- `player.team`: squadra del giocatore (id in `teams`).
+- `teams`: squadre `{ id: { color, dark, light } }` (colori di HUD, bandiere e varianti degli sprite).
+- `ctf`: `tickets` (numero, o `{ "blue": 400, "red": 300 }`), `ticketsPerDeath`, `bleed` (`interval` in secondi,
+  `mode` = `advantage`|`enemyFlags`, `perFlag`), `flag` (default delle bandiere: `radius` px, `captureTime` e
+  `neutralizeTime` in secondi, `extraCapturerSpeed` = velocità in più per ogni soldato oltre il primo,
+  `requireSight` = i muri tra soldato e bandiera impediscono la cattura, `spawnDistance` = [min, max] px del rientro
+  attorno alla bandiera), suoni `capturedSound`/`lostSound`/`neutralizedSound`, `look` (pennone: `poleHeight`,
+  colori, drappo `clothWidth`/`clothHeight`, `neutralColor`/`neutralDark`, sventolio `wave`/`waveSpeed`;
+  area: `showZones`, `zoneAlpha`, `zoneFillAlpha`, `zoneDash`).
+- `death`: `respawnDelay`, `respawnSound`, `maxCorpses` (cadaveri lasciati sulla mappa), `poolSprite`/`poolTime`
+  (pozza che si allarga sotto il corpo: i frame dello sprite vanno dal più piccolo al più grande),
+  `dropWeapon`/`dropDistance` (l'arma cade a terra).
+- `matchEnd`: `delay` (secondi tra la fine dei ticket e la schermata), `restartDelay` (attesa prima che
+  clic/tocco/Invio facciano ricominciare, contro i riavvii involontari).
 - `hud`: misure in pixel di gioco (`margin`, `fontSize`, `font`) e colori. `hud.health`: barra della vita
   (`width`, `height`, `showValue`, colori, `lowThreshold` = frazione sotto cui lampeggia, `trailDelay`/`trailSpeed`
   = scia chiara della vita persa). `hud.weapon`: `iconScale` (icona = `pickupSprite` dell'arma), `ammoFontSize`,
   `pipsWidth`/`pipHeight` (tacche dei colpi; caricatori più grandi diventano una barra), colori.
-  `hud.grenades`: `show`, `icon` (sprite), `iconScale`, `emptyColor`.
+  `hud.grenades`: `show`, `icon` (sprite), `iconScale`, `emptyColor`. `hud.ctf`: pannello ticket/bandiere
+  (`ticketFontSize`, `barWidth`, `lowTickets` = frazione sotto cui il numero lampeggia, `flagGap`, ...), barra della
+  cattura (`zoneBarWidth`, `contestedColor`), messaggi (`toastTime`) e scritta di rientro (`respawnY`, `killedColor`).
 - `camera.smoothing`, `camera.lookAhead` (px di anticipo nella direzione di mira).
 - `mobile.requestFullscreen`, `mobile.lockLandscape`.
