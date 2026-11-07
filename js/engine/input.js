@@ -83,6 +83,18 @@ export class Input {
   }
 
   /**
+   * Guida dei mezzi da tastiera: { throttle, steer } in -1..1 (avanti/indietro = acceleratore/retromarcia,
+   * sinistra/destra = sterzo, relativi al mezzo). null su touch: lì lo stick indica la direzione sullo schermo.
+   */
+  getDrive() {
+    if (this.mode === 'touch') return null;
+    return {
+      throttle: (this.isDown('up') ? 1 : 0) - (this.isDown('down') ? 1 : 0),
+      steer: (this.isDown('right') ? 1 : 0) - (this.isDown('left') ? 1 : 0),
+    };
+  }
+
+  /**
    * Angolo di mira (radianti) o null se non c'è input di mira.
    * sx, sy: posizione del giocatore in pixel di gioco sullo schermo.
    */

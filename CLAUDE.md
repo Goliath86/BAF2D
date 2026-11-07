@@ -215,7 +215,10 @@ tools/check_level.mjs controllo livelli: celle irraggiungibili e vicoli ciechi (
   `game.vehicleSpawns` dalla legend `{ "tile", "vehicle", "team", "angleDeg" }` -> `TileMap.vehicles`). Un soldato a
   bordo ha `unit.vehicle` (posizione sincronizzata da `Game._syncDriver`, non disegnato, escluso da colpi/esplosioni/
   percezione IA/raccolta granate); il mezzo prende la squadra del pilota. Comandi del mezzo
-  `{ move, aim(v), firing, secondary, reload }`: umano `_humanVehicleControl`, bot `unit.vehicleBrain`
+  `{ move, drive, aim(v), firing, secondary, reload }`: umano `_humanVehicleControl`, bot `unit.vehicleBrain`
+  (guida da tastiera: `drive = input.getDrive()` = { throttle, steer }, W/S acceleratore/retromarcia, A/D sterzo,
+  `Vehicle._driveRelative`, in retromarcia le ruote sterzano al contrario; su touch e per i bot `move` = direzione
+  sullo schermo)
   (`VehicleBrain`, cfg `bots.ai.vehicle`). Salita/discesa: azione `pickup` (precedenza sui mezzi) ->
   `_enterVehicle` / `_exitVehicle`; i bot impostano `brain.enterNow` (`BotBrain._boardTick`, cfg `bots.ai.vehicles`).
   Armi del mezzo = voci di weapons.json con `vehicleOnly` (stato in `vehicle.guns`), sparano con

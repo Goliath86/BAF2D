@@ -205,6 +205,10 @@ export class Vehicle {
   }
 
   _drive(dt, ctrl) {
+    if (ctrl.drive) {
+      this._driveRelative(dt, ctrl.drive);
+      return;
+    }
     const d = this.def;
     const m = ctrl.move || { x: 0, y: 0 };
     const len = Math.min(1, Math.hypot(m.x, m.y));
@@ -226,6 +230,33 @@ export class Vehicle {
       const align = Math.max(0, Math.cos(diff));
       target = dir * len * maxSpeed * (dir < 0 ? d.reverseFactor ?? 0.5 : 1) * align * align;
     }
+    this._approachSpeed(dt, target);
+  }
+
+  /**
+   * Guida relativa al mezzo (tastiera): throttle > 0 avanti, < 0 freno e poi retromarcia; steer gira il mezzo.
+   * I mezzi a ruote (turnNeedsSpeed) sterzano solo in movimento e in retromarcia al contrario, come un'auto;
+   * i cingolati girano anche da fermi.
+   */
+  _driveRelative(dt, drive) {
+    const d = this.def;
+    const maxSpeed = d.maxSpeed ?? 100;
+    const throttle = Math.max(-1, Math.min(1, drive.throttle || 0));
+    const steer = Math.max(-1, Math.min(1, drive.steer || 0));
+    this.throttle = Math.max(Math.abs(throttle), Math.abs(steer) * 0.5);
+    let turn = steer * (d.turnRate ?? 2.5) * dt;
+    if (d.turnNeedsSpeed) {
+      turn *= Math.max(d.standTurn ?? 0.3, Math.min(1, Math.abs(this.speed) / (maxSpeed * 0.3)));
+      if (this.speed < -1) turn = -turn;
+    }
+    this.angle += turn;
+    const target = throttle >= 0 ? throttle * maxSpeed : throttle * maxSpeed * (d.reverseFactor ?? 0.5);
+    this._approachSpeed(dt, target);
+  }
+
+  /** Porta la velocità verso target: accelerazione accel, frenata brake (anche quando si inverte il senso). */
+  _approachSpeed(dt, target) {
+    const d = this.def;
     const slowing = Math.abs(target) < Math.abs(this.speed) || Math.sign(target) !== Math.sign(this.speed);
     const a = (slowing ? d.brake ?? 260 : d.accel ?? 150) * dt;
     this.speed += Math.max(-a, Math.min(a, target - this.speed));

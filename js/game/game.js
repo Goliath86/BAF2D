@@ -356,11 +356,15 @@ export class Game {
     }
   }
 
-  /** Comandi del giocatore umano alla guida: muovi = direzione, mira = torretta, fuoco / G = razzi, R. */
+  /**
+   * Comandi del giocatore umano alla guida: da tastiera drive = acceleratore (avanti/indietro) + sterzo
+   * (sinistra/destra); su touch move = direzione sullo schermo. Mira = torretta, fuoco / G = razzi, R.
+   */
   _humanVehicleControl() {
     const { input, camera } = this;
     return {
       move: input.getMove(),
+      drive: input.getDrive(),
       aim: (v) => {
         const p = v.pivot;
         return input.getAim(p.x - Math.round(camera.x), p.y - Math.round(camera.y));
