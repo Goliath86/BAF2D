@@ -93,7 +93,13 @@ Source code licensed under the GNU GPL v3.
 ## Cover image and screenshots
 
 - Cover image: `arts/cover.png` (630 × 500, the size itch.io asks for).
-- Screenshots: 3–5 in-game shots (e.g. the desert village, the oasis, a vehicle fight, the leaderboard).
+- Screenshots (1920 × 1080, in `arts/screenshots/`), suggested order and captions:
+  1. `oasis_battle.png` — Firefight at the oasis: grenades, explosions and a flag to take back.
+  2. `vehicle_combat.png` — Rocket tank vs jeep on the desert road.
+  3. `crossroads_firefight.png` — Holding the centre of Crossroads.
+  4. `promotion.png` — Rank up mid-match: 18 ranks from Private to General.
+  5. `leaderboard.png` — End-of-match leaderboard and career progress.
+  6. `main_menu.png` — Main menu, with a live AI battle running behind it.
 
 ## Release notes (devlog) — v1.0.0
 
