@@ -97,6 +97,8 @@ docs/itch-io.md       testi e impostazioni della pagina itch.io (inglese)
 tools/gen_desert.mjs  genera config/levels/level03.json (deserto 97x65, simmetrico, verifica raggiungibilità)
 tools/gen_arena.mjs   genera config/levels/level01.json (Test Arena 97x65, 3 bandiere)
 tools/gen_crossroads.mjs genera config/levels/level02.json (Crossroads 97x65, 5 bandiere)
+tools/gen_countryside.mjs genera config/levels/level04.json (Countryside 97x65: trincee con parapetti di sacchi,
+                      siepi, frutteto, casale, stagno, crateri; tileset "countryside", meteo "country_breeze")
 tools/levelgen.mjs    utilità dei generatori: griglia simmetrica (rotazione 180°), room/line/fill, writeLevel
 tools/check_level.mjs controllo livelli: celle irraggiungibili e vicoli ciechi (node tools/check_level.mjs <file...>)
 ```
@@ -316,7 +318,9 @@ tools/check_level.mjs controllo livelli: celle irraggiungibili e vicoli ciechi (
   menu desktop/mobile (nuova partita con mappa/squadra/numero di bot, opzioni lingua/volume/tasti, pausa,
   rivincita), seconda mappa "Crocevia" (5 bandiere, simmetrica), terza mappa "Villaggio nel deserto" (97x65,
   tileset deserto procedurale, palme/cespugli, vento con sabbia che si muove, acqua, muretti, case in rovina,
-  strade larghe per i futuri mezzi), punteggi con classifica di fine partita
+  strade larghe per i futuri mezzi), quarta mappa "Campagna" (erba, trincee a zig-zag con sacchi di sabbia,
+  siepi, frutteto, casale in mattoni al centro, stagno, crateri, alberi con chioma sopra i soldati; stili
+  procedurali grass/mud/sandbags/hedge/planks/field/fence e sprite "tree"), punteggi con classifica di fine partita
   (nomi fittizi per i bot), 18 gradi con insegne a pixel, promozioni in partita e carriera salvata in localStorage.
 - Fatto anche: raccolta di armi (scambio con E, anche i bot) e granate da terra, punti fissi con respawn sulle mappe.
 - Non ancora presenti: mappa procedurale, riserva di munizioni (ora infinita),

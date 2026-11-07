@@ -51,6 +51,10 @@
     "desert": {
       "name": "Desert Village",
       "description": "Large desert map swept by the wind: a ruined village in the centre, an oasis with palms, wide dirt roads and dry-stone walls for cover."
+    },
+    "countryside": {
+      "name": "Countryside",
+      "description": "Green farmland between two trench lines: sandbag parapets, hedgerows, orchards, shell craters and a farmhouse to fight over in the middle."
     }
   },
   "options": {

@@ -819,6 +819,41 @@ const SPRITE_SHAPES = {
     if (p.flowers) for (let k = 0; k < 3; k++) rect(g, Math.round(cx + (r() - 0.5) * w * 0.5), Math.round(cy + (r() - 0.5) * h * 0.5), 1, 1, p.flowers);
   },
 
+  /** Chioma d'albero vista dall'alto: grappoli di fogliame tondi, scuri sotto e chiari in alto a sinistra. */
+  tree(g, w, h, p, i) {
+    const n = p.variants ?? 3;
+    const shadow = i >= n;
+    const r = rng((i % n) * 89 + 13);
+    const S = p.shadowColor || '#000';
+    const cx = w / 2;
+    const cy = h / 2;
+    const R = Math.min(w, h) * 0.4;
+    const clumps = [];
+    const k = 6 + Math.floor(r() * 4);
+    for (let j = 0; j < k; j++) {
+      const a = (j / k) * Math.PI * 2 + r() * 0.6;
+      const d = R * (0.35 + r() * 0.3);
+      clumps.push({ x: cx + Math.cos(a) * d, y: cy + Math.sin(a) * d, rr: R * (0.38 + r() * 0.18) });
+    }
+    clumps.push({ x: cx, y: cy, rr: R * 0.55 });
+    if (shadow) {
+      for (const c of clumps) disc(g, c.x, c.y, c.rr, S);
+      return;
+    }
+    for (const c of clumps) disc(g, c.x + 1, c.y + 1.5, c.rr, p.dark);
+    for (const c of clumps) disc(g, c.x, c.y, c.rr - 1, p.color);
+    for (const c of clumps) disc(g, c.x - c.rr * 0.25, c.y - c.rr * 0.3, c.rr * 0.5, p.light);
+    // foglie sparse e qualche riflesso
+    for (let j = 0; j < w * 1.5; j++) {
+      const a = r() * Math.PI * 2;
+      const d = r() * R;
+      const x = Math.round(cx + Math.cos(a) * d);
+      const y = Math.round(cy + Math.sin(a) * d);
+      rect(g, x, y, 1, 1, r() < 0.5 ? p.dark : p.highlight || p.light);
+    }
+    if (p.fruit) for (let j = 0; j < 5; j++) rect(g, Math.round(cx + (r() - 0.5) * R * 1.4), Math.round(cy + (r() - 0.5) * R * 1.4), 1, 1, p.fruit);
+  },
+
   /** Sasso con ombra inclusa (non ondeggia). */
   pebble(g, w, h, p, i) {
     const r = rng(i * 61 + 5);
@@ -1069,6 +1104,135 @@ const TILE_STYLES = {
       rect(g, x, y, 2 + Math.floor(r() * 3), 1, p.light);
     }
     for (let i = 0; i < 6; i++) rect(g, Math.floor(r() * s), Math.floor(r() * s), 1, 1, p.dark);
+  },
+
+  // ---------- Campagna ----------
+
+  /** Erba: fondo verde, ciuffi di fili (due pixel in verticale) chiari e scuri, fiorellini opzionali. */
+  grass(g, s, p, seed) {
+    rect(g, 0, 0, s, s, p.color);
+    const r = rng(seed * 43 + 7);
+    for (let i = 0; i < s * 1.2; i++) rect(g, Math.floor(r() * s), Math.floor(r() * s), 1, 1, p.detail);
+    for (let i = 0; i < (p.tufts ?? 6); i++) {
+      const x = Math.floor(r() * s);
+      const y = Math.floor(r() * (s - 1));
+      rect(g, x, y, 1, 2, p.blade);
+      rect(g, (x + 1) % s, y + 1, 1, 1, p.blade);
+      rect(g, x, y, 1, 1, p.light);
+    }
+    for (let i = 0; i < (p.flowerCount ?? 0); i++) {
+      const cols = p.flowers || ['#f0e8a0'];
+      rect(g, Math.floor(r() * s), Math.floor(r() * s), 1, 1, cols[Math.floor(r() * cols.length)]);
+    }
+  },
+
+  /** Fango (fondo della trincea, crateri): terra scura, zolle, pozzanghere; planks = camminamento di assi. */
+  mud(g, s, p, seed) {
+    rect(g, 0, 0, s, s, p.color);
+    const r = rng(seed * 47 + 3);
+    for (let i = 0; i < s * 1.2; i++) rect(g, Math.floor(r() * s), Math.floor(r() * s), 1, 1, r() < 0.5 ? p.detail : p.light);
+    for (let i = 0; i < (p.puddles ?? 1); i++) {
+      const x = 2 + r() * (s - 4);
+      const y = 2 + r() * (s - 4);
+      ellipse(g, x, y, 1.5 + r() * 2, 1 + r(), p.puddle || p.detail);
+      rect(g, Math.round(x) - 1, Math.round(y) - 1, 1, 1, p.shine || p.light);
+    }
+    if (p.planks) {
+      // assi trasversali (camminamento) con chiodi
+      for (let y = 1; y < s; y += 4) {
+        rect(g, 3, y, s - 6, 3, p.plank);
+        rect(g, 3, y, s - 6, 1, p.plankLight);
+        rect(g, 3, y + 2, s - 6, 1, p.plankDark);
+        rect(g, 4, y + 1, 1, 1, p.plankDark);
+        rect(g, s - 5, y + 1, 1, 1, p.plankDark);
+      }
+    }
+  },
+
+  /** Sacchi di sabbia visti dall'alto: file sfalsate di sacchi arrotondati con cuciture e ombra tra le file. */
+  sandbags(g, s, p, seed) {
+    rect(g, 0, 0, s, s, p.gap);
+    const r = rng(seed * 59 + 1);
+    const cols = p.colors || [p.color];
+    const bh = s / 3;
+    for (let row = 0; row < 3; row++) {
+      const y = row * bh;
+      let x = row % 2 === 0 ? -3 : -7;
+      while (x < s) {
+        const w = 7 + Math.floor(r() * 2);
+        const c = cols[Math.floor(r() * cols.length)];
+        rect(g, x + 1, y + 1, w - 1, bh - 1, p.dark);
+        rect(g, x + 1, y, w - 2, bh - 1, c);
+        rect(g, x, y + 1, w, bh - 3, c);
+        rect(g, x + 2, y + 1, w - 4, 1, p.light);
+        rect(g, x + Math.floor(w / 2), y + 1, 1, bh - 3, p.seam || p.dark);
+        x += w;
+      }
+    }
+  },
+
+  /** Siepe / bosco: fogliame fitto a ciuffi tondi che sborda sui lati (il ritaglio lo tiene nel tile). */
+  hedge(g, s, p, seed) {
+    rect(g, 0, 0, s, s, p.dark);
+    const r = rng(seed * 67 + 5);
+    const n = p.blobs ?? 9;
+    const pts = [];
+    for (let i = 0; i < n; i++) pts.push({ x: r() * s, y: r() * s, rr: 2.5 + r() * (p.blobSize ?? 2.5) });
+    for (const b of pts) disc(g, b.x + 0.7, b.y + 0.9, b.rr, p.shade || p.dark);
+    for (const b of pts) disc(g, b.x, b.y, b.rr - 0.5, p.color);
+    for (const b of pts) disc(g, b.x - 0.8, b.y - 0.8, Math.max(0.8, b.rr * 0.4), p.light);
+    for (let i = 0; i < (p.berries ?? 0); i++) rect(g, Math.floor(r() * s), Math.floor(r() * s), 1, 1, p.berry || '#c03030');
+  },
+
+  /** Assi di legno (pavimento del casale): tavole orizzontali con venature e fughe. */
+  planks(g, s, p, seed) {
+    const r = rng(seed * 71 + 9);
+    const h = 4;
+    for (let y = 0; y < s; y += h) {
+      rect(g, 0, y, s, h, r() < 0.3 ? p.alt || p.color : p.color);
+      rect(g, 0, y + h - 1, s, 1, p.dark);
+      rect(g, 0, y, s, 1, p.light);
+      const j = Math.floor(r() * s);
+      rect(g, j, y, 1, h - 1, p.dark);
+      for (let i = 0; i < 3; i++) rect(g, Math.floor(r() * s), y + 1 + Math.floor(r() * 2), 2, 1, p.grain || p.dark);
+    }
+  },
+
+  /** Campo coltivato: solchi orizzontali di terra con file di piante (grano o verde). */
+  field(g, s, p, seed) {
+    rect(g, 0, 0, s, s, p.soil);
+    const r = rng(seed * 73 + 2);
+    for (let y = 0; y < s; y += 4) {
+      rect(g, 0, y + 3, s, 1, p.furrow || p.soil);
+      for (let x = 0; x < s; x++) {
+        if (r() < 0.15) continue;
+        rect(g, x, y + 1, 1, 2, r() < 0.5 ? p.color : p.dark);
+        if (r() < 0.35) rect(g, x, y, 1, 1, p.light);
+      }
+    }
+  },
+
+  /** Staccionata su erba: pali e due traverse; dir = "h" (orizzontale) o "v" (verticale). */
+  fence(g, s, p, seed) {
+    TILE_STYLES.grass(g, s, p, seed);
+    const v = p.dir === 'v';
+    const m = Math.floor(s / 2);
+    for (const off of [-2, 2]) {
+      if (v) {
+        rect(g, m + off, 0, 1, s, p.rail);
+        rect(g, m + off + 1, 0, 1, s, p.railDark);
+      } else {
+        rect(g, 0, m + off, s, 1, p.rail);
+        rect(g, 0, m + off + 1, s, 1, p.railDark);
+      }
+    }
+    for (const q of [3, s - 4]) {
+      const x = v ? m - 2 : q - 1;
+      const y = v ? q - 1 : m - 2;
+      rect(g, x + 1, y + 1, 4, 4, p.postDark);
+      rect(g, x, y, 4, 4, p.post);
+      rect(g, x, y, 4, 1, p.postLight);
+    }
   },
 };
 

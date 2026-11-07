@@ -322,6 +322,20 @@
       "origin": [3, 3],
       "placeholder": { "shape": "hole", "frames": 3, "rim": "#a8844f", "center": "#7a5c38", "chips": "#c29e62" }
     },
+    "hole_grass": {
+      "src": null,
+      "frameWidth": 7,
+      "frameHeight": 7,
+      "origin": [3, 3],
+      "placeholder": { "shape": "hole", "frames": 3, "rim": "#4a3a24", "center": "#2a2014", "chips": "#6a5434" }
+    },
+    "hole_dirt": {
+      "src": null,
+      "frameWidth": 7,
+      "frameHeight": 7,
+      "origin": [3, 3],
+      "placeholder": { "shape": "hole", "frames": 3, "rim": "#4a3a26", "center": "#261c12", "chips": "#7a6040" }
+    },
     "hole_adobe": {
       "src": null,
       "frameWidth": 7,
@@ -367,6 +381,31 @@
       "frameHeight": 10,
       "origin": [5, 5],
       "placeholder": { "shape": "pebble", "frames": 3, "color": "#a8987c", "dark": "#6e5e48", "light": "#cfc0a2", "shadowColor": "rgba(60,40,20,0.35)" }
+    },
+    "tree": {
+      "src": null,
+      "frameWidth": 44,
+      "frameHeight": 44,
+      "origin": [22, 22],
+      "placeholder": { "shape": "tree", "variants": 3, "frames": 6, "color": "#3f7a2e", "light": "#62a03e", "dark": "#24481c", "highlight": "#86c058", "shadowColor": "#000000" }
+    },
+    "tree_fruit": {
+      "extends": "tree",
+      "placeholder": { "color": "#4a8434", "light": "#6eaa46", "dark": "#2a5020", "fruit": "#d84a2a" }
+    },
+    "bush_green": {
+      "src": null,
+      "frameWidth": 16,
+      "frameHeight": 16,
+      "origin": [8, 8],
+      "placeholder": { "shape": "bush", "variants": 3, "frames": 6, "color": "#3f7a30", "light": "#62a044", "dark": "#24481e", "flowers": "#f0f0f0", "shadowColor": "#000000" }
+    },
+    "stone_grey": {
+      "src": null,
+      "frameWidth": 10,
+      "frameHeight": 10,
+      "origin": [5, 5],
+      "placeholder": { "shape": "pebble", "frames": 3, "color": "#8a8a84", "dark": "#55554f", "light": "#b4b4ac", "shadowColor": "rgba(10,30,10,0.35)" }
     },
     "crosshair": {
       "src": null,
@@ -420,6 +459,43 @@
         { "id": 20, "name": "water", "solid": true, "shootThrough": true, "impact": "water", "edge": { "width": 2, "dither": 1, "round": 8, "colors": ["#a5824e", "#9a7848"], "foam": "#d8eef2", "foamDensity": 0.75 }, "placeholder": { "style": "water", "color": "#3a7aa0", "light": "#8ac4dc", "dark": "#2e6488" } },
         { "id": 21, "name": "crate", "solid": true, "impact": "wood", "placeholder": { "style": "crate", "color": "#8a5a2b", "light": "#b07a40", "dark": "#4f3216" } },
         { "id": 22, "name": "palm_base", "solid": true, "shootThrough": true, "impact": "sand", "placeholder": { "style": "sand", "color": "#d6b376", "detail": "#c6a062", "light": "#e6c98f", "ripple": "#bf9a5c", "ripples": 1 } }
+      ]
+    },
+    "countryside": {
+      "src": null,
+      "tileSize": 16,
+      "shadow": { "color": "#0e1a08", "alpha": 0.32, "dx": 3, "dy": 4 },
+      "tiles": [
+        { "id": 0, "name": "grass", "solid": false, "impact": "grass", "placeholder": { "style": "grass", "color": "#5a8a38", "detail": "#527f33", "light": "#7aac4c", "blade": "#41702a", "tufts": 6 } },
+        { "id": 1, "name": "grass2", "solid": false, "impact": "grass", "placeholder": { "style": "grass", "color": "#578636", "detail": "#4e7b31", "light": "#76a84a", "blade": "#3e6c28", "tufts": 8 } },
+        { "id": 2, "name": "grass3", "solid": false, "impact": "grass", "placeholder": { "style": "grass", "color": "#5c8c3a", "detail": "#548135", "light": "#7cae4e", "blade": "#42722b", "tufts": 5, "flowerCount": 3, "flowers": ["#f4f0d0", "#f0d850", "#e8a0c8"] } },
+        { "id": 3, "name": "grass4", "solid": false, "impact": "grass", "placeholder": { "style": "grass", "color": "#527f33", "detail": "#4a742e", "light": "#6e9e44", "blade": "#3a6626", "tufts": 9 } },
+        { "id": 4, "name": "dirt", "solid": false, "impact": "dirt", "edge": { "group": "dirt", "width": 4, "dither": 0.7, "colors": ["#5a8a38", "#527f33", "#4e7b31"] }, "placeholder": { "style": "road", "color": "#8a6c46", "detail": "#7c603e", "light": "#9a7c52", "stone": "#6a5236", "stones": 1 } },
+        { "id": 5, "name": "dirt2", "solid": false, "impact": "dirt", "edge": { "group": "dirt", "width": 4, "dither": 0.7, "colors": ["#5a8a38", "#527f33", "#4e7b31"] }, "placeholder": { "style": "road", "color": "#866842", "detail": "#785c3a", "light": "#96784e", "stone": "#665034", "stones": 2 } },
+        { "id": 6, "name": "trench", "solid": false, "impact": "dirt", "edge": { "group": "trench", "width": 3, "dither": 0.85, "colors": ["#2e2216", "#3a2c1e"] }, "placeholder": { "style": "mud", "color": "#5a4430", "detail": "#4c3a28", "light": "#6a5238", "puddles": 0 } },
+        { "id": 29, "name": "trench2", "solid": false, "impact": "dirt", "edge": { "group": "trench", "width": 3, "dither": 0.85, "colors": ["#2e2216", "#3a2c1e"] }, "placeholder": { "style": "mud", "color": "#584230", "detail": "#4a3826", "light": "#685036", "puddle": "#3e4a4a", "shine": "#7a8a86", "puddles": 1 } },
+        { "id": 7, "name": "duckboard", "solid": false, "impact": "wood", "edge": { "group": "trench", "width": 3, "dither": 0.85, "colors": ["#2e2216", "#3a2c1e"] }, "placeholder": { "style": "mud", "color": "#5a4430", "detail": "#4c3a28", "light": "#6a5238", "puddles": 0, "planks": true, "plank": "#8a6a44", "plankLight": "#a4825a", "plankDark": "#5a4228" } },
+        { "id": 8, "name": "crater", "solid": false, "impact": "dirt", "edge": { "group": "crater", "width": 4, "dither": 0.6, "round": 6, "colors": ["#6a5438", "#5a8a38"] }, "placeholder": { "style": "mud", "color": "#4e3c2a", "detail": "#3e3020", "light": "#62503a", "puddles": 0 } },
+        { "id": 28, "name": "crater2", "solid": false, "impact": "dirt", "edge": { "group": "crater", "width": 4, "dither": 0.6, "round": 6, "colors": ["#6a5438", "#5a8a38"] }, "placeholder": { "style": "mud", "color": "#4c3a28", "detail": "#3c2e1e", "light": "#604e38", "puddle": "#3a4646", "shine": "#76847e", "puddles": 1 } },
+        { "id": 9, "name": "sandbags", "solid": true, "impact": "sandbag", "placeholder": { "style": "sandbags", "gap": "#4a3e28", "colors": ["#b4a272", "#a69466", "#c0b080"], "light": "#d4c898", "dark": "#6e6040", "seam": "#8a7a52" } },
+        { "id": 10, "name": "sandbags2", "solid": true, "impact": "sandbag", "placeholder": { "style": "sandbags", "gap": "#463a26", "colors": ["#ac9a6a", "#9e8e60", "#b8a878"], "light": "#ccc092", "dark": "#6a5c3e", "seam": "#86764e" } },
+        { "id": 11, "name": "hedge", "solid": true, "impact": "foliage", "placeholder": { "style": "hedge", "color": "#3a6a2a", "light": "#56883a", "dark": "#1e3a16", "shade": "#24441a", "blobs": 10, "blobSize": 2.8 } },
+        { "id": 27, "name": "hedge2", "solid": true, "impact": "foliage", "placeholder": { "style": "hedge", "color": "#3c6c2c", "light": "#5a8c3c", "dark": "#1e3a16", "shade": "#24441a", "blobs": 9, "blobSize": 3.2 } },
+        { "id": 12, "name": "woods", "solid": true, "impact": "foliage", "placeholder": { "style": "hedge", "color": "#2e5a24", "light": "#44763a", "dark": "#14280e", "shade": "#1a3412", "blobs": 7, "blobSize": 4 } },
+        { "id": 13, "name": "woods2", "solid": true, "impact": "foliage", "placeholder": { "style": "hedge", "color": "#32602a", "light": "#4a7c3c", "dark": "#162c10", "shade": "#1c3614", "blobs": 6, "blobSize": 4.5 } },
+        { "id": 14, "name": "brick", "solid": true, "impact": "wall", "placeholder": { "style": "wall", "color": "#8e5a42", "light": "#b07858", "dark": "#5a3626" } },
+        { "id": 15, "name": "stonewall", "solid": true, "impact": "stone", "placeholder": { "style": "stones", "gap": "#4a4a42", "colors": ["#9a9a90", "#a8a89c", "#8a8a80"], "light": "#c4c4b8" } },
+        { "id": 16, "name": "planks", "solid": false, "impact": "wood", "placeholder": { "style": "planks", "color": "#8a6a48", "alt": "#80623e", "light": "#a08058", "dark": "#5a4630", "grain": "#74583a" } },
+        { "id": 17, "name": "field", "solid": false, "impact": "dirt", "placeholder": { "style": "field", "soil": "#7a5e3a", "furrow": "#5e4628", "color": "#c8b04a", "light": "#e2cc6a", "dark": "#9a8436" } },
+        { "id": 18, "name": "field_green", "solid": false, "impact": "dirt", "placeholder": { "style": "field", "soil": "#6e5434", "furrow": "#54402a", "color": "#6aa042", "light": "#8cc05a", "dark": "#4a7a30" } },
+        { "id": 19, "name": "fence_h", "solid": true, "shootThrough": true, "impact": "wood", "placeholder": { "style": "fence", "dir": "h", "color": "#5a8a38", "detail": "#527f33", "light": "#7aac4c", "blade": "#41702a", "tufts": 4, "rail": "#9a7a50", "railDark": "#5a4430", "post": "#7a5a38", "postLight": "#a07a50", "postDark": "#3a2a1a" } },
+        { "id": 20, "name": "fence_v", "solid": true, "shootThrough": true, "impact": "wood", "placeholder": { "style": "fence", "dir": "v", "color": "#5a8a38", "detail": "#527f33", "light": "#7aac4c", "blade": "#41702a", "tufts": 4, "rail": "#9a7a50", "railDark": "#5a4430", "post": "#7a5a38", "postLight": "#a07a50", "postDark": "#3a2a1a" } },
+        { "id": 21, "name": "water", "solid": true, "shootThrough": true, "impact": "water", "edge": { "width": 2, "dither": 1, "round": 8, "colors": ["#4a3c26", "#5a4a30"], "foam": "#c8e0d8", "foamDensity": 0.5 }, "placeholder": { "style": "water", "color": "#3a6a78", "light": "#7ab0bc", "dark": "#2c5664" } },
+        { "id": 22, "name": "crate", "solid": true, "impact": "wood", "placeholder": { "style": "crate", "color": "#8a5a2b", "light": "#b07a40", "dark": "#4f3216" } },
+        { "id": 23, "name": "rubble", "solid": true, "impact": "stone", "placeholder": { "style": "rubble", "base": "#5a8a38", "baseDetail": "#4e7b31", "colors": ["#8e5a42", "#9a9a90", "#a8745a", "#7a7a70"], "shadow": "#2e4a1e", "light": "#c4c4b8", "density": 1 } },
+        { "id": 24, "name": "rubble_floor", "solid": false, "impact": "dirt", "placeholder": { "style": "rubble", "base": "#7a6a50", "baseDetail": "#6a5a42", "colors": ["#8e5a42", "#9a9a90", "#a8745a"], "shadow": "#4a3e2c", "light": "#c4c4b8", "density": 0.4 } },
+        { "id": 25, "name": "tree_base", "solid": true, "shootThrough": true, "impact": "wood", "placeholder": { "style": "grass", "color": "#4e7b31", "detail": "#466e2c", "light": "#6a9a44", "blade": "#3a6626", "tufts": 3 } },
+        { "id": 26, "name": "hay", "solid": true, "impact": "foliage", "placeholder": { "style": "field", "soil": "#a88a40", "furrow": "#7a6430", "color": "#dcc060", "light": "#f0dc88", "dark": "#b49a46" } }
       ]
     }
   },
