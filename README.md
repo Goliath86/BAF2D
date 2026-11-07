@@ -372,7 +372,8 @@ lo stick sinistro due pulsanti a forma di cuore: "−" toglie vita (come F5), "+
   attorno alla bandiera), suoni `capturedSound`/`lostSound`/`neutralizedSound`, `look` (pennone: `poleHeight`,
   colori, drappo `clothWidth`/`clothHeight`, `neutralColor`/`neutralDark`, sventolio `wave`/`waveSpeed`;
   area: `showZones`, `zoneAlpha`, `zoneFillAlpha`, `zoneDash`).
-- `death`: `respawnDelay`, `respawnSound`, `maxCorpses` (cadaveri lasciati sulla mappa), `poolSprite`/`poolTime`
+- `death`: `respawnDelay`, `respawnSound`, `maxCorpses` (cadaveri lasciati sulla mappa), `corpseTime` (secondi
+  prima che un cadavere sparisca, 0 = mai) e `corpseFade` (dissolvenza negli ultimi secondi), `poolSprite`/`poolTime`
   (pozza che si allarga sotto il corpo: i frame dello sprite vanno dal più piccolo al più grande),
   `dropWeapon`/`dropDistance` (l'arma cade a terra).
 - `matchEnd`: `delay` (secondi tra la fine dei ticket e la schermata), `restartDelay` (attesa prima che

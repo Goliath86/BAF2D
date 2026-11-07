@@ -91,6 +91,8 @@
     "respawnDelay": 5,
     "respawnSound": "respawn",
     "maxCorpses": 12,
+    "corpseTime": 12,
+    "corpseFade": 2,
     "poolSprite": "blood_pool",
     "poolTime": 2.5,
     "dropWeapon": true,

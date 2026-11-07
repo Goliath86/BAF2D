@@ -130,7 +130,8 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
   (placeholder con `team`/`teamDark`/`teamLight`, `{team}` nel src); `assets.sprite(nome, team)` sceglie la variante.
   Soldato procedurale: striscia sull'elmetto (`teamStripe`) + mostrine sulle spalle.
 - Morte e rientro: `Player.update`/`draw` non fanno nulla da morto. `Game._onPlayerDeath` crea un cadavere in
-  `this.corpses` (corpo `deadSprite` + pozza + arma caduta, max `death.maxCorpses`), toglie i ticket e avvia
+  `this.corpses` (corpo `deadSprite` + pozza, max `death.maxCorpses`, spariscono dopo `corpseTime` s con dissolvenza
+  `corpseFade`; arma e granate diventano pickup), toglie i ticket e avvia
   `this.respawn`; dopo `death.respawnDelay` un nuovo Player rientra con `ctf.spawnPoint(team, puntoMorte)` (bandiera
   posseduta non contesa più vicina o base). HUD: ticket + bandiere in alto al centro, stato cattura, messaggi, scritta
   di rientro.
@@ -239,7 +240,7 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
   placeholder grafici e sonori, localizzazione en/it, catalogo armi (pistola, fucile, pompa) con cambio arma,
   caricatore e ricarica (R / pulsante touch), bossoli espulsi e caricatori che cadono in ricarica, vampata di volata con fumo, danno per arma, vita del giocatore, HUD (vita, granate, arma, munizioni), granate (rimbalzi, esplosione con bruciatura, fumo, schegge, detriti, scossa, danno),
   modalità Capture The Flag (squadre blu/rossa con segni sui soldati, bandiere catturabili, ticket con calo per
-  morti e bandiere, rientro alla bandiera più vicina o alla base, cadaveri persistenti, vittoria/sconfitta e nuova partita),
+  morti e bandiere, rientro alla bandiera più vicina o alla base, cadaveri che svaniscono dopo qualche secondo, vittoria/sconfitta e nuova partita),
   squadra avversaria IA (cattura bandiere, coperture, fuoco di copertura, aggiramento coordinato, ricarica, granate e fuga dalle granate),
   menu desktop/mobile (nuova partita con mappa/squadra/numero di bot, opzioni lingua/volume/tasti, pausa,
   rivincita), seconda mappa "Crocevia" (5 bandiere, simmetrica), punteggi con classifica di fine partita

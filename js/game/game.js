@@ -376,7 +376,10 @@ export class Game {
     } else {
       this._updateMatchEnd(dt);
     }
+    // cadaveri: spariscono dopo death.corpseTime secondi (dissolvenza negli ultimi corpseFade)
+    const corpseTime = this.deathCfg.corpseTime ?? 12;
     for (const c of this.corpses) c.time += dt;
+    if (corpseTime > 0) this.corpses = this.corpses.filter((c) => c.time < corpseTime);
     this.hud.update(dt, this.player);
     this._updateBullets(dt);
     this.grenades.update(dt, this.map, (g) => this.explode(g.def, g.x, g.y, g.owner));
@@ -571,19 +574,31 @@ export class Game {
     }
   }
 
+  /** Opacità del cadavere c: 1, poi scende a 0 negli ultimi death.corpseFade secondi di death.corpseTime. */
+  _corpseAlpha(c) {
+    const life = this.deathCfg.corpseTime ?? 12;
+    if (life <= 0) return 1;
+    const fade = Math.min(life, this.deathCfg.corpseFade ?? 2);
+    return Math.max(0, Math.min(1, (life - c.time) / fade));
+  }
+
   _drawCorpses(ctx) {
     const poolTime = this.deathCfg.poolTime ?? 2.5;
+    ctx.save();
     for (const c of this.corpses) {
       if (c.pool) {
         // frame della pozza in base al tempo: si allarga fino all'ultimo frame
         const k = Math.min(1, c.time / poolTime);
         const frame = Math.min(c.pool.sprite.frameCount - 1, Math.floor(k * c.pool.sprite.frameCount));
+        ctx.globalAlpha = this._corpseAlpha(c);
         drawSprite(ctx, c.pool.sprite, frame, c.pool.x, c.pool.y, c.pool.angle);
       }
     }
     for (const c of this.corpses) {
+      ctx.globalAlpha = this._corpseAlpha(c);
       if (c.body) drawSprite(ctx, c.body.sprite, 0, c.body.x, c.body.y, c.body.angle);
     }
+    ctx.restore();
   }
 
   /** Cattura/neutralizzazione di una bandiera: suono e messaggio dal punto di vista del giocatore. */
