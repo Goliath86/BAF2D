@@ -232,7 +232,10 @@ tools/check_level.mjs controllo livelli: celle irraggiungibili e vicoli ciechi (
   `Game.explode` (× `vehicleFactor` del def: granate 0.4, razzi 1.2-1.5) e `directDamage` dei razzi; `v.lastHitBy`
   riceve il merito (`scoring.points.vehicle`). `_destroyVehicle`: esplosione `blast`, pilota ucciso, carcassa
   (`wreckTime`), rientro dopo `respawn` s; mezzo vuoto lontano dalla base per `abandonTime` s = rimosso e ricreato.
-  `_vehicleContacts`: soldati spinti fuori (o investiti, `runover`), mezzi separati. Percorsi dei mezzi:
+  `_vehicleContacts`: soldati spinti fuori (o investiti, `runover`), mezzi separati. `VehicleBrain`: una bandiera
+  per mezzo se possibile (`crowdPenalty`, in difesa `defendCrowdPenalty`), punto nell'area lontano dagli altri mezzi
+  (`_zonePoint`, `v.brainPoint`, `vehicleSpacing`), nell'area con un compagno addosso si ferma (`_mateTouching`),
+  dopo `stuckLimit` blocchi evita la bandiera per `stuckAvoidTime` s. Percorsi dei mezzi:
   `nav.findPath(..., minClear = nav.clearanceFor(hw))` (`Nav.clear` = distanza dai solidi).
 - Due armi: `player.holster = { id, ammo }` (l'arma non in mano), `player.reserve[id]` = scorta delle armi con
   `reserve` (munizioni contate; `startReload` la consuma). Le armi `special` (lanciarazzi) si aggiungono:

@@ -1,7 +1,9 @@
 // IA di un bot alla guida di un mezzo (game.json -> bots.ai.vehicle). Produce i comandi del mezzo
 // ({ move, aim, firing, secondary, reload }, vedi Vehicle.update):
 // - obiettivo: va verso la bandiera da catturare più vicina (percorsi A* con spazio libero adatto al mezzo,
-//   Nav.clearanceFor) e resta nell'area finché non è presa;
+//   Nav.clearanceFor) e resta nell'area finché non è presa; ogni mezzo della squadra punta a una bandiera
+//   diversa se può (soprattutto in difesa) e a un punto lontano dagli altri mezzi; nell'area con un compagno
+//   addosso si ferma, e se resta bloccato più volte lascia la bandiera ad altri per un po';
 // - combattimento: bersaglio = soldato nemico a piedi o mezzo nemico in vista; mitragliatrice contro la
 //   fanteria (a raffiche), razzi contro i mezzi (e a volte contro gruppi di soldati); rallenta mentre spara;
 // - bloccato (contro un muro o un altro mezzo): retromarcia per un attimo, poi ricalcola il percorso.
@@ -72,7 +74,7 @@ export class VehicleBrain {
       const f = c.fightMoveFactor ?? 0.5;
       move = { x: move.x * f, y: move.y * f };
     }
-    move = this._unstick(dt, move);
+    move = this._unstick(dt, move, game);
 
     // mira e fuoco
     let firing = false;
@@ -188,11 +190,14 @@ export class VehicleBrain {
     }
     let best = null;
     let bestS = Infinity;
+    const c = this.cfg;
     for (const f of pool) {
       let s = dist(f, v);
-      // un altro mezzo della squadra ci sta già andando
+      // un altro mezzo della squadra ci sta già andando: due mezzi nella stessa area si ostacolano
+      // (in difesa ancora di più: meglio presidiare un'altra bandiera)
       const mates = game.vehicles.filter((o) => o !== v && !o.destroyed && o.team === v.team && o.brainObjective === f).length;
-      s += mates * (this.cfg.crowdPenalty ?? 300);
+      s += mates * (this._needsCapture(f) ? c.crowdPenalty ?? 600 : c.defendCrowdPenalty ?? 2000);
+      if (!this._needsCapture(f) && f.contested) s -= c.contestedBonus ?? 400;
       if (f === this.objective?.flag) s -= 60;
       if (s < bestS) {
         bestS = s;
@@ -200,13 +205,56 @@ export class VehicleBrain {
       }
     }
     if (best !== this.objective?.flag) {
-      // punto nell'area della bandiera, un po' spostato dal pennone
-      const a = Math.random() * Math.PI * 2;
-      const r = best.radius * 0.35;
-      this.objective = { flag: best, point: { x: best.x + Math.cos(a) * r, y: best.y + Math.sin(a) * r } };
+      this.objective = { flag: best, point: this._zonePoint(best, game) };
       this.path = null;
     }
     v.brainObjective = best;
+    v.brainPoint = this.objective.point;
+  }
+
+  /**
+   * Punto nell'area della bandiera con spazio per il mezzo, lontano dagli altri mezzi della squadra
+   * (posizioni e punti già scelti, fino a vehicleSpacing px) e un po' spostato dal pennone.
+   */
+  _zonePoint(f, game) {
+    const v = this.v;
+    const nav = game.nav;
+    const spacing = this.cfg.vehicleSpacing ?? 56;
+    const minClear = nav.clearanceFor(Math.max(v.hw, v.hh));
+    const others = [];
+    for (const o of game.vehicles) {
+      if (o === v || o.destroyed || o.team !== v.team) continue;
+      others.push(o);
+      if (o.brainObjective === f && o.brainPoint) others.push(o.brainPoint);
+    }
+    let best = null;
+    let bestS = -Infinity;
+    for (let i = 0; i < 20; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const r = f.radius * (0.25 + Math.random() * 0.45);
+      const idx = nav.nearestWalkable(f.x + Math.cos(a) * r, f.y + Math.sin(a) * r, 2, minClear);
+      if (idx < 0) continue;
+      const p = nav.center(idx);
+      if (!game.ctf.inZone(f, p.x, p.y)) continue;
+      let near = spacing;
+      for (const o of others) near = Math.min(near, dist(o, p));
+      const s = near + Math.random() * 4;
+      if (s > bestS) {
+        bestS = s;
+        best = p;
+      }
+    }
+    if (best) return best;
+    const a = Math.random() * Math.PI * 2;
+    return { x: f.x + Math.cos(a) * f.radius * 0.35, y: f.y + Math.sin(a) * f.radius * 0.35 };
+  }
+
+  /** Un altro mezzo della squadra è a contatto (o quasi) con questo. */
+  _mateTouching(game) {
+    const v = this.v;
+    const gap = this.cfg.contactGap ?? 10;
+    return game.vehicles.some((o) => o !== v && !o.destroyed && o.team === v.team
+      && Math.abs(o.x - v.x) < o.hw + v.hw + gap && Math.abs(o.y - v.y) < o.hh + v.hh + gap);
   }
 
   /** Vettore di movimento lungo il percorso verso l'obiettivo (0 se arrivato). */
@@ -215,7 +263,9 @@ export class VehicleBrain {
     const o = this.objective;
     if (!o) return { x: 0, y: 0 };
     const arrive = o.flag ? o.flag.radius * 0.5 : 12;
-    if (dist(o.point, v) <= arrive && game.ctf.inZone(o.flag, v.x, v.y)) {
+    // arrivato: vicino al punto, oppure già nell'area con un compagno addosso (non spingersi a vicenda)
+    const inZone = o.flag && game.ctf.inZone(o.flag, v.x, v.y);
+    if (inZone && (dist(o.point, v) <= arrive || this._mateTouching(game))) {
       this.path = null;
       return { x: 0, y: 0 };
     }
@@ -244,22 +294,37 @@ export class VehicleBrain {
     return { x: (wp.x - v.x) / d, y: (wp.y - v.y) / d };
   }
 
-  /** Bloccato mentre vuole muoversi: retromarcia per un attimo e nuovo percorso. */
-  _unstick(dt, move) {
+  /**
+   * Bloccato mentre vuole muoversi: retromarcia per un attimo e nuovo percorso. Se a bloccarlo è un compagno
+   * sceglie un altro punto nell'area; dopo stuckLimit blocchi di fila lascia la bandiera ad altri per un po'.
+   */
+  _unstick(dt, move, game) {
     const v = this.v;
+    const c = this.cfg;
     if (this.reverse > 0) {
       this.reverse -= dt;
       return { x: -Math.cos(v.angle), y: -Math.sin(v.angle) };
     }
     const s = this.stuck;
     s.time += dt;
-    if (s.time >= (this.cfg.stuckTime ?? 1.2)) {
+    if (s.time >= (c.stuckTime ?? 1.2)) {
       const wants = Math.hypot(move.x, move.y) > 0.2;
       if (wants && Math.hypot(v.x - s.x, v.y - s.y) < 4) {
-        this.reverse = this.cfg.reverseTime ?? 0.7;
+        this.reverse = c.reverseTime ?? 0.7;
         this.path = null;
         this.repath = 0;
-      }
+        this.stuckCount = (this.stuckCount || 0) + 1;
+        const o = this.objective;
+        if (o?.flag && this.stuckCount >= (c.stuckLimit ?? 3)) {
+          this.avoid.set(o.flag, this.time + (c.stuckAvoidTime ?? 12));
+          this.objective = null;
+          this.objTimer = 0;
+          this.stuckCount = 0;
+        } else if (o?.flag && this._mateTouching(game)) {
+          o.point = this._zonePoint(o.flag, game);
+          v.brainPoint = o.point;
+        }
+      } else if (Math.hypot(v.x - s.x, v.y - s.y) >= 16) this.stuckCount = 0;
       this.stuck = { time: 0, x: v.x, y: v.y };
     }
     return move;
