@@ -175,7 +175,12 @@ tools/check_level.mjs controllo livelli: celle irraggiungibili e vicoli ciechi (
 - Controllo dei soldati: `Player.update(dt, game, ctrl)` con `ctrl = { move, aim(unit), firing, reload, grenade,
   repeat, faceMove }`: dall'umano (`Game._humanControl`) o dall'IA (`BotBrain.think`). `game.units` = giocatore + bot.
 - Bot (`game.json` -> `bots`, IA in `bots.ai`): `Game.bots` = slot `{ team, weapon, unit, brain, respawn }`; rientro con
-  `ctf.spawnPoint(team, near, hw, hh, { preferFlags, spread })` (bandiera posseduta, base solo se nessuna). BotBrain:
+  `ctf.spawnPoint(team, near, hw, hh, { preferFlags, spread })` (bandiera posseduta, base solo se nessuna).
+  Piano di squadra `Squad.plan` (chiamato da `Game._updateBots`, ogni `planInterval` s o quando cambiano le
+  bandiere): gruppi per combattente (coppie stabili, il dispari fa un terzetto, `maxGroup`/`pairRadius`/
+  `groupBreak`), una bandiera per gruppo con `spreadPenalty` per ogni gruppo già sulla stessa; difesa delle proprie
+  con `defendCost` (meno `contestedBonus` se attaccate). `_chooseObjective` usa `squad.groupOf(brain).flag`; in
+  `_objectiveTick` chi è più avanti va incontro al compagno (`squad.straggler`, `pairLeash`, `pairWaitMax`). BotBrain:
   modo `objective` (bandiere da catturare, poi presidio) o `combat` con ruolo `fix`/`flank` e fasi
   `expose`/`cover`/`peek`; spara solo con bersaglio in vista (dopo `reactionTime`), poi fuoco di copertura
   su `suppressPoint` per `suppressTime`; avvisa i compagni liberi entro `commRadius` (`receive` -> aggiramento).
