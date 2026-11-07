@@ -10,6 +10,7 @@
     "turnNeedsSpeed": false,
     "standTurn": 0.3,
     "turretTurnRate": 4,
+    "throttleRev": 0.35,
     "idleBrake": 4,
     "health": 300,
     "armor": true,
@@ -44,6 +45,7 @@
       "turnRate": 3.2,
       "turnNeedsSpeed": true,
       "turretTurnRate": 6,
+      "engineSound": "engine_jeep",
       "health": 260,
       "respawn": 25,
       "weapons": ["vehicle_mg"]
@@ -61,6 +63,7 @@
       "brake": 200,
       "turnRate": 1.8,
       "turretTurnRate": 2.6,
+      "engineSound": "engine_tank",
       "health": 650,
       "respawn": 45,
       "shadow": [4, 5],

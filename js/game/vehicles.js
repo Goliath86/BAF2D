@@ -156,6 +156,12 @@ export class Vehicle {
     return { x: p.x + c * off - s * side, y: p.y + s * off + c * side };
   }
 
+  /** Regime del motore 0..1: velocità rispetto alla massima, un po' di più con l'acceleratore premuto. */
+  get rpm() {
+    const v = Math.abs(this.speed) / (this.def.maxSpeed || 100);
+    return Math.min(1, Math.max(v, (this.throttle || 0) * (this.def.throttleRev ?? 0.35)));
+  }
+
   /** Avanzamento della ricarica dell'arma i (0..1). */
   reloadProgress(i) {
     const g = this.guns[i];
@@ -178,6 +184,7 @@ export class Vehicle {
       return;
     }
     if (!ctrl) {
+      this.throttle = 0;
       this.idle += dt;
       this.speed *= Math.exp(-(d.idleBrake ?? 4) * dt);
       this._move(dt, game.map);
@@ -201,6 +208,7 @@ export class Vehicle {
     const d = this.def;
     const m = ctrl.move || { x: 0, y: 0 };
     const len = Math.min(1, Math.hypot(m.x, m.y));
+    this.throttle = len; // acceleratore premuto (il motore "sale di giri" anche da fermo)
     const maxSpeed = d.maxSpeed ?? 100;
     let target = 0;
     if (len > 0.05) {

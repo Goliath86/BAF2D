@@ -598,6 +598,41 @@
         { "wave": "sawtooth", "freqStart": 60, "freqEnd": 110, "duration": 0.4, "at": [0.12], "volume": 0.7 }
       ]
     },
+    "engine_jeep": {
+      "src": null,
+      "volume": 0.11,
+      "loop": {
+        "layers": [
+          { "wave": "sawtooth", "freq": 36, "volume": 1 },
+          { "wave": "square", "freq": 72, "volume": 0.3 },
+          { "wave": "noise", "volume": 0.35 }
+        ],
+        "rpm": [1, 2.8],
+        "lowpass": 420,
+        "lowpassOpen": 2.6,
+        "q": 2,
+        "throb": { "rate": [13, 36], "depth": 0.55 },
+        "idle": 0.45
+      }
+    },
+    "engine_tank": {
+      "src": null,
+      "volume": 0.14,
+      "loop": {
+        "layers": [
+          { "wave": "sawtooth", "freq": 24, "volume": 1 },
+          { "wave": "square", "freq": 48, "volume": 0.45 },
+          { "wave": "triangle", "freq": 97, "volume": 0.2 },
+          { "wave": "noise", "volume": 0.6 }
+        ],
+        "rpm": [1, 1.9],
+        "lowpass": 300,
+        "lowpassOpen": 2.4,
+        "q": 1.5,
+        "throb": { "rate": [8, 19], "depth": 0.6 },
+        "idle": 0.5
+      }
+    },
     "vehicle_exit": {
       "src": null,
       "volume": 0.16,

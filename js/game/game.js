@@ -106,6 +106,7 @@ export class Game {
     this.vehicleOffer = null; // mezzo su cui il giocatore può salire ora
     this.enteredAt = -1; // quando il giocatore è salito (per mostrare "[E] Scendi" per qualche secondo)
     this.rockets = new Rockets(assets, this.effects, effectsCfg);
+    this.engines = new Map(); // mezzo -> suono continuo del motore (audio.loop)
 
     this._fps = { value: 0, frames: 0, time: 0 };
   }
@@ -154,6 +155,7 @@ export class Game {
     this.pickups.reset(this.map);
     this.pickupOffer = null;
     this.rockets.clear();
+    this._silenceEngines();
     this._resetVehicles();
     this.respawn = null; // { time, delay, x, y } mentre il giocatore è morto
     this.ended = null; // { time, shown, outcome } a partita finita
@@ -609,6 +611,8 @@ export class Game {
         }
       } else {
         acc = 0;
+        // pausa / dispositivo in verticale: i motori tacciono (ripartono alla ripresa)
+        if (this.engines.size) this._silenceEngines();
       }
       this.render();
       requestAnimationFrame(frame);
@@ -680,7 +684,41 @@ export class Game {
     this.weather.update(dt, { x: this.camera.x, y: this.camera.y, w: display.width, h: display.height });
     // ascoltatore dei suoni posizionali = centro della visuale
     this.audio.listener = { x: this.camera.x + display.width / 2, y: this.camera.y + display.height / 2 };
+    this._updateEngines();
     input.endFrame();
+  }
+
+  /**
+   * Rumore dei motori: acceso per i mezzi con un pilota e abbastanza vicini da sentirsi (def.engineSound),
+   * con il regime che segue la velocità; spento per gli altri.
+   */
+  _updateEngines() {
+    const want = new Set();
+    if (!this.attract) {
+      for (const v of this.vehicles) {
+        if (!v.destroyed && v.driver && v.def.engineSound && this.audio.gainAt(v) > 0.01) want.add(v);
+      }
+    }
+    for (const [v, h] of this.engines) {
+      if (!want.has(v)) {
+        h.stop();
+        this.engines.delete(v);
+      }
+    }
+    for (const v of want) {
+      let h = this.engines.get(v);
+      if (!h) {
+        h = this.audio.loop(v.def.engineSound);
+        if (!h) continue; // audio non ancora attivo o muto: si riprova al prossimo tick
+        this.engines.set(v, h);
+      }
+      h.set(v.rpm, v);
+    }
+  }
+
+  _silenceEngines() {
+    for (const h of this.engines.values()) h.stop();
+    this.engines.clear();
   }
 
   // ---------- Granate ----------

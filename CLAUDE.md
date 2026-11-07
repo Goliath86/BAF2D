@@ -212,6 +212,9 @@ tools/gen_desert.mjs  genera config/levels/level03.json (deserto 97x65, simmetri
 - Razzi (`rockets.js`): arma con `projectile: "rocket"` + `rocket` (tipo in weapons.json -> `rockets`); gittata come i
   proiettili (`Game._shotRange`), scia `effects.json -> trails`; IA: armi `antiVehicle` mirano ai mezzi, mai sotto
   `minSafeRange`; senza anticarro la fanteria si ripara (`BotBrain._vehicleDanger`).
+- Suoni continui: `audio.loop(nome)` -> `{ set(rpm 0..1, pos), stop() }` (def.loop sintetizzato o src in loop),
+  `audio.stopLoops()` (anche con `setMuted(true)`). Motori: `Game._updateEngines` (mezzi guidati e udibili,
+  `vehicle.rpm`), `_silenceEngines` in pausa (ciclo di `start()`) e in `_reset`.
 - Audio posizionale: `audio.play(nome, { x, y })` attenua con la distanza da `audio.listener` (centro visuale,
   `audio.hearing.near/far`).
 - Sprite con `extends`: ereditano tutto tranne `src`, `placeholder` fuso campo per campo.

@@ -77,6 +77,10 @@ Sulla mappa ci sono delle bandiere: un pennone con un drappo che parte da terra.
 - **Corazza**: i proiettili non fanno danni (scintille); granate ridotte (`vehicleFactor`), razzi pieni
   (`directDamage` + esplosione). Distrutto: esplode, muore chi è a bordo, carcassa fumante, ricompare dopo `respawn` s.
   Un mezzo in corsa investe i nemici (`runover`).
+- **Motore**: suono continuo sintetizzato (`engineSound` del mezzo → suono con `loop` in `assets.json`: strati di
+  oscillatori/rumore, `rpm` = moltiplicatore di frequenza da fermo a pieno regime, `lowpass`/`lowpassOpen`, `throb` =
+  pulsazione dei cilindri, `idle` = volume al minimo). Il regime segue la velocità (e l'acceleratore, `throttleRev`);
+  si sente solo vicino, tace in pausa. Con `src` (file in loop) il regime cambia la velocità di riproduzione.
 - **Lanciarazzi** (`weapons.json` → `launcher`, razzi in `rockets`): un colpo per ricarica, sulle mappe come oggetto
   raccoglibile e assegnato a un bot su quattro.
 - **IA**: i bot "guidatori" (`bots.ai.vehicles`) salgono sui mezzi liberi e li portano alle bandiere (`bots.ai.vehicle`,
