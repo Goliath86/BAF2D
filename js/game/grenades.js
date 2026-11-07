@@ -72,7 +72,7 @@ export class Grenades {
       fuse: range(def.fuse, 2),
       time: 0,
     });
-    if (def.throwSound) this.audio.play(def.throwSound);
+    if (def.throwSound) this.audio.play(def.throwSound, { x, y });
   }
 
   /** onExplode(granata) viene chiamato quando scade la spoletta (la granata viene rimossa). */
@@ -101,7 +101,7 @@ export class Grenades {
           g.spin *= f;
           const up = impact * (d.bounce ?? 0.35);
           g.vz = up > (d.minBounce ?? 20) ? up : 0;
-          if (d.bounceSound && impact >= (d.bounceSoundMin ?? 25)) this.audio.play(d.bounceSound);
+          if (d.bounceSound && impact >= (d.bounceSoundMin ?? 25)) this.audio.play(d.bounceSound, g);
         }
       } else {
         // a terra: rotola e rallenta fino a fermarsi
@@ -132,7 +132,7 @@ export class Grenades {
         g.vy = -g.vy * wb;
         g.spin = -g.spin;
       } else g.y = ny;
-      if (bounced && d.bounceSound && bounced >= (d.bounceSoundMin ?? 25)) this.audio.play(d.bounceSound);
+      if (bounced && d.bounceSound && bounced >= (d.bounceSoundMin ?? 25)) this.audio.play(d.bounceSound, g);
       g.rot += g.spin * dt;
     }
   }

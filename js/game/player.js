@@ -30,6 +30,10 @@ export class Player {
     this.hh = (cfg.hitbox?.[1] ?? 10) / 2;
     this.maxHealth = cfg.maxHealth ?? 100;
     this.health = this.maxHealth;
+    this.hurtBy = null; // { unit, x, y } dell'ultimo colpo subito (letto e azzerato dall'IA)
+    // Soldati dell'IA: gittata dei colpi = distanza dal punto mirato (null = regole del giocatore umano)
+    this.aimDistance = null;
+    this.isBot = false;
     this.cooldown = 0;
     this.triggerHeld = false; // per le armi semiautomatiche (un colpo per pressione)
     this.shotQueued = false;
@@ -92,9 +96,13 @@ export class Player {
     return this.health <= 0;
   }
 
-  /** Subisce "amount" danni; restituisce i danni effettivamente applicati. */
-  damage(amount) {
+  /**
+   * Subisce "amount" danni; restituisce i danni effettivamente applicati.
+   * source (opzionale) = { unit, x, y } di chi ha colpito: l'IA lo usa per reagire a chi non vede.
+   */
+  damage(amount, source = null) {
     if (this.dead) return 0;
+    if (source) this.hurtBy = source;
     const before = this.health;
     this.health = Math.max(0, this.health - Math.max(0, amount));
     if (this.dead) {
@@ -145,7 +153,7 @@ export class Player {
     if (this.reload || this.ammo >= w.magazine) return false;
     this.reload = { time: 0, duration: Math.max(0.01, w.reloadTime), sound: null, dropped: false };
     this.shotQueued = false;
-    if (w.reloadSound) this.reload.sound = game.audio.play(w.reloadSound);
+    if (w.reloadSound) this.reload.sound = game.audio.play(w.reloadSound, this);
     return true;
   }
 
@@ -164,19 +172,24 @@ export class Player {
     }
   }
 
-  update(dt, game) {
+  /**
+   * ctrl = comandi del tick, dal giocatore umano (Game._humanControl) o dall'IA (BotBrain.think):
+   * { move: {x, y} lunghezza 0..1, aim(unit) -> angolo | null, firing, reload, grenade,
+   *   repeat (semiautomatiche a ripetizione tenendo premuto), faceMove (senza mira guarda dove cammina) }
+   */
+  update(dt, game, ctrl) {
     if (this.dead) return; // nessun controllo da morto
-    const { input, map, camera } = game;
+    const { map } = game;
     const w = this.weapon;
 
-    // Ricarica: avanza il tempo, avvio manuale (R / pulsante touch)
+    // Ricarica: avanza il tempo, avvio manuale (R / pulsante touch / IA)
     this._updateReload(dt, game);
-    if (input.wasPressed('reload')) this.startReload(game);
+    if (ctrl.reload) this.startReload(game);
 
     // Movimento (spazio schermo: su/giù/strafe sx/dx, indipendente dalla mira).
     // Su touch la lunghezza del vettore (0..1) dipende da quanto è spinto lo stick -> velocità analogica.
     // Durante la ricarica la velocità è moltiplicata per reloadMoveFactor (0 = fermo).
-    const move = input.getMove();
+    const move = { x: ctrl.move.x, y: ctrl.move.y };
     if (this.reload) {
       const f = Math.max(0, w.reloadMoveFactor ?? 1);
       move.x *= f;
@@ -190,19 +203,17 @@ export class Player {
     this.y = p.y;
     this.moving = mag > 0.05;
 
-    // Mira
-    const sx = this.x - Math.round(camera.x);
-    const sy = this.y - Math.round(camera.y);
-    const aim = input.getAim(sx, sy);
+    // Mira (calcolata dopo lo spostamento: per il mouse conta la posizione sullo schermo)
+    const aim = ctrl.aim(this);
     if (aim !== null) {
       this.angle = aim;
-    } else if (this.cfg.faceMoveWhenIdle && input.mode === 'touch' && this.moving) {
+    } else if (this.cfg.faceMoveWhenIdle && ctrl.faceMove && this.moving) {
       this.angle = Math.atan2(move.y, move.x);
     }
 
     // Granata (G / pulsante touch), verso la mira appena aggiornata
     this.throwCooldown = Math.max(0, this.throwCooldown - dt);
-    if (input.wasPressed('grenade')) this.throwGrenade(game);
+    if (ctrl.grenade) this.throwGrenade(game);
 
     // Fuoco: automatico finché si tiene premuto, semiautomatico un colpo per pressione
     // (su touch le semiautomatiche possono ripetere tenendo lo stick, vedi input.touch.holdToRepeat)
@@ -217,14 +228,14 @@ export class Player {
     // Una pressione durante il cooldown resta "in coda" e parte appena l'arma è pronta.
     // Durante la ricarica non si spara; a caricatore vuoto il grilletto fa "click"
     // (e, se l'arma ha autoReload, parte la ricarica).
-    const firing = input.isFiring();
+    const firing = !!ctrl.firing;
     const pressed = firing && !this.triggerHeld;
-    const auto = w.auto || (input.mode === 'touch' && input.touchHoldToRepeat);
+    const auto = w.auto || !!ctrl.repeat;
     if (this.reload) {
       this.shotQueued = false;
     } else if (this.ammo <= 0) {
       this.shotQueued = false;
-      if (pressed && w.emptySound) game.audio.play(w.emptySound);
+      if (pressed && w.emptySound) game.audio.play(w.emptySound, this);
       if (firing && w.autoReload) this.startReload(game);
     } else {
       if (pressed) this.shotQueued = true;

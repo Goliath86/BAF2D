@@ -68,9 +68,11 @@ js/game/
   effects.js          Effects: decal con fade (buchi), particelle (fumo/scintille/schegge), impact(type, ...),
                       bossoli espulsi casing(type, ...), esplosioni explosion(type, x, y, map)
   ctf.js              Ctf: modalità Capture The Flag (bandiere, catture, ticket, punti di rientro, disegno pennoni)
+  nav.js              Nav: griglia dei tile per l'IA (A* 8 direzioni + percorso 'tirato', reach() = Dijkstra limitato, los)
+  ai.js               Squad (lavagna di squadra: bot, nemici avvistati) + BotBrain (IA di un bot -> comandi come l'umano)
 config/
   game.json           parametri generali (display, i18n, player + squadra e arma iniziale, input, camera, audio,
-                      mobile, teams, ctf, death, matchEnd, hud)
+                      mobile, teams, ctf, death, matchEnd, hud, combat, bots)
   weapons.json        armi: "defaults" + "weapons" { id: { name, bodySprite, pickupSprite, auto, pellets, ... } };
                       granate: "grenadeDefaults" + "grenades" { id: { fuse, lift, bounce, damage, explosion, ... } }
   assets.json         sprites (anche "extends") / tilesets (con "impact" per tile) / sounds
@@ -131,6 +133,19 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
   `onMatchEnd(outcome)` (main.js riempie `#overlay-matchend` e mette `body.match-over match-<outcome>` = filtro CSS).
   `restart()` (clic/tocco sull'overlay o `confirm` = Invio) solo dopo `restartDelay`; `_reset()` azzera ctf, ricrea
   Player e Hud, svuota proiettili/effetti/cadaveri e chiama `onRestart`. Game resta senza DOM: l'HTML è in main.js.
+- Controllo dei soldati: `Player.update(dt, game, ctrl)` con `ctrl = { move, aim(unit), firing, reload, grenade,
+  repeat, faceMove }`: dall'umano (`Game._humanControl`) o dall'IA (`BotBrain.think`). `game.units` = giocatore + bot.
+- Bot (`game.json` -> `bots`, IA in `bots.ai`): `Game.bots` = slot `{ team, weapon, unit, brain, respawn }`; rientro con
+  `ctf.spawnPoint(team, near, hw, hh, { preferFlags, spread })` (bandiera posseduta, base solo se nessuna). BotBrain:
+  modo `objective` (bandiere da catturare, poi presidio) o `combat` con ruolo `fix`/`flank` e fasi
+  `expose`/`cover`/`peek`; spara solo con bersaglio in vista (dopo `reactionTime`), poi fuoco di copertura
+  su `suppressPoint` per `suppressTime`; avvisa i compagni liberi entro `commRadius` (`receive` -> aggiramento).
+  Colpi dei bot: `unit.aimDistance` = distanza dal punto mirato -> gittata (+ `shotOvershoot`), quindi colpiscono
+  o cadono vicino al bersaglio. Proiettili con `team`/`owner`: `_unitHit` (hitbox + `combat.hitPadding`, niente
+  fuoco amico), a fine corsa `_hitJustBeyond` (`endHitReach`). `player.damage(n, { unit, x, y })` -> `hurtBy` letto
+  dall'IA. Esplosioni feriscono tutte le unità. F3 disegna percorsi/coperture dei bot.
+- Audio posizionale: `audio.play(nome, { x, y })` attenua con la distanza da `audio.listener` (centro visuale,
+  `audio.hearing.near/far`).
 - Sprite con `extends`: ereditano tutto tranne `src`, `placeholder` fuso campo per campo.
 - Movimento touch analogico: lunghezza vettore stick SX (dopo deadzone, elevata a `moveCurve`) × `speed`.
 - `Animator.update(dt)` accetta dt negativo (animazione all'indietro).
@@ -181,7 +196,8 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
   placeholder grafici e sonori, localizzazione en/it, catalogo armi (pistola, fucile, pompa) con cambio arma,
   caricatore e ricarica (R / pulsante touch), bossoli espulsi e caricatori che cadono in ricarica, vampata di volata con fumo, danno per arma, vita del giocatore, HUD (vita, granate, arma, munizioni), granate (rimbalzi, esplosione con bruciatura, fumo, schegge, detriti, scossa, danno),
   modalità Capture The Flag (squadre blu/rossa con segni sui soldati, bandiere catturabili, ticket con calo per
-  morti e bandiere, rientro alla bandiera più vicina o alla base, cadaveri persistenti, vittoria/sconfitta e nuova partita).
-- Non ancora presenti: raccolta armi/granate da terra, riserva di munizioni (ora infinita), nemici/bot (quindi la
-  squadra rossa non cattura da sola), menu, selettore lingua in-game, asset grafici reali.
+  morti e bandiere, rientro alla bandiera più vicina o alla base, cadaveri persistenti, vittoria/sconfitta e nuova partita),
+  squadra avversaria IA (cattura bandiere, coperture, fuoco di copertura, aggiramento coordinato, ricarica).
+- Non ancora presenti: raccolta armi/granate da terra, riserva di munizioni (ora infinita), granate lanciate dai bot,
+  menu, selettore lingua in-game, asset grafici reali.
 - Controlli touch (stick + pulsante ricarica) verificati dall'utente su un dispositivo reale (2026-11-02).

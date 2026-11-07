@@ -6,10 +6,19 @@ import { Effects } from './effects.js';
 import { Hud } from './hud.js';
 import { Grenades } from './grenades.js';
 import { Ctf } from './ctf.js';
+import { Nav } from './nav.js';
+import { BotBrain, Squad } from './ai.js';
 
 const STEP = 1 / 60; // update a timestep fisso
 const BULLET_SUBSTEP = 2; // px: passo massimo del controllo collisioni dei proiettili
 const WALL_DECAL_INSET = 3; // px: distanza del buco dalla faccia del muro colpita
+
+/** Valore numerico o intervallo [min, max] -> numero casuale nell'intervallo. */
+function rand(v, def = 0) {
+  if (v === undefined || v === null) return def;
+  if (Array.isArray(v)) return v[0] + Math.random() * (v[1] - v[0]);
+  return v;
+}
 
 export class Game {
   constructor({ config, assets, audio, display, input, level, effectsCfg, weapons, grenadeTypes, i18n }) {
@@ -48,6 +57,15 @@ export class Game {
     this.onRestart = null;
     this.corpses = [];
 
+    // Soldati controllati dall'IA (game.json -> bots) e colpi sui soldati (combat)
+    this.nav = new Nav(this.map);
+    this.botsCfg = config.bots || {};
+    this.aiCfg = this.botsCfg.ai || {};
+    this.combat = config.combat || {};
+    this.bots = []; // { unit, brain, team, weapon, respawn }
+    this.squads = {};
+    this.time = 0; // secondi di gioco (memoria dell'IA)
+
     this._fps = { value: 0, frames: 0, time: 0 };
     this._reset();
   }
@@ -66,11 +84,92 @@ export class Game {
     this.corpses.length = 0;
     this.respawn = null; // { time, delay, x, y } mentre il giocatore è morto
     this.ended = null; // { time, shown, outcome } a partita finita
+    this._spawnBots();
     this.camera.snap(this.player.x, this.player.y, 0, display.width, display.height, this.map);
   }
 
   _spawnPlayer(x, y) {
     this.player = new Player(this.config.player, x, y, this.assets, this.weapons, this.grenadeTypes, this.playerTeam);
+  }
+
+  /** Tutti i soldati (giocatore + bot), vivi o morti: { x, y, team, dead, ... }. */
+  get units() {
+    const list = [this.player];
+    for (const b of this.bots) list.push(b.unit);
+    return list;
+  }
+
+  /** Bot di inizio partita: bots.teams = { squadra: numero }, armi a rotazione da bots.weapons. */
+  _spawnBots() {
+    this.bots.length = 0;
+    this.squads = {};
+    for (const t of this.ctf.teamIds) this.squads[t] = new Squad(t);
+    const teams = this.botsCfg.teams || {};
+    const weapons = (this.botsCfg.weapons || [this.config.player.weapon]).filter((id) => this.weapons.get(id));
+    for (const [team, count] of Object.entries(teams)) {
+      if (!this.squads[team]) {
+        console.warn(`bots.teams: unknown team "${team}"`);
+        continue;
+      }
+      for (let i = 0; i < count; i++) {
+        const slot = { team, weapon: weapons[i % weapons.length] || this.config.player.weapon, unit: null, brain: null, respawn: null };
+        this.bots.push(slot);
+        this._spawnBot(slot, null);
+      }
+    }
+  }
+
+  /** (Ri)crea il soldato del bot "slot": su una bandiera della squadra se ce n'è una, altrimenti alla base. */
+  _spawnBot(slot, near) {
+    const cfg = { ...this.config.player, ...(this.botsCfg.player || {}), weapon: slot.weapon };
+    const hw = (cfg.hitbox?.[0] ?? 10) / 2;
+    const hh = (cfg.hitbox?.[1] ?? 10) / 2;
+    const pos = this.ctf.spawnPoint(slot.team, near, hw, hh, { preferFlags: true, spread: this.botsCfg.baseSpread || [6, 22] });
+    const unit = new Player(cfg, pos.x, pos.y, this.assets, this.weapons, this.grenadeTypes, slot.team);
+    unit.isBot = true;
+    // guarda verso il centro della mappa
+    unit.angle = Math.atan2(this.map.pixelHeight / 2 - pos.y, this.map.pixelWidth / 2 - pos.x);
+    unit.legsAngle = unit.angle;
+    const squad = this.squads[slot.team];
+    const brain = new BotBrain(unit, squad, this.aiCfg);
+    const i = squad.brains.indexOf(slot.brain);
+    if (i >= 0) squad.brains[i] = brain;
+    else squad.brains.push(brain);
+    slot.unit = unit;
+    slot.brain = brain;
+    slot.respawn = null;
+  }
+
+  _updateBots(dt) {
+    for (const b of this.bots) {
+      if (!b.unit.dead) {
+        b.unit.update(dt, this, b.brain.think(dt, this));
+        continue;
+      }
+      if (!b.respawn) {
+        // appena morto: cadavere, ticket in meno, conto alla rovescia
+        this._addCorpse(b.unit);
+        this.ctf.onDeath(b.team);
+        b.respawn = { time: 0, delay: this.botsCfg.respawnDelay ?? this.deathCfg.respawnDelay ?? 5, x: b.unit.x, y: b.unit.y };
+      } else if ((b.respawn.time += dt) >= b.respawn.delay) {
+        this._spawnBot(b, b.respawn);
+      }
+    }
+    for (const s of Object.values(this.squads)) s.update(this.time, this.aiCfg.memoryTime ?? 6);
+  }
+
+  /** Comandi del giocatore umano per Player.update (tastiera/mouse o stick touch). */
+  _humanControl() {
+    const { input, camera } = this;
+    return {
+      move: input.getMove(),
+      aim: (u) => input.getAim(u.x - Math.round(camera.x), u.y - Math.round(camera.y)),
+      firing: input.isFiring(),
+      reload: input.wasPressed('reload'),
+      grenade: input.wasPressed('grenade'),
+      repeat: input.mode === 'touch' && input.touchHoldToRepeat,
+      faceMove: input.mode === 'touch',
+    };
   }
 
   /** Nuova partita (dalla schermata di fine partita). */
@@ -142,11 +241,13 @@ export class Game {
     if (input.wasPressed('debugGrenade')) this.player.addGrenades(1);
     if (input.wasPressed('debugTeam')) this._cycleTeam();
 
+    this.time += dt;
     if (!this.ended) {
-      this.player.update(dt, this);
+      this.player.update(dt, this, this._humanControl());
+      this._updateBots(dt);
       if (this.player.dead && !this.respawn) this._onPlayerDeath();
       if (this.respawn) this._updateRespawn(dt);
-      this.ctf.update(dt, [this.player]);
+      this.ctf.update(dt, this.units);
       for (const e of this.ctf.takeEvents()) this._onFlagEvent(e);
       if (this.ctf.result) this._endMatch();
     } else {
@@ -160,6 +261,8 @@ export class Game {
     this.shake.time = Math.max(0, this.shake.time - dt);
 
     this.camera.follow(this.player.x, this.player.y, this.player.angle, display.width, display.height, this.map, dt);
+    // ascoltatore dei suoni posizionali = centro della visuale
+    this.audio.listener = { x: this.camera.x + display.width / 2, y: this.camera.y + display.height / 2 };
     input.endFrame();
   }
 
@@ -199,13 +302,15 @@ export class Game {
       this.shake.duration = def.shake.time ?? 0.4;
       this.shake.time = this.shake.duration;
     }
-    // danno al giocatore: decresce con la distanza fino a minDamageFactor sul bordo, i muri riparano
-    const p = this.player;
+    // danno ai soldati (giocatore e bot, di qualunque squadra): decresce con la distanza
+    // fino a minDamageFactor sul bordo, i muri riparano
+    if (def.hurtsPlayer === false) return;
     const radius = def.blastRadius ?? 40;
-    const d = Math.hypot(p.x - x, p.y - y);
-    if (def.hurtsPlayer !== false && d < radius && this._lineOfSight(x, y, p.x, p.y)) {
+    for (const p of this.units) {
+      const d = Math.hypot(p.x - x, p.y - y);
+      if (p.dead || d >= radius || !this._lineOfSight(x, y, p.x, p.y)) continue;
       const k = 1 - (d / radius) * (1 - (def.minDamageFactor ?? 0.2));
-      p.damage(Math.round((def.damage ?? 80) * k));
+      p.damage(Math.round((def.damage ?? 80) * k), { unit: null, x, y });
     }
   }
 
@@ -224,11 +329,15 @@ export class Game {
   /** Il giocatore è appena morto: cadavere a terra, ticket in meno, conto alla rovescia per il rientro. */
   _onPlayerDeath() {
     const p = this.player;
+    this._addCorpse(p);
+    this.ctf.onDeath(p.team);
+    this.respawn = { time: 0, delay: this.deathCfg.respawnDelay ?? 5, x: p.x, y: p.y };
+  }
+
+  _addCorpse(p) {
     this.corpses.push(this._makeCorpse(p));
     const max = this.deathCfg.maxCorpses ?? 12;
     while (this.corpses.length > max) this.corpses.shift();
-    this.ctf.onDeath(p.team);
-    this.respawn = { time: 0, delay: this.deathCfg.respawnDelay ?? 5, x: p.x, y: p.y };
   }
 
   _updateRespawn(dt) {
@@ -249,7 +358,7 @@ export class Game {
   _makeCorpse(p) {
     const g = this.deathCfg;
     const a = p.deathAngle;
-    if (p.cfg.deathSound) this.audio.play(p.cfg.deathSound);
+    if (p.cfg.deathSound) this.audio.play(p.cfg.deathSound, p);
 
     // corpo: lo sprite ha la testa a sinistra, quindi ruotato come la mira la testa finisce
     // dietro (caduto all'indietro), i piedi restano dov'era il soldato
@@ -353,7 +462,7 @@ export class Game {
   /** Un colpo dell'arma impugnata: un suono e "pellets" proiettili (>1 = fucile a pompa). */
   fire(player) {
     const w = player.weapon;
-    if (w.sound) this.audio.play(w.sound);
+    if (w.sound) this.audio.play(w.sound, player);
     // vampata e fumo alla volata (non se la canna è dentro un muro)
     const m = player.muzzle;
     if (w.muzzleFlash && !this.map.isSolidAt(m.x, m.y)) this.effects.muzzle(w.muzzleFlash, m.x, m.y, player.angle);
@@ -370,7 +479,10 @@ export class Game {
     const minRange = w.minRange ?? 4;
 
     let range;
-    if (this.input.mode === 'desktop' && this.input.mouse.seen) {
+    if (player.aimDistance !== null) {
+      // bot: fino al punto mirato più un piccolo scarto -> o colpisce o cade a terra vicino al bersaglio
+      range = player.aimDistance - (w.muzzleOffset ?? 8) + rand(this.aiCfg.shotOvershoot, 6);
+    } else if (this.input.mode === 'desktop' && this.input.mouse.seen) {
       const mouse = this.input.mouseGame;
       const tx = mouse.x + Math.round(this.camera.x);
       const ty = mouse.y + Math.round(this.camera.y);
@@ -391,7 +503,28 @@ export class Game {
 
     const sprite = this.assets.sprite(w.bulletSprite || 'bullet');
     // damage: danno del singolo proiettile/pallino (verrà applicato ai bersagli colpiti)
-    this.bullets.push({ x: m.x, y: m.y, dx, dy, angle: a, speed: w.bulletSpeed || 300, range, sprite, damage: w.damage ?? 0 });
+    // team/owner: i colpi non feriscono la propria squadra; il bersaglio sa da dove arrivano (IA)
+    this.bullets.push({
+      x: m.x, y: m.y, dx, dy, angle: a, speed: w.bulletSpeed || 300, range, sprite,
+      damage: w.damage ?? 0, team: player.team, owner: player,
+    });
+  }
+
+  /** Soldato colpito dal proiettile b nella posizione attuale (null se nessuno). */
+  _unitHit(b) {
+    const pad = this.combat.hitPadding ?? 1;
+    const ff = !!this.combat.friendlyFire;
+    for (const u of this.units) {
+      if (u.dead || u === b.owner || (!ff && u.team === b.team)) continue;
+      if (Math.abs(b.x - u.x) <= u.hw + pad && Math.abs(b.y - u.y) <= u.hh + pad) return u;
+    }
+    return null;
+  }
+
+  _hitUnit(b, u) {
+    const o = b.owner;
+    u.damage(b.damage, o ? { unit: o, x: o.x, y: o.y } : null);
+    this.effects.impact(this.combat.hitImpact || 'flesh', b.x, b.y, b.x, b.y, b.dx, b.dy);
   }
 
   /** Debug: passa all'arma successiva del catalogo. */
@@ -430,17 +563,40 @@ export class Game {
         b.range -= step;
         travel -= step;
 
-        if (map.isSolidAt(b.x, b.y)) {
+        const hit = this._unitHit(b);
+        if (hit) {
+          this._hitUnit(b, hit);
+          done = true;
+        } else if (map.isSolidAt(b.x, b.y)) {
           const n = this._surfaceNormal(px, py, b.x, b.y, b.dx, b.dy);
           this._wallImpact(b.x, b.y, px, py, n.x, n.y);
           done = true;
         } else if (b.range <= 1e-6) {
-          this._groundImpact(b.x, b.y);
+          // a fine corsa conta anche un soldato appena oltre (mirino/punto mirato sul suo corpo)
+          if (!this._hitJustBeyond(b)) this._groundImpact(b.x, b.y);
           done = true;
         }
       }
       if (done) this.bullets.splice(i, 1);
     }
+  }
+
+  /** Prosegue di combat.endHitReach px dalla fine della corsa: se incontra un soldato lo colpisce. */
+  _hitJustBeyond(b) {
+    const reach = this.combat.endHitReach ?? 6;
+    const x0 = b.x;
+    const y0 = b.y;
+    let hit = null;
+    for (let s = 2; s <= reach && !hit; s += 2) {
+      b.x = x0 + b.dx * s;
+      b.y = y0 + b.dy * s;
+      if (this.map.isSolidAt(b.x, b.y)) break;
+      hit = this._unitHit(b);
+    }
+    if (hit) this._hitUnit(b, hit);
+    b.x = x0;
+    b.y = y0;
+    return !!hit;
   }
 
   /** Normale della faccia del tile solido attraversata passando da (px,py) a (x,y). */
@@ -506,11 +662,14 @@ export class Game {
     this.effects.drawCasings(ctx, false); // bossoli a terra
     this.grenades.draw(ctx, false); // granate a terra
     this._drawCorpses(ctx);
-    // pennoni: quelli "dietro" il giocatore (più in alto sullo schermo) prima di lui, gli altri dopo
-    const py = this.player.y;
-    for (const f of this.ctf.flags) if (f.y <= py) this.ctf.drawFlag(ctx, f);
-    this.player.draw(ctx);
-    for (const f of this.ctf.flags) if (f.y > py) this.ctf.drawFlag(ctx, f);
+    // pennoni e soldati ordinati per y: chi sta più in alto sullo schermo è "dietro"
+    // (a parità di y prima il pennone; sort stabile)
+    const sorted = [...this.ctf.flags, ...this.units.filter((u) => !u.dead)].sort((a, b) => a.y - b.y);
+    for (const o of sorted) {
+      if (o.draw) o.draw(ctx);
+      else this.ctf.drawFlag(ctx, o);
+    }
+    if (this.debug) this._drawBotDebug(ctx);
     this.effects.drawCasings(ctx, true); // bossoli in volo
     this.grenades.draw(ctx, true); // granate in volo
     for (const b of this.bullets) drawSprite(ctx, b.sprite, 0, b.x, b.y, b.angle);
@@ -548,6 +707,38 @@ export class Game {
     if (this.debug) this._drawDebug(ui);
   }
 
+  /** Debug (F3), in coordinate mondo: percorso dei bot, copertura/aggiramento, ultima posizione nota del bersaglio. */
+  _drawBotDebug(ctx) {
+    ctx.save();
+    ctx.globalAlpha = 0.8;
+    for (const { unit: u, brain: b } of this.bots) {
+      if (u.dead) continue;
+      ctx.fillStyle = this.teams[u.team]?.light || '#fff';
+      if (b.path) {
+        let x = u.x;
+        let y = u.y;
+        for (let i = b.pathIdx; i < b.path.length; i++) {
+          const p = b.path[i];
+          const n = Math.max(1, Math.ceil(Math.hypot(p.x - x, p.y - y) / 3));
+          for (let k = 0; k < n; k++) ctx.fillRect(Math.round(x + ((p.x - x) * k) / n), Math.round(y + ((p.y - y) * k) / n), 1, 1);
+          x = p.x;
+          y = p.y;
+        }
+      }
+      const mark = (p, color) => {
+        if (!p) return;
+        ctx.fillStyle = color;
+        ctx.fillRect(Math.round(p.x) - 2, Math.round(p.y) - 2, 5, 1);
+        ctx.fillRect(Math.round(p.x) - 2, Math.round(p.y) + 2, 5, 1);
+      };
+      mark(b.cover, '#4f4');
+      mark(b.peek, '#ff4');
+      mark(b.flankPoint, '#f4f');
+      if (b.target && b.lastSeen) mark(b.lastSeen, b.visible ? '#f44' : '#f84');
+    }
+    ctx.restore();
+  }
+
   _drawDebug(ui) {
     const { display, input, player, effects } = this;
     const mv = input.getMove();
@@ -564,6 +755,7 @@ export class Game {
       `grenades ${player.grenades} (G: throw, F7: +1) live ${this.grenades.list.length} blasts ${effects.blasts.length}`,
       `team ${this.playerTeam} (F8: switch) tickets ${this.ctf.teamIds.map((t) => `${t} ${this.ctf.tickets[t]}`).join(' / ')}`,
       `flags ${this.ctf.flags.map((f) => `${f.id}:${f.owner || '-'} ${Math.round(f.progress * 100)}%`).join('  ')}`,
+      `bots ${this.bots.map((b) => (b.unit.dead ? 'x' : `${b.brain.mode === 'combat' ? `${b.brain.role}/${b.brain.phase}` : 'obj'}`)).join(' ')}`,
       `bullets ${this.bullets.length} decals ${effects.decals.length} particles ${effects.particles.length} casings ${effects.casings.length} flashes ${effects.flashes.length}`,
     ];
     const top = Math.round(this.hud.topHeight(display)); // sotto l'HUD

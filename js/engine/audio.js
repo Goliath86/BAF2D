@@ -6,6 +6,8 @@ export class AudioManager {
   constructor(sounds = {}, cfg = {}) {
     this.defs = sounds;
     this.buffers = new Map();
+    this.hearing = cfg.hearing || {};
+    this.listener = null; // { x, y } posizione dell'ascoltatore nel mondo (vedi gainAt)
     const Ctx = window.AudioContext || window.webkitAudioContext;
     this.ctx = Ctx ? new Ctx() : null;
     if (this.ctx) {
@@ -56,14 +58,34 @@ export class AudioManager {
     src.start(0);
   }
 
-  /** Riproduce un suono; restituisce { stop() } per interromperlo (es. ricarica annullata). */
-  play(name) {
+  /**
+   * Volume relativo (0..1) di un suono emesso in "pos" ({ x, y } in pixel di mondo) rispetto
+   * all'ascoltatore (this.listener, aggiornato dal gioco): pieno entro hearing.near, nullo oltre hearing.far.
+   */
+  gainAt(pos) {
+    const l = this.listener;
+    if (!pos || !l) return 1;
+    const near = this.hearing.near ?? 220;
+    const far = Math.max(near + 1, this.hearing.far ?? 520);
+    const d = Math.hypot(pos.x - l.x, pos.y - l.y);
+    if (d <= near) return 1;
+    const k = Math.max(0, 1 - (d - near) / (far - near));
+    return k * k;
+  }
+
+  /**
+   * Riproduce un suono; restituisce { stop() } per interromperlo (es. ricarica annullata).
+   * pos (opzionale) = punto del mondo da cui proviene: il volume cala con la distanza dall'ascoltatore.
+   */
+  play(name, pos = null) {
     const none = { stop() {} };
     const ctx = this.ctx;
     if (!ctx || ctx.state !== 'running') return none;
     const def = this.defs[name];
     if (!def) return none;
-    const vol = def.volume ?? 1;
+    const gain = this.gainAt(pos);
+    if (gain <= 0.01) return none;
+    const vol = (def.volume ?? 1) * gain;
     const buffer = this.buffers.get(name);
     let sources = [];
     if (buffer) {

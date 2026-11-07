@@ -20,7 +20,8 @@
   },
 
   "audio": {
-    "masterVolume": 0.6
+    "masterVolume": 0.6,
+    "hearing": { "near": 220, "far": 520 }
   },
 
   "mobile": {
@@ -162,6 +163,71 @@
     "grenade": "frag",
     "grenades": 2,
     "maxGrenades": 9
+  },
+
+  "combat": {
+    "hitImpact": "flesh",
+    "hitPadding": 1,
+    "endHitReach": 6,
+    "friendlyFire": false
+  },
+
+  "bots": {
+    "teams": { "red": 4, "blue": 0 },
+    "weapons": ["rifle", "rifle", "shotgun", "pistol"],
+    "respawnDelay": 5,
+    "baseSpread": [6, 22],
+    "player": { "speed": 78, "faceMoveWhenIdle": false },
+    "ai": {
+      "viewRange": 210,
+      "reactionTime": [0.3, 0.6],
+      "turnSpeedDeg": 540,
+      "fireConeDeg": 6,
+      "targetStickiness": 0.6,
+      "memoryTime": 6,
+      "suppressTime": [0.8, 1.8],
+      "aimErrorDeg": 3,
+      "aimErrorMovingDeg": 5,
+      "suppressErrorDeg": 5,
+      "leadFactor": 0.6,
+      "shotOvershoot": [-4, 14],
+      "burst": [0.35, 0.9],
+      "burstPause": [0.25, 0.6],
+      "rangeFactor": 0.85,
+      "fireMoveFactor": 0.7,
+      "exposeTime": [1.2, 2.6],
+      "coverTime": [0.8, 1.8],
+      "hurtCoverChance": 0.5,
+      "lowAmmo": 0.25,
+      "coverReload": 0.7,
+      "coverSearch": 6,
+      "peekSearch": 3,
+      "minCoverDistance": 28,
+      "preferredRange": [60, 150],
+      "rangeWeight": 0.5,
+      "strafeTime": [0.5, 1.1],
+      "strafeChance": 0.6,
+      "strafeSpeed": 0.45,
+      "squadRadius": 120,
+      "commRadius": 220,
+      "alertInterval": 1.5,
+      "flankAngleDeg": 75,
+      "flankDistance": 80,
+      "flankSearch": 3,
+      "flankRetarget": 40,
+      "captureCommit": 12,
+      "objectiveInterval": [0.8, 1.3],
+      "objectiveStickiness": 40,
+      "holdTime": [2, 4.5],
+      "flagSquad": 2,
+      "crowdPenalty": 150,
+      "flagBias": 60,
+      "separation": 12,
+      "repathInterval": 0.5,
+      "arriveDistance": 4,
+      "waypointReach": 3,
+      "destTolerance": 8
+    }
   },
 
   "input": {

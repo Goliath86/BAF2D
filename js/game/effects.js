@@ -69,7 +69,7 @@ export class Effects {
       const n = Math.round(range(deb.count, 6));
       for (let i = 0; i < n; i++) this.casing(deb.type, x, y, Math.random() * Math.PI * 2);
     }
-    if (d.sound) this.audio.play(d.sound);
+    if (d.sound) this.audio.play(d.sound, { x, y });
   }
 
   /**
@@ -147,7 +147,7 @@ export class Effects {
     }
     if (def.decal) this.addDecal(def.decal, x, y);
     for (const em of def.emitters || []) this.emit(em, ex, ey, nx, ny);
-    if (def.sound) this.audio.play(def.sound);
+    if (def.sound) this.audio.play(def.sound, { x, y });
   }
 
   /**
@@ -285,7 +285,7 @@ export class Effects {
           c.z = 0;
           if (!c.landed) {
             c.landed = true;
-            if (d.sound) this.audio.play(d.sound);
+            if (d.sound) this.audio.play(d.sound, c);
           }
           const f = d.friction ?? 0.6;
           c.vx *= f;

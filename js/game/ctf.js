@@ -231,29 +231,50 @@ export class Ctf {
    * Punto di rientro per "team": tra la base e le bandiere possedute (non contese) il più vicino a
    * "near" (es. dove è morto). Vicino alla bandiera cerca un punto libero per un AABB hw x hh.
    */
-  spawnPoint(team, near, hw = 5, hh = 5) {
+  spawnPoint(team, near, hw = 5, hh = 5, opts = {}) {
     const base = this.bases[team] || { x: this.map.pixelWidth / 2, y: this.map.pixelHeight / 2 };
-    if (!near) return { x: base.x, y: base.y };
+    // bandiere possedute in cui non c'è nessun nemico
+    const owned = this.flags.filter((f) => f.owner === team && !Object.keys(f.present).some((t) => t !== team));
     let best = base;
-    let bestD = Math.hypot(base.x - near.x, base.y - near.y);
-    for (const f of this.flags) {
-      if (f.owner !== team || Object.keys(f.present).some((t) => t !== team)) continue;
-      const d = Math.hypot(f.x - near.x, f.y - near.y);
-      if (d < bestD) {
-        best = f;
-        bestD = d;
+    if (opts.preferFlags && owned.length) {
+      // (bot) sempre su una bandiera se ce n'è una: la più vicina a "near", o una a caso
+      if (near) {
+        let bestD = Infinity;
+        for (const f of owned) {
+          const d = Math.hypot(f.x - near.x, f.y - near.y);
+          if (d < bestD) {
+            best = f;
+            bestD = d;
+          }
+        }
+      } else best = owned[Math.floor(Math.random() * owned.length)];
+    } else if (near) {
+      let bestD = Math.hypot(base.x - near.x, base.y - near.y);
+      for (const f of owned) {
+        const d = Math.hypot(f.x - near.x, f.y - near.y);
+        if (d < bestD) {
+          best = f;
+          bestD = d;
+        }
       }
     }
-    if (best === base) return { x: base.x, y: base.y };
-    const [d0, d1] = best.spawnDistance;
+    if (best === base) {
+      // opts.spread = [min, max] px: punto libero attorno alla base (più soldati non si sovrappongono)
+      return opts.spread ? this._freePoint(base, opts.spread, hw, hh) : { x: base.x, y: base.y };
+    }
+    return this._freePoint(best, best.spawnDistance, hw, hh);
+  }
+
+  /** Punto a distanza [d0, d1] da "c" libero per un AABB hw x hh e in vista di c (o c stesso). */
+  _freePoint(c, [d0, d1], hw, hh) {
     for (let i = 0; i < 16; i++) {
       const a = Math.random() * Math.PI * 2;
       const d = d0 + Math.random() * (d1 - d0);
-      const x = best.x + Math.cos(a) * d;
-      const y = best.y + Math.sin(a) * d;
-      if (!this.map.rectHitsSolid(x - hw, y - hh, hw * 2, hh * 2) && this._lineOfSight(best.x, best.y, x, y)) return { x, y };
+      const x = c.x + Math.cos(a) * d;
+      const y = c.y + Math.sin(a) * d;
+      if (!this.map.rectHitsSolid(x - hw, y - hh, hw * 2, hh * 2) && this._lineOfSight(c.x, c.y, x, y)) return { x, y };
     }
-    return { x: best.x, y: best.y };
+    return { x: c.x, y: c.y };
   }
 
   /**

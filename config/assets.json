@@ -383,6 +383,14 @@
       "src": null,
       "volume": 0.2,
       "placeholder": { "wave": "triangle", "freqStart": 320, "freqEnd": 90, "duration": 0.07 }
+    },
+    "hit_flesh": {
+      "src": null,
+      "volume": 0.25,
+      "placeholder": [
+        { "wave": "noise", "duration": 0.05, "volume": 0.6 },
+        { "wave": "sine", "freqStart": 180, "freqEnd": 60, "duration": 0.08 }
+      ]
     }
   }
 }

@@ -49,7 +49,28 @@ Sulla mappa ci sono delle bandiere: un pennone con un drappo che parte da terra.
 - **Fine partita**: la squadra che arriva a 0 ticket perde; schermata di vittoria/sconfitta (pareggio se finiscono
   insieme). Clic, tocco o Invio per una nuova partita.
 
-Per ora non ci sono nemici: per provare le catture da entrambe le parti usa F8 (cambia squadra).
+### Squadra avversaria (IA)
+
+La squadra rossa è controllata dal computer (`bots` in `game.json`, numero di soldati per squadra: si possono
+aggiungere anche compagni blu). Ogni bot:
+
+- **rientra** su una bandiera posseduta dalla sua squadra (la più vicina a dove è morto), alla base solo se non ne ha;
+- ha come **priorità le bandiere**: va a catturare quelle non sue (senza ammassarsi tutti sulla stessa), resta
+  nell'area finché non è presa; se le ha tutte le presidia;
+- **spara solo a un nemico in vista** (dopo un tempo di reazione, a raffiche, con un errore di mira che cresce se il
+  bersaglio si muove); se lo perde di vista continua per un po' a sparare dove l'ha visto (fuoco di copertura);
+- i suoi colpi **o vanno a segno o cadono a terra vicino al bersaglio** (gittata = distanza dal punto mirato);
+- **si muove in modo tattico**: spara allo scoperto, poi si ripara dietro un muro (e lì ricarica), poi si sporge da un
+  punto vicino che vede il bersaglio; a vita/munizioni basse o se colpito cerca riparo; chi sta catturando combatte
+  senza uscire dall'area della bandiera;
+- **in squadra**: chi avvista un nemico lo comunica ai compagni vicini non impegnati (né in cattura né con un altro
+  bersaglio); se più bot ingaggiano lo stesso bersaglio, uno lo tiene impegnato e gli altri lo **aggirano** da lati
+  alterni;
+- munizioni infinite, ma deve **ricaricare**.
+
+I colpi feriscono solo la squadra avversaria (`combat.friendlyFire`); le granate feriscono tutti. In debug (F3) si
+vedono percorsi dei bot, coperture (verde), punti da cui sporgersi (giallo), punti di aggiramento (viola) e ultima
+posizione nota del bersaglio (rosso).
 
 La modalità (desktop/touch) cambia automaticamente in base all'ultimo input usato.
 Su mobile, al primo tocco il gioco prova ad andare a schermo intero e a bloccare l'orientamento in landscape;
@@ -313,5 +334,19 @@ lo stick sinistro due pulsanti a forma di cuore: "−" toglie vita (come F5), "+
   `hud.grenades`: `show`, `icon` (sprite), `iconScale`, `emptyColor`. `hud.ctf`: pannello ticket/bandiere
   (`ticketFontSize`, `barWidth`, `lowTickets` = frazione sotto cui il numero lampeggia, `flagGap`, ...), barra della
   cattura (`zoneBarWidth`, `contestedColor`), messaggi (`toastTime`) e scritta di rientro (`respawnY`, `killedColor`).
+- `combat`: `hitImpact` (tipo di impatto in `effects.json` quando un colpo prende un soldato), `hitPadding` (px in
+  più attorno alla hitbox), `endHitReach` (a fine corsa il colpo prende anche un soldato fino a questi px oltre),
+  `friendlyFire`.
+- `bots`: `teams` (`{ "red": 4, "blue": 0 }`), `weapons` (armi assegnate a rotazione), `respawnDelay`,
+  `baseSpread` ([min, max] px attorno alla base), `player` (sovrascrive `player` per i bot, es. `speed`).
+  `bots.ai`: vista (`viewRange`, `reactionTime`, `turnSpeedDeg`, `memoryTime`), tiro (`fireConeDeg`, `burst`/`burstPause`,
+  `aimErrorDeg`, `aimErrorMovingDeg`, `suppressErrorDeg`, `leadFactor`, `shotOvershoot` = [min, max] px oltre il punto
+  mirato, `rangeFactor` = frazione di `maxRange` dell'arma entro cui spara), fuoco di copertura (`suppressTime`),
+  ciclo tattico (`exposeTime`, `coverTime`, `hurtCoverChance`, `lowAmmo`, `coverReload`, `coverSearch`/`peekSearch`
+  in tile, `minCoverDistance`, `preferredRange`, `strafe*`), squadra (`squadRadius`, `commRadius`, `alertInterval`,
+  `flankAngleDeg`, `flankDistance`, `flankSearch`, `flankRetarget`), bandiere (`captureCommit`, `objectiveInterval`,
+  `holdTime`, `flagSquad` = bot per bandiera prima della penalità `crowdPenalty`, `flagBias`), movimento
+  (`separation`, `repathInterval`, `arriveDistance`, `waypointReach`, `destTolerance`).
+- `audio.hearing`: `near`/`far` px dal centro della visuale (i suoni lontani si attenuano fino a sparire).
 - `camera.smoothing`, `camera.lookAhead` (px di anticipo nella direzione di mira).
 - `mobile.requestFullscreen`, `mobile.lockLandscape`.

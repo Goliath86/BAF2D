@@ -279,6 +279,31 @@
   },
 
   "impacts": {
+    "flesh": {
+      "sound": "hit_flesh",
+      "emitters": [
+        {
+          "count": [4, 7],
+          "colors": ["#b01818", "#8a1010", "#d02a20"],
+          "speed": [30, 80],
+          "life": [0.15, 0.35],
+          "size": [1, 1],
+          "drag": 6,
+          "spreadDeg": 70
+        },
+        {
+          "count": [1, 2],
+          "colors": ["#6a0c0c", "#8a1010"],
+          "speed": [5, 15],
+          "life": [0.4, 0.7],
+          "size": [1, 2],
+          "drag": 5,
+          "spreadDeg": 120,
+          "alpha": 0.8
+        }
+      ]
+    },
+
     "ground": {
       "decal": { "sprite": "hole_ground", "life": 3, "fade": 1.5 },
       "sound": "hit_ground",
