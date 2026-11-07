@@ -37,6 +37,7 @@ export class Player {
     this.combatant = null;
     // Soldati dell'IA: gittata dei colpi = distanza dal punto mirato (null = regole del giocatore umano)
     this.aimDistance = null;
+    this.throwDistance = null; // gittata della granata scelta dall'IA (px)
     this.isBot = false;
     this.cooldown = 0;
     this.triggerHeld = false; // per le armi semiautomatiche (un colpo per pressione)

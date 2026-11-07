@@ -383,12 +383,15 @@ export class Game {
 
   /**
    * Lancia una granata di "player" verso la mira. Desktop con mouse: tocca terra la prima volta
-   * sotto il mirino (tra minRange e maxRange); touch o senza mouse: a defaultRange px.
+   * sotto il mirino (tra minRange e maxRange); touch o senza mouse: a defaultRange px;
+   * bot: a player.throwDistance px (scelta dall'IA).
    */
   throwGrenade(player) {
     const def = player.grenadeType;
     let dist = def.defaultRange ?? 90;
-    if (this.input.mode === 'desktop' && this.input.mouse.seen) {
+    if (player.isBot) {
+      dist = player.throwDistance ?? dist;
+    } else if (this.input.mode === 'desktop' && this.input.mouse.seen) {
       const m = this.input.mouseGame;
       dist = Math.hypot(m.x + Math.round(this.camera.x) - player.x, m.y + Math.round(this.camera.y) - player.y);
     }
@@ -870,6 +873,8 @@ export class Game {
       mark(b.peek, '#ff4');
       mark(b.flankPoint, '#f4f');
       if (b.target && b.lastSeen) mark(b.lastSeen, b.visible ? '#f44' : '#f84');
+      mark(b.throwPlan?.point, '#fa0');
+      mark(b.evade?.point, '#4ff');
     }
     ctx.restore();
   }

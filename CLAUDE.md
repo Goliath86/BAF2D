@@ -161,7 +161,9 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
   su `suppressPoint` per `suppressTime`; avvisa i compagni liberi entro `commRadius` (`receive` -> aggiramento).
   Colpi dei bot: `unit.aimDistance` = distanza dal punto mirato -> gittata (+ `shotOvershoot`), quindi colpiscono
   o cadono vicino al bersaglio. Proiettili con `team`/`owner`: `_unitHit` (hitbox + `combat.hitPadding`, niente
-  fuoco amico), a fine corsa `_hitJustBeyond` (`endHitReach`). `player.damage(n, { unit, x, y })` -> `hurtBy` letto
+  fuoco amico), a fine corsa `_hitJustBeyond` (`endHitReach`). Granate dei bot: `BotBrain._considerGrenade` ->
+  `throwPlan` (mira al punto, poi `ctrl.grenade`), gittata in `unit.throwDistance` (letta da `Game.throwGrenade` per
+  `isBot`); `_grenadeDanger` -> `evade` (fuga, ha la precedenza su combattimento/obiettivo, niente fuoco). `player.damage(n, { unit, x, y })` -> `hurtBy` letto
   dall'IA. Esplosioni feriscono tutte le unità. F3 disegna percorsi/coperture dei bot.
 - Punteggi (`scores.js`, `game.json -> scoring`): `game.scores` ha un record per combattente (`unit.combatant`,
   persistente tra i rientri: `game.playerRecord`, `slot.record` dei bot, nomi da `i18n.list('scoreboard.botNames')`).
@@ -230,10 +232,10 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
   caricatore e ricarica (R / pulsante touch), bossoli espulsi e caricatori che cadono in ricarica, vampata di volata con fumo, danno per arma, vita del giocatore, HUD (vita, granate, arma, munizioni), granate (rimbalzi, esplosione con bruciatura, fumo, schegge, detriti, scossa, danno),
   modalità Capture The Flag (squadre blu/rossa con segni sui soldati, bandiere catturabili, ticket con calo per
   morti e bandiere, rientro alla bandiera più vicina o alla base, cadaveri persistenti, vittoria/sconfitta e nuova partita),
-  squadra avversaria IA (cattura bandiere, coperture, fuoco di copertura, aggiramento coordinato, ricarica),
+  squadra avversaria IA (cattura bandiere, coperture, fuoco di copertura, aggiramento coordinato, ricarica, granate e fuga dalle granate),
   menu desktop/mobile (nuova partita con mappa/squadra/numero di bot, opzioni lingua/volume/tasti, pausa,
   rivincita), seconda mappa "Crocevia" (5 bandiere, simmetrica), punteggi con classifica di fine partita
   (nomi fittizi per i bot), 18 gradi con insegne a pixel, promozioni in partita e carriera salvata in localStorage.
 - Non ancora presenti: mappa procedurale, raccolta armi/granate da terra, riserva di munizioni (ora infinita),
-  granate lanciate dai bot, asset grafici reali.
+  asset grafici reali.
 - Controlli touch (stick + pulsante ricarica) verificati dall'utente su un dispositivo reale (2026-11-02).

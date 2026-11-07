@@ -14,6 +14,9 @@
 //    il primo lo tiene impegnato ("fix") e gli altri lo aggirano ("flank") da lati alterni.
 // I colpi dei bot hanno gittata pari alla distanza dal punto mirato (più un piccolo scarto):
 // o colpiscono o finiscono a terra vicino al bersaglio (vedi Game._spawnBullet).
+// 4. granate: ogni tanto (grenadeInterval) valuta un lancio sul bersaglio, anche nascosto dietro un angolo
+//    (punto d'arrivo in vista sia dal bot sia dal bersaglio), mai se un compagno o lui stesso sarebbero
+//    nell'esplosione; scappa dalle granate vicine (di chiunque) dopo un tempo di reazione.
 
 const DEG = Math.PI / 180;
 
@@ -113,6 +116,12 @@ export class BotBrain {
     this.aimErr = 0;
     this.strafe = 0;
     this.strafeTimer = 0;
+
+    // granate: prossima valutazione di un lancio, lancio in preparazione, fuga da una granata
+    this.grenadeTimer = rand(cfg.grenadeFirstDelay, 3);
+    this.throwPlan = null; // { point, until }
+    this.evade = null; // { g, point, retarget }
+    this.grenadeReaction = rand(cfg.grenadeReaction, 0.4);
   }
 
   // ---------- Tick ----------
@@ -126,16 +135,23 @@ export class BotBrain {
     this._perceive(dt, game);
     this._onHurt(game);
 
-    if (this.target) this._combat(dt, game);
+    // una granata vicina ha la precedenza su tutto: via dall'esplosione
+    if (this._grenadeDanger(dt, game)) this._goTo(this.evade.point, game);
+    else if (this.target) this._combat(dt, game);
     else this._objectiveTick(dt, game);
+    this._considerGrenade(dt, game);
 
     const move = this._steer(dt, game);
 
-    // mira e fuoco
-    const aimPt = this._aimPoint(game);
+    // mira e fuoco (durante la preparazione di un lancio: mira al punto d'arrivo, niente fuoco)
+    const plan = this.throwPlan;
+    const aimPt = plan || this.evade ? null : this._aimPoint(game); // in fuga dalla granata corre e basta
     let desired = this.angle;
     let wantFire = false;
-    if (aimPt) {
+    if (plan) {
+      this.burstOn = false;
+      desired = Math.atan2(plan.point.y - u.y, plan.point.x - u.x);
+    } else if (aimPt) {
       wantFire = this._burst(dt, aimPt);
       desired = Math.atan2(aimPt.y - u.y, aimPt.x - u.x) + this.aimErr;
     } else {
@@ -151,12 +167,24 @@ export class BotBrain {
     const firing = wantFire && onTarget && !u.reloading && u.ammo > 0;
     u.aimDistance = aimPt ? dist(aimPt, u) : null;
 
+    // lancio: quando è girato verso il punto (la granata rotola un po' dopo il primo rimbalzo: grenadeRangeFactor)
+    let grenade = false;
+    if (plan) {
+      if (Math.abs(angleDiff(desired, this.angle)) <= (c.grenadeConeDeg ?? 8) * DEG) {
+        grenade = true;
+        u.throwDistance = dist(plan.point, u) * (c.grenadeRangeFactor ?? 0.8);
+        this.throwPlan = null;
+      } else if (this.time > plan.until) {
+        this.throwPlan = null;
+      }
+    }
+
     return {
       move,
       aim: () => this.angle,
       firing,
-      reload: this._wantReload(wantFire),
-      grenade: false,
+      reload: !plan && this._wantReload(wantFire),
+      grenade,
       repeat: true,
       faceMove: false,
     };
@@ -639,6 +667,127 @@ export class BotBrain {
       }
     }
     return null;
+  }
+
+  // ---------- Granate ----------
+
+  /**
+   * Granata vicina (entro blastRadius + grenadeAvoidMargin, in vista, notata dopo grenadeReaction s):
+   * prepara this.evade = { g, point } con il punto raggiungibile più vicino fuori dal raggio o al riparo.
+   * Restituisce true finché c'è pericolo.
+   */
+  _grenadeDanger(dt, game) {
+    const u = this.unit;
+    const c = this.cfg;
+    const nav = game.nav;
+    let threat = null;
+    let radius = 0;
+    let best = Infinity;
+    for (const g of game.grenades.list) {
+      if (g.time < this.grenadeReaction) continue;
+      const r = (g.def.blastRadius ?? 40) + (c.grenadeAvoidMargin ?? 10);
+      const d = dist(g, u);
+      if (d >= r || d >= best || !nav.los(g.x, g.y, u.x, u.y)) continue;
+      best = d;
+      threat = g;
+      radius = r;
+    }
+    if (!threat) {
+      if (this.evade) {
+        this.evade = null;
+        this._stop();
+        this.repath = 0;
+      }
+      return false;
+    }
+    const e = this.evade;
+    // la granata rotola: ricalcola il punto ogni tanto
+    if (!e || e.g !== threat || (e.retarget -= dt) <= 0) {
+      this.evade = { g: threat, point: this._evadePoint(game, threat, radius), retarget: 0.3 };
+      this.throwPlan = null;
+      this.repath = 0;
+    }
+    return true;
+  }
+
+  _evadePoint(game, g, radius) {
+    const u = this.unit;
+    const nav = game.nav;
+    const reach = nav.reach(u.x, u.y, Math.ceil(radius / nav.size) + 3);
+    let best = null;
+    let bestD = Infinity;
+    for (const i of reach.list) {
+      const d = reach.dist(i);
+      if (d >= bestD) continue;
+      const p = nav.center(i);
+      if (dist(p, g) < radius && nav.los(g.x, g.y, p.x, p.y)) continue;
+      bestD = d;
+      best = p;
+    }
+    if (best) return best;
+    // nessun punto sicuro vicino: lontano dalla granata in linea retta
+    const a = Math.atan2(u.y - g.y, u.x - g.x);
+    return { x: u.x + Math.cos(a) * radius, y: u.y + Math.sin(a) * radius };
+  }
+
+  /**
+   * Ogni grenadeInterval s, con un bersaglio noto da poco, cerca un punto d'arrivo: il bersaglio stesso o un
+   * punto vicino (per lanciare dietro un angolo) in vista dal bot e dal bersaglio, entro la gittata, abbastanza
+   * lontano da sé e senza compagni nel raggio. Più probabile se il bersaglio è al riparo o ci sono più nemici.
+   */
+  _considerGrenade(dt, game) {
+    const u = this.unit;
+    const c = this.cfg;
+    if (this.throwPlan || (this.grenadeTimer -= dt) > 0) return;
+    this.grenadeTimer = rand(c.grenadeInterval, 6);
+    if (c.grenades === false || u.grenades <= 0 || u.reloading || u.throwCooldown > 0) return;
+    if (this.evade || !this.target || this.time < this.reactAt || !this.lastSeen) return;
+    const mem = c.grenadeMemory ?? 3;
+    if (this.time - this.lastSeen.time > mem) return;
+    const seen = this.visible ? { x: this.target.x, y: this.target.y } : this.lastSeen;
+
+    const nav = game.nav;
+    const def = u.grenadeType;
+    const R = def.blastRadius ?? 40;
+    const minD = Math.max(def.minRange ?? 20, R * (c.grenadeSelfSafety ?? 1.25));
+    const maxD = (def.maxRange ?? 150) * 0.95;
+    const margin = c.grenadeFriendlyMargin ?? 14;
+    const mates = game.units.filter((o) => o !== u && !o.dead && o.team === u.team);
+    // nemici noti (lavagna di squadra) + il bersaglio
+    const enemies = new Map();
+    for (const [e, k] of this.squad.contacts) if (!e.dead && this.time - k.time <= mem) enemies.set(e, k);
+    enemies.set(this.target, seen);
+
+    const candidates = [seen];
+    for (const f of [0.35, 0.65]) {
+      for (let k = 0; k < 8; k++) {
+        const a = (k / 8) * Math.PI * 2;
+        candidates.push({ x: seen.x + Math.cos(a) * R * f, y: seen.y + Math.sin(a) * R * f });
+      }
+    }
+    let best = null;
+    let bestS = -Infinity;
+    let bestHits = 0;
+    for (const p of candidates) {
+      if (game.map.isSolidAt(p.x, p.y)) continue;
+      const d = dist(p, u);
+      if (d < minD || d > maxD) continue;
+      if (!nav.los(u.x, u.y, p.x, p.y) || !nav.los(p.x, p.y, seen.x, seen.y)) continue;
+      if (mates.some((m) => dist(m, p) < R + margin)) continue;
+      let hits = 0;
+      for (const e of enemies.values()) if (dist(e, p) < R * 0.8 && nav.los(p.x, p.y, e.x, e.y)) hits++;
+      if (!hits) continue;
+      const s = hits * 100 - dist(p, seen);
+      if (s > bestS) {
+        bestS = s;
+        best = p;
+        bestHits = hits;
+      }
+    }
+    if (!best) return;
+    let chance = this.visible ? c.grenadeChanceVisible ?? 0.2 : c.grenadeChanceHidden ?? 0.6;
+    if (bestHits >= 2) chance += c.grenadeChanceGroup ?? 0.3;
+    if (Math.random() < chance) this.throwPlan = { point: { x: best.x, y: best.y }, until: this.time + (c.grenadeAimTime ?? 0.8) };
   }
 
   // ---------- Mira e fuoco ----------

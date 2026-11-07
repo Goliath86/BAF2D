@@ -97,11 +97,15 @@ Compagni e avversari sono controllati dal computer (`bots` in `game.json`; il nu
 - **in squadra**: chi avvista un nemico lo comunica ai compagni vicini non impegnati (né in cattura né con un altro
   bersaglio); se più bot ingaggiano lo stesso bersaglio, uno lo tiene impegnato e gli altri lo **aggirano** da lati
   alterni;
-- munizioni infinite, ma deve **ricaricare**.
+- munizioni infinite, ma deve **ricaricare**;
+- **lancia granate** (scorta `bots.player.grenades` per vita): ogni tanto valuta un lancio sul bersaglio, più
+  volentieri se è al riparo (la lancia anche dietro un angolo, su un punto visibile sia da lui sia dal bersaglio) o se
+  ci sono più nemici vicini; mai se un compagno o lui stesso sarebbero nel raggio dell'esplosione;
+- **scappa dalle granate** vicine (di chiunque) verso il punto più vicino fuori dal raggio o al riparo.
 
 I colpi feriscono solo la squadra avversaria (`combat.friendlyFire`); le granate feriscono tutti. In debug (F3) si
 vedono percorsi dei bot, coperture (verde), punti da cui sporgersi (giallo), punti di aggiramento (viola) e ultima
-posizione nota del bersaglio (rosso).
+posizione nota del bersaglio (rosso), punto di lancio della granata (arancio) e punto di fuga da una granata (azzurro).
 
 La modalità (desktop/touch) cambia automaticamente in base all'ultimo input usato.
 Su mobile, al primo tocco il gioco prova ad andare a schermo intero e a bloccare l'orientamento in landscape;
@@ -389,7 +393,11 @@ lo stick sinistro due pulsanti a forma di cuore: "−" toglie vita (come F5), "+
   in tile, `minCoverDistance`, `preferredRange`, `strafe*`), squadra (`squadRadius`, `commRadius`, `alertInterval`,
   `flankAngleDeg`, `flankDistance`, `flankSearch`, `flankRetarget`), bandiere (`captureCommit`, `objectiveInterval`,
   `holdTime`, `holdSpacing` = distanza minima tra compagni nell'area, `holdInner` = frazione del raggio vicino al pennone da evitare, `flagSquad` = bot per bandiera prima della penalità `crowdPenalty`, `flagBias`), movimento
-  (`separation`, `repathInterval`, `arriveDistance`, `waypointReach`, `destTolerance`).
+  (`separation`, `repathInterval`, `arriveDistance`, `waypointReach`, `destTolerance`), granate (`grenades` = on/off,
+  `grenadeFirstDelay`/`grenadeInterval` tra due valutazioni, `grenadeChanceVisible`/`Hidden`/`Group`, `grenadeMemory`,
+  `grenadeSelfSafety` = distanza minima in raggi d'esplosione, `grenadeFriendlyMargin`, `grenadeRangeFactor` = la
+  granata rotola ~23% oltre il primo rimbalzo, `grenadeConeDeg`, `grenadeAimTime`; fuga: `grenadeReaction`,
+  `grenadeAvoidMargin`).
 - `audio.hearing`: `near`/`far` px dal centro della visuale (i suoni lontani si attenuano fino a sparire).
 - `camera.smoothing`, `camera.lookAhead` (px di anticipo nella direzione di mira).
 - `mobile.requestFullscreen`, `mobile.lockLandscape`.
