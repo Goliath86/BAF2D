@@ -42,7 +42,7 @@
   "levels": {
     "arena": {
       "name": "Test Arena",
-      "description": "Compact arena with three flags: fast, close-quarters fights."
+      "description": "Industrial arena with three flags: warehouses, crate stacks and a walled ring around the centre flag."
     },
     "crossroads": {
       "name": "Crossroads",
@@ -66,6 +66,10 @@
     "pressKey": "Press a key...",
     "pressKeyHint": "Esc: cancel · Delete: clear",
     "resetKeys": "Reset keys",
+    "autoReload": "Auto reload",
+    "autoReloadHint": "Reload by itself as soon as the magazine is empty, without pressing the reload key.",
+    "on": "On",
+    "off": "Off",
     "unbound": "—",
     "actions": {
       "up": "Move up",
@@ -115,6 +119,8 @@
   },
   "hud": {
     "reloading": "RELOADING",
+    "reloadPrompt": "RELOAD! [{key}]",
+    "reloadPromptTouch": "RELOAD!",
     "empty": "EMPTY",
     "grenades": "x{count}",
     "killed": "KILLED IN ACTION",

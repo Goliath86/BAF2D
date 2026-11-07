@@ -99,6 +99,7 @@ export class Hud {
     }
     if (mode?.vehicle) this._drawVehicle(ui, u, display.cssWidth, mode.vehicle);
     else this._drawWeapon(ui, u, display.cssWidth, player, mode?.holster);
+    if (mode?.reloadPrompt) this._drawReloadPrompt(ui, u, display, mode.reloadPrompt);
     if (mode?.ctf) {
       const W = Math.floor(display.cssWidth / u);
       let y = this._drawTickets(ui, u, W, mode.ctf, mode.team, mode.zone);
@@ -108,6 +109,16 @@ export class Hud {
     }
     if (this.promotions.length) this._drawPromotion(ui, u, Math.floor(display.cssWidth / u), Math.floor(display.cssHeight / u));
     ui.restore();
+  }
+
+  /** "RICARICA!" lampeggiante al centro, sotto il giocatore (game.json -> hud.reloadPrompt). */
+  _drawReloadPrompt(ui, u, display, text) {
+    const rp = this.cfg.reloadPrompt || {};
+    const period = rp.blink ?? 0.5;
+    if (this.time % period >= period * (rp.duty ?? 0.6)) return;
+    const W = Math.floor(display.cssWidth / u);
+    const H = Math.floor(display.cssHeight / u);
+    this._text(ui, u, text, Math.floor(W / 2), Math.floor(H * (rp.y ?? 0.62)), rp.fontSize ?? 10, rp.color || '#ffd36b', 'center');
   }
 
   // ---------- Punteggio e grado ----------

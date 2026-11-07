@@ -146,6 +146,7 @@
   },
 
   "hud": {
+    "reloadPrompt": { "y": 0.62, "fontSize": 10, "color": "#ffd36b", "blink": 0.5, "duty": 0.6 },
     "margin": 5,
     "font": "\"Courier New\", monospace",
     "fontSize": 7,
@@ -320,7 +321,8 @@
     "weapon": "rifle",
     "grenade": "frag",
     "grenades": 2,
-    "maxGrenades": 9
+    "maxGrenades": 9,
+    "autoReload": false
   },
 
   "combat": {

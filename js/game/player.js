@@ -240,6 +240,13 @@ export class Player {
     return this.reload ? Math.min(1, this.reload.time / this.reload.duration) : 0;
   }
 
+  /** Può ricaricare ora: non sta già ricaricando, caricatore non pieno e (armi a munizioni contate) c'è scorta. */
+  get canReload() {
+    const w = this.weapon;
+    if (this.reload || this.ammo >= w.magazine) return false;
+    return w.reserve === undefined || (this.reserve[w.id] ?? 0) > 0;
+  }
+
   /** Avvia la ricarica se il caricatore non è pieno. */
   startReload(game) {
     const w = this.weapon;
@@ -334,7 +341,8 @@ export class Player {
     }
     // Una pressione durante il cooldown resta "in coda" e parte appena l'arma è pronta.
     // Durante la ricarica non si spara; a caricatore vuoto il grilletto fa "click"
-    // (e, se l'arma ha autoReload, parte la ricarica).
+    // (e, se l'arma ha autoReload, parte la ricarica). autoReloadEmpty (opzione del giocatore umano):
+    // la ricarica parte da sola appena il caricatore si svuota, senza premere nulla.
     const firing = !!ctrl.firing;
     const pressed = firing && !this.triggerHeld;
     const auto = w.auto || !!ctrl.repeat;
@@ -343,7 +351,7 @@ export class Player {
     } else if (this.ammo <= 0) {
       this.shotQueued = false;
       if (pressed && w.emptySound) game.audio.play(w.emptySound, this);
-      if (firing && w.autoReload) this.startReload(game);
+      if ((firing && w.autoReload) || (this.autoReloadEmpty && this.cooldown <= 0)) this.startReload(game);
     } else {
       if (pressed) this.shotQueued = true;
       if ((this.shotQueued || (auto && firing)) && this.cooldown <= 0 && this.switchCooldown <= 0) {

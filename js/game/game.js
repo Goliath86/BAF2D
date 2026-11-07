@@ -83,6 +83,8 @@ export class Game {
     this.squads = {};
     this.playerBrain = null; // IA del giocatore nella partita dimostrativa
     this.time = 0; // secondi di gioco (memoria dell'IA)
+    // ricarica automatica a caricatore vuoto per il giocatore umano (opzione; default game.json -> player.autoReload)
+    this.autoReload = !!config.player?.autoReload;
 
     // Punteggi della partita (game.json -> scoring) e carriera del giocatore (gradi, ranks.js)
     this.scoringCfg = config.scoring || {};
@@ -230,6 +232,7 @@ export class Game {
   _spawnPlayer(x, y) {
     this.player = new Player(this.config.player, x, y, this.assets, this.weapons, this.grenadeTypes, this.playerTeam);
     this.player.combatant = this.playerRecord;
+    this.player.autoReloadEmpty = this.autoReload && !this.attract;
     if (!this.attract) return;
     // partita dimostrativa: il giocatore è guidato da un BotBrain come gli altri soldati
     this.player.isBot = true;
@@ -239,6 +242,12 @@ export class Game {
     if (i >= 0) squad.brains[i] = brain;
     else squad.brains.push(brain);
     this.playerBrain = brain;
+  }
+
+  /** Opzione "ricarica automatica" (dal menu): vale subito anche per il soldato in campo. */
+  setAutoReload(on) {
+    this.autoReload = !!on;
+    if (this.player) this.player.autoReloadEmpty = this.autoReload && !this.attract;
   }
 
   /** Tutti i soldati (giocatore + bot), vivi o morti: { x, y, team, dead, ... }. */
@@ -944,6 +953,14 @@ export class Game {
    * Testo dell'HUD sotto il soldato: "[E] Raccogli Fucile a pompa", "[E] Sali: Jeep", e "[E] Scendi" per qualche
    * secondo dopo essere saliti (su touch senza il tasto: c'è il pulsante).
    */
+  /** Scritta lampeggiante "RICARICA!" a caricatore vuoto (a piedi, se si può ricaricare), o null. */
+  _reloadPrompt() {
+    const p = this.player;
+    if (p.dead || p.vehicle || p.ammo > 0 || !p.canReload) return null;
+    if (this.input.mode === 'touch') return this.i18n.t('hud.reloadPromptTouch');
+    return this.i18n.t('hud.reloadPrompt', { key: keyName(this.input.bindings.reload?.[0], this.i18n) });
+  }
+
   _pickupPrompt() {
     const touch = this.input.mode === 'touch';
     const key = keyName(this.input.bindings.pickup?.[0], this.i18n);
@@ -1395,6 +1412,7 @@ export class Game {
         },
         screen: { x: this.player.x - cx, y: this.player.y - cy }, // posizione del giocatore sullo schermo (px di gioco)
         pickup: playing ? this._pickupPrompt() : null,
+        reloadPrompt: playing ? this._reloadPrompt() : null,
         vehicle: this.player.vehicle ? this._vehicleHud(this.player.vehicle) : null,
         holster: this._holsterHud(),
       });

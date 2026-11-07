@@ -42,7 +42,7 @@
   "levels": {
     "arena": {
       "name": "Arena di prova",
-      "description": "Arena compatta con tre bandiere: scontri rapidi e ravvicinati."
+      "description": "Arena industriale con tre bandiere: magazzini, cataste di casse e un anello di muri attorno alla bandiera centrale."
     },
     "crossroads": {
       "name": "Crocevia",
@@ -66,6 +66,10 @@
     "pressKey": "Premi un tasto...",
     "pressKeyHint": "Esc: annulla · Canc: rimuovi",
     "resetKeys": "Ripristina tasti",
+    "autoReload": "Ricarica automatica",
+    "autoReloadHint": "Ricarica da sola appena il caricatore è vuoto, senza premere il tasto di ricarica.",
+    "on": "Sì",
+    "off": "No",
     "unbound": "—",
     "actions": {
       "up": "Su",
@@ -115,6 +119,8 @@
   },
   "hud": {
     "reloading": "RICARICA",
+    "reloadPrompt": "RICARICA! [{key}]",
+    "reloadPromptTouch": "RICARICA!",
     "empty": "SCARICO",
     "grenades": "x{count}",
     "killed": "SEI STATO UCCISO",

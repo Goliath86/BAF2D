@@ -463,6 +463,21 @@ export class Menu {
       this.audio.unlock();
       this.audio.preview(this.cfg.volumeSound || 'dry_fire');
     });
+
+    // ricarica automatica a caricatore vuoto (sì / no)
+    const auto = $('autoreload-choice');
+    const renderAuto = () => {
+      for (const b of auto.querySelectorAll('[data-value]')) b.setAttribute('aria-pressed', String((b.dataset.value === 'on') === this.game.autoReload));
+    };
+    for (const b of auto.querySelectorAll('[data-value]')) {
+      b.addEventListener('click', () => {
+        const on = b.dataset.value === 'on';
+        this.game.setAutoReload(on);
+        this.settings.set('autoReload', on);
+        renderAuto();
+      });
+    }
+    renderAuto();
   }
 
   _renderLang() {

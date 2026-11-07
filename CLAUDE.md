@@ -122,7 +122,10 @@ tools/check_level.mjs controllo livelli: celle irraggiungibili e vicoli ciechi (
   `equip(id, ammo)` accetta i colpi nel caricatore. F4 = arma successiva (debug). Semiautomatiche: la pressione
   durante il cooldown resta in coda; su touch `holdToRepeat`.
 - Munizioni/ricarica: `magazine`, `reloadTime`, `reloadSound`, `emptySound`, `reloadMoveFactor` (0 = fermo),
-  `autoReload`, `damage` (salvato su ogni proiettile, `bullet.damage`, per i futuri bersagli). Azione `reload`:
+  `autoReload`, `damage` (salvato su ogni proiettile, `bullet.damage`, per i futuri bersagli). Opzione del giocatore
+  "Ricarica automatica" (Settings `autoReload`, default `game.json -> player.autoReload`, `game.setAutoReload`):
+  `player.autoReloadEmpty` = la ricarica parte da sola a caricatore vuoto (solo umano). A caricatore vuoto (se
+  `player.canReload`) l'HUD mostra "RICARICA! [R]" lampeggiante (`Game._reloadPrompt`, `hud.reloadPrompt`). Azione `reload`:
   tasto R o pulsante touch. Animazione `reload` del busto riprodotta con `Animator.setProgress()` (dura sempre
   `reloadTime`); frame procedurali via `reloadPose()` in `placeholders.js`. Il cambio arma annulla la ricarica
   e ferma il suo suono (`audio.play()` restituisce `{ stop() }`).
