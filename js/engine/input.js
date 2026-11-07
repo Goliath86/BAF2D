@@ -15,8 +15,8 @@ export class Input {
     this.isTouchDevice = coarse || (navigator.maxTouchPoints > 0 && !fine);
     this.mode = this.isTouchDevice ? 'touch' : 'desktop';
 
-    this.bindings = cfg.keyboard || {};
-    this.boundCodes = new Set(Object.values(this.bindings).flat());
+    this.defaultBindings = cfg.keyboard || {};
+    this.setBindings({});
     this.fireButton = cfg.mouse?.fireButton ?? 0;
 
     this.keys = new Set();
@@ -27,6 +27,21 @@ export class Input {
     document.body.classList.toggle('is-touch', this.isTouchDevice);
     this._applyModeClass();
     this._attach();
+  }
+
+  /** Tasti personalizzati (opzioni): { azione: [codici] } sopra quelli di game.json. */
+  setBindings(custom = {}) {
+    this.bindings = { ...this.defaultBindings };
+    for (const [action, codes] of Object.entries(custom)) {
+      if (this.bindings[action] && Array.isArray(codes)) this.bindings[action] = codes.filter(Boolean);
+    }
+    this.boundCodes = new Set(Object.values(this.bindings).flat());
+    this.keys?.clear(); // (nel costruttore non esiste ancora)
+  }
+
+  /** Rilascia tasti, mouse e stick (es. entrando in pausa). */
+  releaseAll() {
+    this._releaseAll();
   }
 
   // ---------- API per il gioco ----------
@@ -112,9 +127,9 @@ export class Input {
 
   _attach() {
     window.addEventListener('keydown', (e) => {
-      if (!this.boundCodes.has(e.code)) return;
+      // da disabilitato (menu) i tasti restano ai pulsanti HTML (Invio, Spazio, frecce)
+      if (!this.enabled || !this.boundCodes.has(e.code)) return;
       e.preventDefault();
-      if (!this.enabled) return;
       this._setMode('desktop');
       if (!e.repeat) this.pressed.add(e.code);
       this.keys.add(e.code);

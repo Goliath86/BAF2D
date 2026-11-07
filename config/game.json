@@ -1,9 +1,26 @@
 {
   "title": "BAF2D",
+  "version": "1.0.0",
   "assets": "config/assets.json",
   "effects": "config/effects.json",
   "weapons": "config/weapons.json",
-  "startLevel": "config/levels/level01.json",
+
+  "levels": [
+    { "id": "arena", "file": "config/levels/level01.json" },
+    { "id": "crossroads", "file": "config/levels/level02.json" }
+  ],
+
+  "menu": {
+    "level": "crossroads",
+    "team": "blue",
+    "allies": { "min": 0, "max": 7, "default": 3 },
+    "enemies": { "min": 1, "max": 8, "default": 4 },
+    "procedural": false,
+    "thumbTile": 4,
+    "volumeSound": "dry_fire",
+    "attract": { "level": "crossroads", "team": "blue", "allies": 3, "enemies": 4, "panelOffset": 0.5 },
+    "storageKey": "baf2d.settings"
+  },
 
   "i18n": {
     "default": "en",
@@ -242,6 +259,7 @@
       "reload": ["KeyR"],
       "grenade": ["KeyG"],
       "confirm": ["Enter", "NumpadEnter"],
+      "pause": ["Escape", "KeyP"],
       "debug": ["F3"],
       "debugNextWeapon": ["F4"],
       "debugHurt": ["F5"],
@@ -252,6 +270,7 @@
     "mouse": {
       "fireButton": 0
     },
+    "rebindable": ["up", "down", "left", "right", "fire", "reload", "grenade", "pause"],
     "touch": {
       "radius": 0.16,
       "deadZone": 0.12,

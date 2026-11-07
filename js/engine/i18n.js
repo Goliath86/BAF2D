@@ -1,7 +1,7 @@
 // Localizzazione: i testi stanno in file JSON per lingua (es. config/lang/en.json).
-// Le chiavi sono percorsi puntati ("start.tapToStart"), i segnaposto sono "{nome}".
-// Ordine di scelta della lingua: parametro URL ?lang=xx -> i18n.language in game.json
-// (se diverso da "auto") -> lingue del browser -> lingua di default.
+// Le chiavi sono percorsi puntati ("menu.newGame"), i segnaposto sono "{nome}".
+// Ordine di scelta della lingua: parametro URL ?lang=xx -> lingua salvata nelle opzioni
+// -> i18n.language in game.json (se diverso da "auto") -> lingue del browser -> lingua di default.
 // Le chiavi mancanti nella lingua scelta ricadono sulla lingua di default.
 
 import { loadJSON } from './loader.js';
@@ -24,30 +24,54 @@ export class I18n {
     this._missing = new Set();
   }
 
-  async load(cfg = {}) {
+  /** saved = lingua scelta dal giocatore nelle opzioni (ha la precedenza su game.json e browser). */
+  async load(cfg = {}, saved = null) {
     this.defaultLang = cfg.default || 'en';
     this.available = cfg.available || [this.defaultLang];
     this.path = cfg.path || 'config/lang/{lang}.json';
-    this.lang = this.detect(cfg.language);
+    this._cache = new Map();
 
-    this.fallback = await loadJSON(this._url(this.defaultLang));
-    if (this.lang === this.defaultLang) {
-      this.strings = this.fallback;
-    } else {
-      try {
-        this.strings = await loadJSON(this._url(this.lang));
-      } catch (e) {
-        console.warn(`Language "${this.lang}" not loaded (${e.message}), using "${this.defaultLang}"`);
-        this.lang = this.defaultLang;
-        this.strings = this.fallback;
-      }
-    }
-    document.documentElement.lang = this.lang;
+    this.fallback = await this._file(this.defaultLang);
+    await this.setLanguage(this.detect(cfg.language, saved));
   }
 
-  detect(preferred) {
+  /** Cambia lingua a runtime (menu opzioni): carica il file e aggiorna gli elementi [data-i18n]. */
+  async setLanguage(lang) {
+    if (!this.available.includes(lang)) lang = this.defaultLang;
+    try {
+      this.strings = await this._file(lang);
+      this.lang = lang;
+    } catch (e) {
+      console.warn(`Language "${lang}" not loaded (${e.message}), using "${this.defaultLang}"`);
+      this.lang = this.defaultLang;
+      this.strings = this.fallback;
+    }
+    document.documentElement.lang = this.lang;
+    this.applyToDOM();
+  }
+
+  /** Nome di ogni lingua disponibile nella lingua stessa (meta.name del suo file). */
+  async languageNames() {
+    const names = {};
+    for (const l of this.available) {
+      try {
+        names[l] = (await this._file(l)).meta?.name || l;
+      } catch (e) {
+        names[l] = l;
+      }
+    }
+    return names;
+  }
+
+  async _file(lang) {
+    if (!this._cache.has(lang)) this._cache.set(lang, await loadJSON(this._url(lang)));
+    return this._cache.get(lang);
+  }
+
+  detect(preferred, saved = null) {
     const candidates = [
       new URLSearchParams(location.search).get('lang'),
+      saved,
       preferred && preferred !== 'auto' ? preferred : null,
       ...(navigator.languages || [navigator.language]),
     ];
@@ -87,10 +111,15 @@ export class I18n {
     return e && e.key && this.has(e.key) ? this.t(e.key, e.params) : e?.message || String(e);
   }
 
-  /** Applica le traduzioni agli elementi con attributo data-i18n="chiave". */
+  /** Applica le traduzioni agli elementi con data-i18n="chiave" (testo) e data-i18n-title (title + aria-label). */
   applyToDOM(root = document) {
     for (const el of root.querySelectorAll('[data-i18n]')) {
       el.textContent = this.t(el.dataset.i18n);
+    }
+    for (const el of root.querySelectorAll('[data-i18n-title]')) {
+      const s = this.t(el.dataset.i18nTitle);
+      el.title = s;
+      el.setAttribute('aria-label', s);
     }
   }
 }

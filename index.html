@@ -17,23 +17,97 @@
     <canvas id="ui"></canvas>
   </div>
 
-  <div id="overlay-start" class="overlay hidden">
-    <div class="panel">
-      <h1>BAF2D</h1>
-      <p class="hint-desktop" data-i18n="start.hintDesktop"></p>
-      <p class="hint-touch" data-i18n="start.hintTouch"></p>
-      <p class="objective" data-i18n="start.objective"></p>
-      <p class="blink" data-i18n="start.tapToStart"></p>
-    </div>
+  <!-- Menu: pannello laterale sinistro; a destra si vede la partita dimostrativa (tutti bot) sul canvas di gioco.
+       Le schermate sono <section data-screen>, i contenuti dinamici li riempie js/menu.js -->
+  <div id="menu" class="hidden">
+    <div class="menu-shade"></div>
+    <aside class="menu-panel">
+      <header class="menu-logo">
+        <h1>BAF2D</h1>
+        <p data-i18n="menu.tagline"></p>
+      </header>
+
+      <section class="menu-screen" data-screen="main">
+        <nav class="menu-list">
+          <button type="button" class="menu-item" data-go="newGame" data-i18n="menu.newGame"></button>
+          <button type="button" class="menu-item" data-go="options" data-i18n="menu.options"></button>
+        </nav>
+      </section>
+
+      <section class="menu-screen" data-screen="pause">
+        <h2 class="menu-title" data-i18n="menu.paused"></h2>
+        <nav class="menu-list">
+          <button type="button" class="menu-item" data-action="resume" data-i18n="menu.resume"></button>
+          <button type="button" class="menu-item" data-go="options" data-i18n="menu.options"></button>
+          <button type="button" class="menu-item" data-action="quit" data-i18n="menu.quit"></button>
+        </nav>
+      </section>
+
+      <section class="menu-screen wide" data-screen="newGame">
+        <h2 class="menu-title" data-i18n="newGame.title"></h2>
+        <div class="newgame-grid">
+          <div class="newgame-col">
+            <h3 class="menu-label" data-i18n="newGame.map"></h3>
+            <div id="map-list" class="map-list"></div>
+          </div>
+          <div class="newgame-col">
+            <h3 class="menu-label" data-i18n="newGame.team"></h3>
+            <div id="team-choice" class="segmented"></div>
+            <div class="stepper-row">
+              <h3 class="menu-label" data-i18n="newGame.allies"></h3>
+              <div class="stepper" data-stepper="allies"></div>
+            </div>
+            <div class="stepper-row">
+              <h3 class="menu-label" data-i18n="newGame.enemies"></h3>
+              <div class="stepper" data-stepper="enemies"></div>
+            </div>
+            <p id="newgame-summary" class="newgame-summary"></p>
+            <p class="menu-note" data-i18n="start.objective"></p>
+          </div>
+        </div>
+        <div class="menu-actions">
+          <button type="button" class="menu-item primary" data-action="start" data-i18n="newGame.start"></button>
+          <button type="button" class="menu-item small" data-back data-i18n="menu.back"></button>
+        </div>
+      </section>
+
+      <section class="menu-screen" data-screen="options">
+        <h2 class="menu-title" data-i18n="options.title"></h2>
+        <h3 class="menu-label" data-i18n="options.language"></h3>
+        <div id="lang-choice" class="segmented"></div>
+        <h3 class="menu-label" data-i18n="options.volume"></h3>
+        <div class="volume-row">
+          <input id="volume" type="range" min="0" max="100" step="5">
+          <span id="volume-value" class="volume-value"></span>
+        </div>
+        <h3 class="menu-label" data-i18n="options.controls"></h3>
+        <div class="controls-desktop">
+          <div id="key-list" class="key-list"></div>
+          <p id="key-hint" class="menu-note key-hint"></p>
+          <p class="menu-note" data-i18n="options.mouse"></p>
+          <button type="button" class="menu-item small" data-action="resetKeys" data-i18n="options.resetKeys"></button>
+        </div>
+        <p class="controls-touch menu-note" data-i18n="start.hintTouch"></p>
+        <div class="menu-actions">
+          <button type="button" class="menu-item small" data-back data-i18n="menu.back"></button>
+        </div>
+      </section>
+    </aside>
+    <div id="menu-version" class="menu-version"></div>
   </div>
+
+  <!-- pausa su touch (su desktop: Esc / P) -->
+  <button type="button" id="pause-button" class="pause-button hidden" data-i18n-title="menu.pause"></button>
 
   <!-- titolo e sottotitolo impostati da main.js in base all'esito (matchEnd.victory/defeat/draw) -->
   <div id="overlay-matchend" class="overlay hidden">
     <div class="panel">
       <h1 id="matchend-title" class="matchend-title"></h1>
       <p id="matchend-subtitle"></p>
-      <p class="blink hint-desktop" data-i18n="matchEnd.restartDesktop"></p>
-      <p class="blink hint-touch" data-i18n="matchEnd.restartTouch"></p>
+      <div class="matchend-actions">
+        <button type="button" class="menu-item primary" data-action="rematch" data-i18n="matchEnd.rematch"></button>
+        <button type="button" class="menu-item" data-action="menu" data-i18n="matchEnd.menu"></button>
+      </div>
     </div>
   </div>
 

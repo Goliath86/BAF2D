@@ -106,14 +106,6 @@ body.is-touch .hint-desktop {
   display: none;
 }
 
-.panel p.objective {
-  max-width: 560px;
-  margin-left: auto;
-  margin-right: auto;
-  font-size: 13px;
-  opacity: 0.85;
-}
-
 /* ---------- Fine partita ---------- */
 
 /* In sconfitta/pareggio la scena si desatura e scurisce; l'HUD (canvas ui) resta leggibile */
@@ -157,10 +149,10 @@ body.match-victory #game {
   text-shadow: 4px 4px 0 #3a0a08;
 }
 
-/* il cursore torna visibile per cliccare */
+/* il cursore torna visibile per cliccare i pulsanti */
 body.match-over #app,
 body.match-over #overlay-matchend {
-  cursor: pointer;
+  cursor: default;
 }
 
 @keyframes fade-in {
@@ -169,6 +161,691 @@ body.match-over #overlay-matchend {
   }
   to {
     opacity: 1;
+  }
+}
+
+.matchend-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 18px;
+}
+
+.matchend-actions .menu-item {
+  width: auto;
+  min-width: 180px;
+  text-align: center;
+}
+
+/* ---------- Menu ---------- */
+/* Pannello laterale sinistro sopra la partita dimostrativa (canvas di gioco), che si vede a destra.
+   Stile pixel: bordi netti, ombre piene, niente sfumature morbide sui controlli. */
+
+:root {
+  --menu-bg: rgba(9, 9, 16, 0.94);
+  --menu-line: #23233a;
+  --menu-text: #e8e8f0;
+  --menu-dim: #9a9ab0;
+  --menu-accent: #3fa9f5;
+  --menu-accent-dark: #0b2a44;
+  --menu-gold: #ffd36b;
+  --menu-gold-dark: #4a3608;
+  --menu-item-h: 48px;
+  --menu-pad: 28px;
+}
+
+#menu {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  cursor: default;
+}
+
+#menu.hidden {
+  display: none;
+}
+
+.menu-shade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.18) 0 1px, transparent 1px 3px),
+    linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.15) 55%, rgba(5, 5, 10, 0.35) 100%);
+}
+
+#menu.paused .menu-shade {
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.18) 0 1px, transparent 1px 3px),
+    rgba(5, 5, 10, 0.55);
+}
+
+.menu-panel {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: clamp(300px, 30vw, 400px);
+  display: flex;
+  flex-direction: column;
+  padding: var(--menu-pad) var(--menu-pad) 20px;
+  padding-left: max(var(--menu-pad), env(safe-area-inset-left));
+  background: var(--menu-bg);
+  border-right: 4px solid var(--menu-line);
+  box-shadow: 4px 0 0 rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+
+.menu-panel.wide {
+  width: min(860px, 100vw - 120px);
+}
+
+.menu-logo h1 {
+  font-size: 56px;
+  letter-spacing: 8px;
+  line-height: 1;
+  color: var(--menu-accent);
+  text-shadow: 4px 4px 0 var(--menu-accent-dark), 8px 8px 0 rgba(0, 0, 0, 0.5);
+}
+
+.menu-logo p {
+  margin-top: 10px;
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: var(--menu-dim);
+  text-transform: uppercase;
+}
+
+.menu-screen {
+  display: none;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  margin-top: 28px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--menu-line) transparent;
+}
+
+.menu-screen.active {
+  display: flex;
+}
+
+/* nella schermata principale le voci stanno in basso, sotto il logo c'è aria */
+.menu-screen[data-screen="main"],
+.menu-screen[data-screen="pause"] {
+  justify-content: center;
+}
+
+.menu-title {
+  font-size: 22px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--menu-gold);
+  text-shadow: 3px 3px 0 var(--menu-gold-dark);
+  margin-bottom: 14px;
+}
+
+.menu-label {
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--menu-dim);
+  margin: 16px 0 8px;
+}
+
+.menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+.menu-item {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-height: var(--menu-item-h);
+  padding: 10px 16px 10px 34px;
+  border: 0;
+  background: transparent;
+  color: var(--menu-text);
+  font-size: 20px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* indicatore a "pixel" a sinistra della voce attiva */
+.menu-item::before {
+  content: "";
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  margin-top: -4px;
+  background: currentColor;
+  opacity: 0;
+}
+
+.menu-item:hover,
+.menu-item:focus-visible {
+  outline: none;
+  background: var(--menu-accent);
+  color: #0b0b12;
+  box-shadow: 4px 4px 0 var(--menu-accent-dark);
+}
+
+.menu-item:hover::before,
+.menu-item:focus-visible::before {
+  opacity: 1;
+}
+
+.menu-item:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 var(--menu-accent-dark);
+}
+
+.menu-item.primary {
+  background: var(--menu-gold);
+  color: #0b0b12;
+  box-shadow: 4px 4px 0 var(--menu-gold-dark);
+  text-align: center;
+  padding-left: 16px;
+}
+
+.menu-item.primary::before {
+  display: none;
+}
+
+.menu-item.primary:hover,
+.menu-item.primary:focus-visible {
+  background: #ffe49a;
+  box-shadow: 4px 4px 0 var(--menu-gold-dark);
+}
+
+.menu-item.small {
+  font-size: 15px;
+  min-height: 40px;
+  width: auto;
+  align-self: flex-start;
+}
+
+/* pulsanti in fondo alla schermata, sempre visibili anche quando il contenuto scorre */
+.menu-actions {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: auto;
+  padding: 18px 6px 6px 0;
+  background: linear-gradient(to bottom, rgba(9, 9, 16, 0), var(--menu-bg) 14px);
+}
+
+.menu-actions .menu-item.primary {
+  width: auto;
+  min-width: 200px;
+}
+
+.menu-note {
+  margin-top: 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--menu-dim);
+  white-space: pre-line;
+}
+
+.menu-version {
+  position: absolute;
+  right: max(14px, env(safe-area-inset-right));
+  bottom: 10px;
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: var(--menu-dim);
+  text-shadow: 2px 2px 0 #000;
+  pointer-events: none;
+}
+
+/* ---------- Nuova partita ---------- */
+
+.newgame-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 28px;
+  min-height: 0;
+}
+
+.newgame-col > .menu-label:first-child {
+  margin-top: 0;
+}
+
+.map-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.map-card {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 8px;
+  border: 2px solid var(--menu-line);
+  background: rgba(255, 255, 255, 0.02);
+  text-align: left;
+  cursor: pointer;
+}
+
+.map-card:hover,
+.map-card:focus-visible {
+  outline: none;
+  border-color: var(--menu-accent);
+}
+
+.map-card[aria-pressed="true"] {
+  border-color: var(--menu-gold);
+  background: rgba(255, 211, 107, 0.08);
+  box-shadow: 4px 4px 0 var(--menu-gold-dark);
+}
+
+.map-card:disabled {
+  cursor: default;
+  opacity: 0.55;
+  border-style: dashed;
+}
+
+.map-thumb {
+  position: static; /* la regola generale "canvas" è per i canvas di gioco */
+  width: 120px;
+  height: auto;
+  display: block;
+  image-rendering: pixelated;
+  border: 2px solid #000;
+}
+
+.map-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.map-name {
+  font-size: 16px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.map-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 6px;
+  font-size: 10px;
+  letter-spacing: 1px;
+  vertical-align: middle;
+  background: var(--menu-line);
+  color: var(--menu-gold);
+}
+
+.map-meta {
+  font-size: 12px;
+  color: var(--menu-gold);
+}
+
+.map-desc {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--menu-dim);
+}
+
+.segmented {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.seg {
+  min-height: 40px;
+  min-width: 110px;
+  padding: 8px 14px;
+  border: 2px solid var(--menu-line);
+  background: transparent;
+  color: var(--menu-text);
+  font-size: 15px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.seg:hover,
+.seg:focus-visible {
+  outline: none;
+  border-color: var(--menu-accent);
+}
+
+.seg[aria-pressed="true"] {
+  border-color: var(--menu-gold);
+  background: var(--menu-gold);
+  color: #0b0b12;
+  box-shadow: 4px 4px 0 var(--menu-gold-dark);
+}
+
+.seg.team::before {
+  content: "";
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 8px;
+  background: var(--team);
+  box-shadow: 2px 2px 0 var(--team-dark);
+}
+
+.seg.team[aria-pressed="true"] {
+  background: var(--team);
+  border-color: var(--team);
+  color: #fff;
+  text-shadow: 2px 2px 0 var(--team-dark);
+  box-shadow: 4px 4px 0 var(--team-dark);
+}
+
+.seg.team[aria-pressed="true"]::before {
+  background: #fff;
+}
+
+.stepper-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.stepper-row .menu-label {
+  margin: 0;
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+}
+
+.step {
+  width: 40px;
+  height: 40px;
+  border: 2px solid var(--menu-line);
+  background: transparent;
+  color: var(--menu-text);
+  font-size: 22px;
+  font-weight: bold;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.step:hover:not(:disabled),
+.step:focus-visible {
+  outline: none;
+  border-color: var(--menu-accent);
+  color: var(--menu-accent);
+}
+
+.step:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.step-value {
+  min-width: 48px;
+  text-align: center;
+  font-size: 22px;
+  font-weight: bold;
+  color: var(--menu-gold);
+}
+
+.newgame-summary {
+  margin-top: 18px;
+  padding: 8px 10px;
+  border-left: 4px solid var(--menu-accent);
+  background: rgba(63, 169, 245, 0.08);
+  font-size: 14px;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+/* ---------- Opzioni ---------- */
+
+.volume-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.volume-row input[type="range"] {
+  flex: 1;
+  accent-color: var(--menu-gold);
+  height: 28px;
+}
+
+.volume-value {
+  min-width: 48px;
+  text-align: right;
+  font-weight: bold;
+  color: var(--menu-gold);
+}
+
+.key-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.key-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px 96px;
+  gap: 6px;
+  align-items: center;
+}
+
+.key-action {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.key-slot {
+  min-height: 30px;
+  padding: 4px 6px;
+  border: 2px solid var(--menu-line);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--menu-text);
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.key-slot.unbound {
+  color: var(--menu-dim);
+}
+
+.key-slot:hover,
+.key-slot:focus-visible {
+  outline: none;
+  border-color: var(--menu-accent);
+}
+
+.key-slot.listening {
+  border-color: var(--menu-gold);
+  color: var(--menu-gold);
+  animation: blink 0.8s steps(2, start) infinite;
+}
+
+.key-hint {
+  min-height: 1.5em;
+  margin-top: 6px;
+  color: var(--menu-gold);
+}
+
+.controls-touch {
+  display: none;
+}
+
+body.is-touch .controls-touch {
+  display: block;
+}
+
+body.is-touch .controls-desktop {
+  display: none;
+}
+
+/* ---------- Pulsante di pausa (solo touch, durante la partita) ---------- */
+
+.pause-button {
+  position: fixed;
+  left: max(8px, env(safe-area-inset-left));
+  top: 48px;
+  z-index: 5;
+  width: 40px;
+  height: 40px;
+  display: none;
+  border: 2px solid rgba(232, 232, 240, 0.5);
+  background: rgba(5, 5, 10, 0.35);
+  cursor: pointer;
+}
+
+/* due barre a pixel */
+.pause-button::before,
+.pause-button::after {
+  content: "";
+  position: absolute;
+  top: 11px;
+  width: 5px;
+  height: 14px;
+  background: rgba(232, 232, 240, 0.85);
+}
+
+.pause-button::before {
+  left: 12px;
+}
+
+.pause-button::after {
+  right: 12px;
+}
+
+body.mode-touch .pause-button:not(.hidden) {
+  display: block;
+}
+
+/* ---------- Mobile landscape / schermi bassi: menu compatto ---------- */
+
+@media (max-height: 540px) {
+  :root {
+    --menu-item-h: 40px;
+    --menu-pad: 16px;
+  }
+
+  .menu-panel {
+    width: clamp(240px, 36vw, 340px);
+    padding-top: 12px;
+    padding-bottom: 10px;
+  }
+
+  .menu-panel.wide {
+    width: min(860px, 100vw - 48px);
+  }
+
+  .menu-logo h1 {
+    font-size: 34px;
+    letter-spacing: 5px;
+    text-shadow: 3px 3px 0 var(--menu-accent-dark);
+  }
+
+  .menu-logo p {
+    margin-top: 4px;
+    font-size: 11px;
+  }
+
+  /* fuori dalla schermata principale il logo lascia spazio ai contenuti */
+  .menu-panel.wide .menu-logo,
+  .menu-panel:has(.menu-screen[data-screen="options"].active) .menu-logo {
+    display: none;
+  }
+
+  .menu-screen {
+    margin-top: 12px;
+  }
+
+  .menu-item {
+    font-size: 17px;
+  }
+
+  .menu-title {
+    font-size: 17px;
+    margin-bottom: 6px;
+  }
+
+  .menu-label {
+    margin: 10px 0 6px;
+  }
+
+  .newgame-grid {
+    gap: 16px;
+  }
+
+  .map-card {
+    grid-template-columns: 84px minmax(0, 1fr);
+    gap: 8px;
+    padding: 6px;
+  }
+
+  .map-thumb {
+    width: 84px;
+  }
+
+  .map-desc {
+    display: none;
+  }
+
+  .stepper-row {
+    margin-top: 8px;
+  }
+
+  .newgame-summary {
+    margin-top: 10px;
+  }
+
+  .newgame-col .menu-note {
+    display: none;
+  }
+
+  .menu-actions {
+    padding-top: 10px;
+  }
+
+  .menu-version {
+    bottom: 6px;
+    font-size: 11px;
+  }
+}
+
+/* telefoni stretti in landscape (o finestre strette): la schermata larga occupa tutto */
+@media (max-width: 700px) {
+  .menu-panel.wide {
+    width: 100vw;
+    border-right: 0;
   }
 }
 

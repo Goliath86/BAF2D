@@ -46,7 +46,9 @@ Sparatutto top-down in pixel-art per browser. Lingua di lavoro con l'utente: **i
 ## Architettura
 
 ```
-js/main.js            bootstrap: game.json -> i18n -> assets/livello -> Display/Assets/Audio/Input -> Game
+js/main.js            bootstrap: game.json -> Settings -> i18n -> assets/livelli -> Display/Assets/Audio/Input -> Game -> Menu
+js/menu.js            Menu (DOM): principale/nuova partita/opzioni/pausa/fine partita, partita dimostrativa dietro
+js/settings.js        Settings: impostazioni del giocatore in localStorage (lang, volume, keys, newGame)
 js/engine/
   loader.js           loadJSON / loadImage / loadArrayBuffer (errori = LocalizedError)
   errors.js           LocalizedError(key, params, fallbackMessage)
@@ -71,8 +73,8 @@ js/game/
   nav.js              Nav: griglia dei tile per l'IA (A* 8 direzioni + percorso 'tirato', reach() = Dijkstra limitato, los)
   ai.js               Squad (lavagna di squadra: bot, nemici avvistati) + BotBrain (IA di un bot -> comandi come l'umano)
 config/
-  game.json           parametri generali (display, i18n, player + squadra e arma iniziale, input, camera, audio,
-                      mobile, teams, ctf, death, matchEnd, hud, combat, bots)
+  game.json           parametri generali (version, levels, menu, display, i18n, player + arma iniziale, input,
+                      camera, audio, mobile, teams, ctf, death, matchEnd, hud, combat, bots)
   weapons.json        armi: "defaults" + "weapons" { id: { name, bodySprite, pickupSprite, auto, pellets, ... } };
                       granate: "grenadeDefaults" + "grenades" { id: { fuse, lift, bounce, damage, explosion, ... } }
   assets.json         sprites (anche "extends") / tilesets (con "impact" per tile) / sounds
@@ -130,9 +132,24 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
   posseduta non contesa più vicina o base). HUD: ticket + bandiere in alto al centro, stato cattura, messaggi, scritta
   di rientro.
 - Fine partita: `ctf.result` -> `Game.ended` (`outcome` victory/defeat/draw), dopo `matchEnd.delay` chiama
-  `onMatchEnd(outcome)` (main.js riempie `#overlay-matchend` e mette `body.match-over match-<outcome>` = filtro CSS).
-  `restart()` (clic/tocco sull'overlay o `confirm` = Invio) solo dopo `restartDelay`; `_reset()` azzera ctf, ricrea
-  Player e Hud, svuota proiettili/effetti/cadaveri e chiama `onRestart`. Game resta senza DOM: l'HTML è in main.js.
+  `onMatchEnd(outcome)` (Menu riempie `#overlay-matchend` e mette `body.match-over match-<outcome>` = filtro CSS).
+  `restart()` (pulsante Rivincita o `confirm` = Invio) solo dopo `restartDelay`; `_reset()` azzera ctf, ricrea
+  squadre, Player e Hud, svuota proiettili/effetti/cadaveri e chiama `onRestart`. Game resta senza DOM: l'HTML è in menu.js.
+- Partita: `game.setup({ level, team, allies, enemies, attract })` (JSON del livello già caricato, bot per squadra in
+  `botCounts`); il costruttore di Game non crea mappa né partita (`render` non disegna nulla finché `map` è null).
+  `attract: true` = partita dimostrativa dietro al menu: anche il giocatore ha un `BotBrain` (`playerBrain`), niente
+  HUD/mirino/stick, audio muto (`audio.setMuted`), a fine partita ricomincia da sola. `game.viewOffsetX` (px di gioco)
+  sposta la visuale a destra del pannello (`menu.attract.panelOffset` × larghezza pannello). Pausa = `game.suspended`
+  (niente update, scena disegnata), input disabilitato.
+- Menu (`menu.js`, config `game.json -> menu`): schermate = `<section data-screen>` in index.html, pila `stack` con
+  "Indietro"/Esc; `mode` = menu/playing/paused/ended. Livelli in `game.json -> levels` (`{ id, file }`, nomi/descrizioni
+  in `levels.<id>.name/description` delle lingue), anteprime dal canvas pre-renderizzato del TileMap. Mappa procedurale:
+  card disabilitata "prossimamente" (`menu.procedural`). Lingua a runtime: `i18n.setLanguage(lang)` (+ `applyToDOM`,
+  supporta anche `data-i18n-title`). Tasti: `input.setBindings(custom)` sopra i default, azioni modificabili in
+  `input.rebindable` (Canc = rimuovi, Esc = annulla; i tasti di azioni non modificabili non si assegnano). Input non
+  fa `preventDefault` da disabilitato (i pulsanti HTML ricevono Invio/Spazio). Tasto `pause` (Esc/P) gestito dal Menu
+  in capture; su touch `#pause-button` sotto l'HUD.
+- Versione del gioco: `game.json -> version` (in basso a destra nel menu).
 - Controllo dei soldati: `Player.update(dt, game, ctrl)` con `ctrl = { move, aim(unit), firing, reload, grenade,
   repeat, faceMove }`: dall'umano (`Game._humanControl`) o dall'IA (`BotBrain.think`). `game.units` = giocatore + bot.
 - Bot (`game.json` -> `bots`, IA in `bots.ai`): `Game.bots` = slot `{ team, weapon, unit, brain, respawn }`; rientro con
@@ -185,7 +202,9 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
 - Suoni: `placeholder` può essere una lista di strati (ognuno con `volume` relativo).
 - `input.endFrame()` va chiamato a fine di ogni tick di update (azzera i `wasPressed`).
 - Su touch in portrait il gioco è in pausa e compare l'overlay "ruota il dispositivo" (CSS + `Game.paused`).
-- Il click/tocco di avvio fa `stopPropagation` per non sparare subito; fullscreen + lock landscape solo su touch.
+- Si avvia dal pulsante "Inizia" (evento `click`, dopo il rilascio: non spara); i pulsanti sopra al gioco
+  (pausa, fine partita) fermano il `pointerdown` per non sparare/aprire stick. Fullscreen + lock landscape solo su
+  touch (primo tocco nel menu e "Inizia"). `window.BAF2D_MENU` = istanza del Menu.
 - `window.BAF2D` espone l'istanza di `Game` per il debug da console.
 - Commenti nel codice in italiano; messaggi di console per sviluppatori in inglese.
 
@@ -197,7 +216,9 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
   caricatore e ricarica (R / pulsante touch), bossoli espulsi e caricatori che cadono in ricarica, vampata di volata con fumo, danno per arma, vita del giocatore, HUD (vita, granate, arma, munizioni), granate (rimbalzi, esplosione con bruciatura, fumo, schegge, detriti, scossa, danno),
   modalità Capture The Flag (squadre blu/rossa con segni sui soldati, bandiere catturabili, ticket con calo per
   morti e bandiere, rientro alla bandiera più vicina o alla base, cadaveri persistenti, vittoria/sconfitta e nuova partita),
-  squadra avversaria IA (cattura bandiere, coperture, fuoco di copertura, aggiramento coordinato, ricarica).
-- Non ancora presenti: raccolta armi/granate da terra, riserva di munizioni (ora infinita), granate lanciate dai bot,
-  menu, selettore lingua in-game, asset grafici reali.
+  squadra avversaria IA (cattura bandiere, coperture, fuoco di copertura, aggiramento coordinato, ricarica),
+  menu desktop/mobile (nuova partita con mappa/squadra/numero di bot, opzioni lingua/volume/tasti, pausa,
+  rivincita), seconda mappa "Crocevia" (5 bandiere, simmetrica).
+- Non ancora presenti: mappa procedurale, raccolta armi/granate da terra, riserva di munizioni (ora infinita),
+  granate lanciate dai bot, asset grafici reali.
 - Controlli touch (stick + pulsante ricarica) verificati dall'utente su un dispositivo reale (2026-11-02).

@@ -8,14 +8,38 @@ export class AudioManager {
     this.buffers = new Map();
     this.hearing = cfg.hearing || {};
     this.listener = null; // { x, y } posizione dell'ascoltatore nel mondo (vedi gainAt)
+    this.volume = cfg.masterVolume ?? 0.6; // volume generale 0..1 (opzioni)
+    this.muted = false; // es. partita dimostrativa dietro al menu
     const Ctx = window.AudioContext || window.webkitAudioContext;
     this.ctx = Ctx ? new Ctx() : null;
     if (this.ctx) {
       this.master = this.ctx.createGain();
-      this.master.gain.value = cfg.masterVolume ?? 0.6;
+      this.master.gain.value = this.volume;
       this.master.connect(this.ctx.destination);
       this._autoUnlock();
     }
+  }
+
+  setVolume(v) {
+    this.volume = Math.min(1, Math.max(0, v));
+    this._applyGain();
+  }
+
+  /** Muto = i nuovi suoni non partono (quelli già in corso finiscono). */
+  setMuted(m) {
+    this.muted = !!m;
+  }
+
+  /** Suona "name" anche se muto (es. prova del volume nelle opzioni). */
+  preview(name) {
+    const m = this.muted;
+    this.muted = false;
+    this.play(name);
+    this.muted = m;
+  }
+
+  _applyGain() {
+    if (this.master) this.master.gain.value = this.volume;
   }
 
   /**
@@ -80,7 +104,7 @@ export class AudioManager {
   play(name, pos = null) {
     const none = { stop() {} };
     const ctx = this.ctx;
-    if (!ctx || ctx.state !== 'running') return none;
+    if (!ctx || ctx.state !== 'running' || this.muted) return none;
     const def = this.defs[name];
     if (!def) return none;
     const gain = this.gainAt(pos);

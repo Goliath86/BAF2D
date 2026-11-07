@@ -4,10 +4,90 @@
   },
   "loading": "Loading...",
   "start": {
-    "hintDesktop": "WASD / arrows: move · Mouse: aim · Click / Space: fire · R: reload · G: grenade · F3: debug",
     "hintTouch": "Left stick: move · Right stick: aim · Round buttons: reload, grenade\n(push the right stick past the dashed circle to fire)",
-    "objective": "Capture the flags by staying close to them. Every death and every flag held by the enemy costs tickets: the team that runs out loses.",
-    "tapToStart": "Click / tap to start"
+    "objective": "Capture the flags by staying close to them. Every death and every flag held by the enemy costs tickets: the team that runs out loses."
+  },
+  "menu": {
+    "tagline": "Top-down capture the flag",
+    "newGame": "New game",
+    "options": "Options",
+    "back": "Back",
+    "version": "v{version}",
+    "paused": "Paused",
+    "resume": "Resume",
+    "quit": "Quit to main menu",
+    "pause": "Pause"
+  },
+  "newGame": {
+    "title": "New game",
+    "map": "Map",
+    "team": "Your team",
+    "allies": "Teammates",
+    "enemies": "Opponents",
+    "decrease": "Fewer",
+    "increase": "More",
+    "start": "Start",
+    "flags": "{count} flags",
+    "size": "{cols}×{rows}",
+    "summary": "You + {allies} vs {enemies}",
+    "procedural": "Procedural",
+    "proceduralDesc": "A new map generated for every match.",
+    "comingSoon": "Coming soon"
+  },
+  "teams": {
+    "blue": "Blue",
+    "red": "Red"
+  },
+  "levels": {
+    "arena": {
+      "name": "Test Arena",
+      "description": "Compact arena with three flags: fast, close-quarters fights."
+    },
+    "crossroads": {
+      "name": "Crossroads",
+      "description": "Symmetric map with five flags: two outposts on the sides and a contested centre."
+    }
+  },
+  "options": {
+    "title": "Options",
+    "language": "Language",
+    "volume": "Volume",
+    "controls": "Controls",
+    "mouse": "Mouse: aim · Left button: fire",
+    "pressKey": "Press a key...",
+    "pressKeyHint": "Esc: cancel · Delete: clear",
+    "resetKeys": "Reset keys",
+    "unbound": "—",
+    "actions": {
+      "up": "Move up",
+      "down": "Move down",
+      "left": "Move left",
+      "right": "Move right",
+      "fire": "Fire",
+      "reload": "Reload",
+      "grenade": "Grenade",
+      "pause": "Pause"
+    }
+  },
+  "keys": {
+    "Space": "Space",
+    "Enter": "Enter",
+    "NumpadEnter": "Num Enter",
+    "Escape": "Esc",
+    "Tab": "Tab",
+    "Backspace": "Backspace",
+    "ShiftLeft": "L Shift",
+    "ShiftRight": "R Shift",
+    "ControlLeft": "L Ctrl",
+    "ControlRight": "R Ctrl",
+    "AltLeft": "Alt",
+    "AltRight": "Alt Gr",
+    "CapsLock": "Caps Lock",
+    "ArrowUp": "Up",
+    "ArrowDown": "Down",
+    "ArrowLeft": "Left",
+    "ArrowRight": "Right",
+    "numpad": "Num {key}"
   },
   "rotate": {
     "message": "Rotate your device to landscape"
@@ -19,8 +99,8 @@
     "victorySubtitle": "The enemy team has run out of tickets",
     "defeatSubtitle": "Your team has run out of tickets",
     "drawSubtitle": "Both teams have run out of tickets",
-    "restartDesktop": "Click or press Enter for a new match",
-    "restartTouch": "Tap for a new match"
+    "rematch": "Rematch",
+    "menu": "Main menu"
   },
   "hud": {
     "reloading": "RELOADING",
@@ -54,6 +134,7 @@
     "unknownTile": "Tile \"{tile}\" is not defined in tileset \"{tileset}\"",
     "unknownWeapon": "Weapon not defined in weapons.json: \"{name}\"",
     "unknownGrenade": "Grenade not defined in weapons.json: \"{name}\"",
-    "spriteExtendsLoop": "Circular \"extends\" in sprite \"{name}\" (assets.json)"
+    "spriteExtendsLoop": "Circular \"extends\" in sprite \"{name}\" (assets.json)",
+    "noLevels": "No levels defined in game.json (\"levels\")"
   }
 }

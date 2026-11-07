@@ -1,4 +1,5 @@
 import { loadJSON } from './engine/loader.js';
+import { LocalizedError } from './engine/errors.js';
 import { I18n } from './engine/i18n.js';
 import { Display } from './engine/display.js';
 import { Assets } from './engine/assets.js';
@@ -7,6 +8,8 @@ import { Input } from './engine/input.js';
 import { Game } from './game/game.js';
 import { Weapons } from './game/weapons.js';
 import { GrenadeTypes } from './game/grenades.js';
+import { Menu } from './menu.js';
+import { Settings } from './settings.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -40,18 +43,22 @@ async function boot() {
   try {
     const config = await loadJSON('config/game.json');
     document.title = config.title || document.title;
+    const settings = new Settings(config.menu?.storageKey);
 
-    await i18n.load(config.i18n);
+    await i18n.load(config.i18n, settings.get('lang', null));
     i18nReady = true;
     i18n.applyToDOM();
     showMessage(i18n.t('loading'));
 
-    const [assetsCfg, level, effectsCfg, weaponsCfg] = await Promise.all([
+    const levelList = config.levels || [];
+    if (!levelList.length) throw new LocalizedError('errors.noLevels', {}, 'No levels defined in game.json ("levels")');
+    const [assetsCfg, effectsCfg, weaponsCfg, ...levelData] = await Promise.all([
       loadJSON(config.assets),
-      loadJSON(config.startLevel),
       loadJSON(config.effects),
       loadJSON(config.weapons),
+      ...levelList.map((l) => loadJSON(l.file)),
     ]);
+    const levels = levelList.map((l, i) => ({ ...l, data: levelData[i] }));
     const weapons = new Weapons(weaponsCfg);
     const grenadeTypes = new GrenadeTypes(weaponsCfg);
 
@@ -60,52 +67,37 @@ async function boot() {
     await assets.load(assetsCfg, config.teams); // + varianti di squadra degli sprite "teamColored"
 
     const audio = new AudioManager(assetsCfg.sounds, config.audio);
+    audio.setVolume(settings.get('volume', audio.volume));
     await audio.load();
 
     // ?debug=1 nell'URL: mostra i pulsanti touch di debug (es. togli/ridai vita)
     const urlDebug = new URLSearchParams(location.search).get('debug') === '1';
     const input = new Input(display, config.input, { debug: urlDebug });
-    const game = new Game({ config, assets, audio, display, input, level, effectsCfg, weapons, grenadeTypes, i18n });
-    game.start();
+    input.setBindings(settings.get('keys', {})); // tasti personalizzati dalle opzioni
+    const game = new Game({ config, assets, audio, display, input, effectsCfg, weapons, grenadeTypes, i18n });
+
+    const menu = new Menu({
+      config,
+      i18n,
+      game,
+      input,
+      audio,
+      assets,
+      display,
+      levels,
+      settings,
+      fullscreen: () => enterFullscreenLandscape(config.mobile),
+    });
+    // fine partita (una squadra senza ticket): schermata di vittoria/sconfitta/pareggio, vedi Menu
+    game.onMatchEnd = (outcome) => menu.onMatchEnd(outcome);
+    game.onRestart = () => menu.onRestart();
 
     hideMessage();
-    const startOverlay = $('overlay-start');
-    startOverlay.classList.remove('hidden');
-    startOverlay.addEventListener(
-      'pointerdown',
-      async (e) => {
-        e.preventDefault();
-        e.stopPropagation(); // evita che il click di avvio spari subito
-        audio.unlock();
-        startOverlay.classList.add('hidden');
-        if (e.pointerType === 'touch') await enterFullscreenLandscape(config.mobile);
-        input.enabled = true;
-        game.running = true;
-      },
-      { once: true }
-    );
-
-    // Fine partita (una squadra senza ticket): schermata di vittoria/sconfitta/pareggio,
-    // in sconfitta la scena si desatura; clic/tocco (o Invio) per una nuova partita
-    const endOverlay = $('overlay-matchend');
-    game.onMatchEnd = (outcome) => {
-      $('matchend-title').textContent = i18n.t(`matchEnd.${outcome}`);
-      $('matchend-subtitle').textContent = i18n.t(`matchEnd.${outcome}Subtitle`);
-      endOverlay.dataset.outcome = outcome;
-      document.body.classList.add('match-over', `match-${outcome}`);
-      endOverlay.classList.remove('hidden');
-    };
-    game.onRestart = () => {
-      document.body.classList.remove('match-over', 'match-victory', 'match-defeat', 'match-draw');
-      endOverlay.classList.add('hidden');
-    };
-    endOverlay.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      e.stopPropagation(); // il clic per ricominciare non deve sparare
-      game.restart(); // ignorato finché non è trascorso matchEnd.restartDelay
-    });
+    menu.showMain();
+    game.start();
 
     window.BAF2D = game; // comodo per il debug da console
+    window.BAF2D_MENU = menu;
   } catch (e) {
     console.error(e);
     // Se i file lingua non sono disponibili si usa il testo inglese di riserva dell'errore

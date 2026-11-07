@@ -21,7 +21,8 @@ function rand(v, def = 0) {
 }
 
 export class Game {
-  constructor({ config, assets, audio, display, input, level, effectsCfg, weapons, grenadeTypes, i18n }) {
+  /** La partita vera e propria si prepara con setup() (mappa, squadra, numero di bot). */
+  constructor({ config, assets, audio, display, input, effectsCfg, weapons, grenadeTypes, i18n }) {
     this.config = config;
     this.i18n = i18n; // per i testi di HUD/menu: this.i18n.t('chiave')
     this.assets = assets;
@@ -30,16 +31,19 @@ export class Game {
     this.input = input;
 
     this.running = false;
+    this.suspended = false; // pausa del giocatore (menu di pausa): niente update, la scena resta disegnata
+    this.attract = false; // partita dimostrativa dietro al menu: anche il "giocatore" è un bot, niente HUD
+    this.viewOffsetX = 0; // px di gioco: sposta la visuale (il menu laterale copre la parte sinistra)
     this.debug = !!config.debug;
     this.background = config.display?.background || '#000';
 
-    this.map = new TileMap(level, assets.tileset(level.tileset));
+    this.map = null;
     this.weapons = weapons;
 
     // Modalità Capture The Flag: squadre, bandiere, ticket (game.json -> teams / ctf)
     this.teams = config.teams || {};
-    this.ctf = new Ctf(config.ctf, this.teams, this.map, level);
-    this.playerTeam = this.teams[config.player.team] ? config.player.team : this.ctf.teamIds[0] || null;
+    this.ctf = null;
+    this.playerTeam = null;
     this.grenadeTypes = grenadeTypes;
 
     this.bullets = [];
@@ -58,22 +62,43 @@ export class Game {
     this.corpses = [];
 
     // Soldati controllati dall'IA (game.json -> bots) e colpi sui soldati (combat)
-    this.nav = new Nav(this.map);
+    this.nav = null;
     this.botsCfg = config.bots || {};
     this.aiCfg = this.botsCfg.ai || {};
     this.combat = config.combat || {};
     this.bots = []; // { unit, brain, team, weapon, respawn }
+    this.botCounts = this.botsCfg.teams || {}; // { squadra: numero di bot }
     this.squads = {};
+    this.playerBrain = null; // IA del giocatore nella partita dimostrativa
     this.time = 0; // secondi di gioco (memoria dell'IA)
 
     this._fps = { value: 0, frames: 0, time: 0 };
+  }
+
+  /**
+   * Prepara una partita: level = JSON del livello, team = squadra del giocatore,
+   * allies / enemies = bot compagni / avversari, attract = partita dimostrativa (tutti bot, niente HUD né audio).
+   */
+  setup({ level, team, allies = 0, enemies = 4, attract = false }) {
+    this.level = level;
+    this.map = new TileMap(level, this.assets.tileset(level.tileset));
+    this.ctf = new Ctf(this.config.ctf, this.teams, this.map, level);
+    this.nav = new Nav(this.map);
+    this.playerTeam = this.teams[team] ? team : this.ctf.teamIds[0] || null;
+    const enemy = this.ctf.teamIds.find((t) => t !== this.playerTeam);
+    this.botCounts = { [this.playerTeam]: Math.max(0, allies | 0) };
+    if (enemy) this.botCounts[enemy] = Math.max(0, enemies | 0);
+    this.attract = !!attract;
+    this.suspended = false;
     this._reset();
   }
 
   /** Stato di una nuova partita: ticket e bandiere iniziali, giocatore alla base, niente proiettili/effetti. */
   _reset() {
-    const { display } = this;
     this.ctf.reset();
+    this.squads = {};
+    for (const t of this.ctf.teamIds) this.squads[t] = new Squad(t);
+    this.playerBrain = null;
     const base = this.ctf.spawnPoint(this.playerTeam, null);
     this._spawnPlayer(base.x, base.y);
     this.hud = new Hud(this.config.hud, this.i18n, this.assets);
@@ -85,11 +110,25 @@ export class Game {
     this.respawn = null; // { time, delay, x, y } mentre il giocatore è morto
     this.ended = null; // { time, shown, outcome } a partita finita
     this._spawnBots();
-    this.camera.snap(this.player.x, this.player.y, 0, display.width, display.height, this.map);
+    this._snapCamera();
+  }
+
+  _snapCamera() {
+    const { display } = this;
+    this.camera.snap(this.player.x - this.viewOffsetX, this.player.y, 0, display.width, display.height, this.map);
   }
 
   _spawnPlayer(x, y) {
     this.player = new Player(this.config.player, x, y, this.assets, this.weapons, this.grenadeTypes, this.playerTeam);
+    if (!this.attract) return;
+    // partita dimostrativa: il giocatore è guidato da un BotBrain come gli altri soldati
+    this.player.isBot = true;
+    const squad = this.squads[this.playerTeam];
+    const brain = new BotBrain(this.player, squad, this.aiCfg);
+    const i = squad.brains.indexOf(this.playerBrain);
+    if (i >= 0) squad.brains[i] = brain;
+    else squad.brains.push(brain);
+    this.playerBrain = brain;
   }
 
   /** Tutti i soldati (giocatore + bot), vivi o morti: { x, y, team, dead, ... }. */
@@ -99,12 +138,10 @@ export class Game {
     return list;
   }
 
-  /** Bot di inizio partita: bots.teams = { squadra: numero }, armi a rotazione da bots.weapons. */
+  /** Bot di inizio partita: botCounts = { squadra: numero } (da setup), armi a rotazione da bots.weapons. */
   _spawnBots() {
     this.bots.length = 0;
-    this.squads = {};
-    for (const t of this.ctf.teamIds) this.squads[t] = new Squad(t);
-    const teams = this.botsCfg.teams || {};
+    const teams = this.botCounts || {};
     const weapons = (this.botsCfg.weapons || [this.config.player.weapon]).filter((id) => this.weapons.get(id));
     for (const [team, count] of Object.entries(teams)) {
       if (!this.squads[team]) {
@@ -204,7 +241,7 @@ export class Game {
       if (dt > 0.25) dt = 0.25;
       this._countFps(dt);
 
-      if (this.running && !this.paused) {
+      if (this.running && !this.suspended && !this.paused && this.map) {
         acc += dt;
         while (acc >= STEP) {
           this.update(STEP);
@@ -243,7 +280,8 @@ export class Game {
 
     this.time += dt;
     if (!this.ended) {
-      this.player.update(dt, this, this._humanControl());
+      const ctrl = this.playerBrain && !this.player.dead ? this.playerBrain.think(dt, this) : this._humanControl();
+      this.player.update(dt, this, ctrl);
       this._updateBots(dt);
       if (this.player.dead && !this.respawn) this._onPlayerDeath();
       if (this.respawn) this._updateRespawn(dt);
@@ -260,7 +298,7 @@ export class Game {
     this.effects.update(dt, this.map);
     this.shake.time = Math.max(0, this.shake.time - dt);
 
-    this.camera.follow(this.player.x, this.player.y, this.player.angle, display.width, display.height, this.map, dt);
+    this.camera.follow(this.player.x - this.viewOffsetX, this.player.y, this.player.angle, display.width, display.height, this.map, dt);
     // ascoltatore dei suoni posizionali = centro della visuale
     this.audio.listener = { x: this.camera.x + display.width / 2, y: this.camera.y + display.height / 2 };
     input.endFrame();
@@ -350,8 +388,7 @@ export class Game {
     this._spawnPlayer(pos.x, pos.y);
     this.respawn = null;
     if (this.deathCfg.respawnSound) this.audio.play(this.deathCfg.respawnSound);
-    const { display } = this;
-    this.camera.snap(pos.x, pos.y, 0, display.width, display.height, this.map);
+    this._snapCamera();
   }
 
   /** Cadavere del soldato p: corpo, pozza che si allarga e arma caduta. */
@@ -438,6 +475,11 @@ export class Game {
   _updateMatchEnd(dt) {
     const e = this.ended;
     e.time += dt;
+    if (this.attract) {
+      // partita dimostrativa: ricomincia da sola
+      if (e.time >= (this.matchCfg.delay ?? 2)) this._reset();
+      return;
+    }
     if (!e.shown && e.time >= (this.matchCfg.delay ?? 2)) {
       e.shown = true;
       this.onMatchEnd?.(e.outcome);
@@ -641,6 +683,10 @@ export class Game {
 
     ctx.fillStyle = this.background;
     ctx.fillRect(0, 0, W, H);
+    if (!this.map) {
+      display.uiCtx.clearRect(0, 0, display.cssWidth, display.cssHeight);
+      return;
+    }
 
     // scossa della camera: spostamento casuale di pixel interi, si attenua fino a zero
     let sx = 0;
@@ -679,7 +725,8 @@ export class Game {
 
     ctx.restore();
 
-    const playing = this.running && !this.ended && !this.player.dead;
+    const live = this.running && !this.attract; // partita del giocatore (non la dimostrativa del menu)
+    const playing = live && !this.suspended && !this.ended && !this.player.dead;
     if (playing && input.mode === 'desktop' && input.mouse.seen && this.crosshair) {
       const m = input.mouseGame;
       drawSprite(ctx, this.crosshair, 0, m.x, m.y);
@@ -695,7 +742,7 @@ export class Game {
         grenade: { badge: String(p.grenades), disabled: p.grenades <= 0 },
       });
     }
-    if (this.running) {
+    if (live) {
       const r = this.respawn;
       this.hud.draw(ui, display, this.player, {
         ctf: this.ctf,

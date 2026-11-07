@@ -4,10 +4,90 @@
   },
   "loading": "Caricamento...",
   "start": {
-    "hintDesktop": "WASD / frecce: muovi · Mouse: mira · Click / Spazio: spara · R: ricarica · G: granata · F3: debug",
     "hintTouch": "Stick SX: muovi · Stick DX: mira · Pulsanti tondi: ricarica, granata\n(spingi lo stick DX oltre il cerchio tratteggiato per sparare)",
-    "objective": "Conquista le bandiere restando vicino ad esse. Ogni morte e ogni bandiera in mano al nemico costano ticket: la squadra che li esaurisce perde.",
-    "tapToStart": "Clicca / tocca per iniziare"
+    "objective": "Conquista le bandiere restando vicino ad esse. Ogni morte e ogni bandiera in mano al nemico costano ticket: la squadra che li esaurisce perde."
+  },
+  "menu": {
+    "tagline": "Cattura la bandiera, vista dall'alto",
+    "newGame": "Nuova partita",
+    "options": "Opzioni",
+    "back": "Indietro",
+    "version": "v{version}",
+    "paused": "Pausa",
+    "resume": "Riprendi",
+    "quit": "Torna al menu principale",
+    "pause": "Pausa"
+  },
+  "newGame": {
+    "title": "Nuova partita",
+    "map": "Mappa",
+    "team": "La tua squadra",
+    "allies": "Compagni",
+    "enemies": "Avversari",
+    "decrease": "Meno",
+    "increase": "Più",
+    "start": "Inizia",
+    "flags": "{count} bandiere",
+    "size": "{cols}×{rows}",
+    "summary": "Tu + {allies} contro {enemies}",
+    "procedural": "Procedurale",
+    "proceduralDesc": "Una mappa nuova generata a ogni partita.",
+    "comingSoon": "Prossimamente"
+  },
+  "teams": {
+    "blue": "Blu",
+    "red": "Rossa"
+  },
+  "levels": {
+    "arena": {
+      "name": "Arena di prova",
+      "description": "Arena compatta con tre bandiere: scontri rapidi e ravvicinati."
+    },
+    "crossroads": {
+      "name": "Crocevia",
+      "description": "Mappa simmetrica con cinque bandiere: due avamposti ai lati e un centro conteso."
+    }
+  },
+  "options": {
+    "title": "Opzioni",
+    "language": "Lingua",
+    "volume": "Volume",
+    "controls": "Comandi",
+    "mouse": "Mouse: mira · Tasto sinistro: spara",
+    "pressKey": "Premi un tasto...",
+    "pressKeyHint": "Esc: annulla · Canc: rimuovi",
+    "resetKeys": "Ripristina tasti",
+    "unbound": "—",
+    "actions": {
+      "up": "Su",
+      "down": "Giù",
+      "left": "Sinistra",
+      "right": "Destra",
+      "fire": "Spara",
+      "reload": "Ricarica",
+      "grenade": "Granata",
+      "pause": "Pausa"
+    }
+  },
+  "keys": {
+    "Space": "Spazio",
+    "Enter": "Invio",
+    "NumpadEnter": "Invio (tast. num.)",
+    "Escape": "Esc",
+    "Tab": "Tab",
+    "Backspace": "Backspace",
+    "ShiftLeft": "Maiusc SX",
+    "ShiftRight": "Maiusc DX",
+    "ControlLeft": "Ctrl SX",
+    "ControlRight": "Ctrl DX",
+    "AltLeft": "Alt",
+    "AltRight": "Alt Gr",
+    "CapsLock": "Bloc Maiusc",
+    "ArrowUp": "Freccia su",
+    "ArrowDown": "Freccia giù",
+    "ArrowLeft": "Freccia sx",
+    "ArrowRight": "Freccia dx",
+    "numpad": "Num {key}"
   },
   "rotate": {
     "message": "Ruota il dispositivo in orizzontale"
@@ -19,8 +99,8 @@
     "victorySubtitle": "La squadra nemica ha esaurito i ticket",
     "defeatSubtitle": "La tua squadra ha esaurito i ticket",
     "drawSubtitle": "Entrambe le squadre hanno esaurito i ticket",
-    "restartDesktop": "Clicca o premi Invio per una nuova partita",
-    "restartTouch": "Tocca per una nuova partita"
+    "rematch": "Rivincita",
+    "menu": "Menu principale"
   },
   "hud": {
     "reloading": "RICARICA",
@@ -54,6 +134,7 @@
     "unknownTile": "Tile \"{tile}\" non definito nel tileset \"{tileset}\"",
     "unknownWeapon": "Arma non definita in weapons.json: \"{name}\"",
     "unknownGrenade": "Granata non definita in weapons.json: \"{name}\"",
-    "spriteExtendsLoop": "\"extends\" circolare nello sprite \"{name}\" (assets.json)"
+    "spriteExtendsLoop": "\"extends\" circolare nello sprite \"{name}\" (assets.json)",
+    "noLevels": "Nessun livello definito in game.json (\"levels\")"
   }
 }

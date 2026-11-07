@@ -24,7 +24,23 @@ Apri `http://localhost:8080/`. Per provarlo su un telefono collegato alla stessa
 | Click sinistro / Spazio: spara | Stick destro spinto oltre il cerchio tratteggiato: spara |
 | R: ricarica | Pulsante tondo sopra lo stick destro: ricarica |
 | G: lancia una granata (verso il mirino) | Pulsante con la granata, a sinistra dello stick destro |
+| Esc / P: pausa | Pulsante pausa in alto a sinistra (sotto la vita) |
 | F3: overlay di debug · F4: arma successiva · F5/F6: togli/ridai vita · F7: +1 granata · F8: cambia squadra (debug) | |
+
+I tasti si possono cambiare da **Opzioni → Comandi** (due tasti per azione; salvati nel browser).
+
+## Menu
+
+- **Principale** (pannello a sinistra): *Nuova partita*, *Opzioni*; a destra gira una partita dimostrativa tutta di bot
+  (senza HUD né audio), in basso a destra la versione (`version` in `game.json`).
+- **Nuova partita**: mappa (anteprima, numero di bandiere, dimensioni; la mappa procedurale è annunciata come
+  "prossimamente"), squadra blu/rossa, numero di compagni e di avversari (limiti in `menu.allies` / `menu.enemies`).
+  L'ultima scelta viene ricordata.
+- **Opzioni**: lingua, volume, comandi da tastiera (su touch: riepilogo dei comandi).
+- **Pausa** (Esc / P / pulsante touch): riprendi, opzioni, torna al menu principale.
+- **Fine partita**: rivincita o menu principale.
+
+Le impostazioni (lingua, volume, tasti, ultima partita) stanno in `localStorage` (`menu.storageKey`).
 
 **HUD**: in alto a sinistra la vita (cuore, barra con scia del danno, valore; lampeggia quando è bassa) e le granate rimaste,
 in alto a destra l'arma in uso (nome tradotto, icona), i colpi (`12/30` e tacche), la barra di ricarica e gli avvisi
@@ -47,12 +63,12 @@ Sulla mappa ci sono delle bandiere: un pennone con un drappo che parte da terra.
 - **Rientro**: da morto (resta il corpo con la pozza e l'arma caduta), dopo `death.respawnDelay` secondi si rientra
   alla bandiera della propria squadra (non contesa) più vicina al punto della morte, o alla base se è più vicina.
 - **Fine partita**: la squadra che arriva a 0 ticket perde; schermata di vittoria/sconfitta (pareggio se finiscono
-  insieme). Clic, tocco o Invio per una nuova partita.
+  insieme). Pulsanti *Rivincita* (anche Invio) e *Menu principale*.
 
 ### Squadra avversaria (IA)
 
-La squadra rossa è controllata dal computer (`bots` in `game.json`, numero di soldati per squadra: si possono
-aggiungere anche compagni blu). Ogni bot:
+Compagni e avversari sono controllati dal computer (`bots` in `game.json`; il numero per squadra si sceglie in
+*Nuova partita*). Ogni bot:
 
 - **rientra** su una bandiera posseduta dalla sua squadra (la più vicina a dove è morto), alla base solo se non ne ha;
 - ha come **priorità le bandiere**: va a catturare quelle non sue (senza ammassarsi tutti sulla stessa), resta
@@ -85,10 +101,12 @@ config/
   weapons.json         armi (statistiche, sprite, suoni) e granate
   assets.json          sprite, tileset e suoni
   effects.json         impatti dei colpi (buchi, fumo, scintille, schegge), bossoli, vampate, esplosioni
-  levels/level01.json  livello di test
+  levels/              livelli (level01 = Arena di prova, level02 = Crocevia), elencati in game.json -> "levels"
   lang/                testi localizzati (en.json = default, it.json)
 js/
   main.js              bootstrap
+  menu.js              menu (DOM): principale, nuova partita, opzioni, pausa, fine partita
+  settings.js          impostazioni del giocatore in localStorage
   engine/              display, input, touch (joystick), assets, placeholder, tilemap, camera, audio, loader, i18n
   game/                game (loop, proiettili, render), player, weapons (catalogo armi), grenades, hud, effects (decal e particelle),
                        ctf (bandiere, ticket, rientro)
@@ -267,7 +285,7 @@ spawn (base di una squadra: lo spawn ha il nome della squadra) o a una bandiera:
 ### Localizzazione (`config/lang/*.json`)
 
 Tutti i testi visibili stanno in un file JSON per lingua (`en.json`, `it.json`, ...), con chiavi annidate
-(`"start": { "tapToStart": "..." }` → chiave `start.tapToStart`) e segnaposto `{nome}`. Per andare a capo usa `\n`.
+(`"menu": { "newGame": "..." }` → chiave `menu.newGame`) e segnaposto `{nome}`. Per andare a capo usa `\n`.
 
 Configurazione in `game.json`:
 
