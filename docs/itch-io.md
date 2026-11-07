@@ -1,4 +1,4 @@
-# BAF2D — itch.io page (v1.0.1)
+# BAF2D — itch.io page (v1.0.2)
 
 Copy each block into the matching field of the itch.io "Edit game" page.
 
@@ -10,12 +10,12 @@ BAF2D
 
 ## Short description or tagline
 
-Top-down pixel-art capture the flag: squad AI, jeeps, rocket tanks and a career that ranks you up.
+Top-down pixel-art capture the flag: squad AI, jeeps, rocket tanks, attack helicopters and a career that ranks you up.
 
 ## Classification / Kind of project
 
 - Classification: **Games**
-- Kind of project: **HTML** (upload `dist/BAF2D-1.0.1-html5.zip`, tick "This file will be played in the browser")
+- Kind of project: **HTML** (upload `dist/BAF2D-1.0.2-html5.zip`, tick "This file will be played in the browser")
 - Release status: **Released**
 
 ## Embed options (Uploads → HTML)
@@ -46,13 +46,15 @@ pick up better weapons and jump into vehicles. Every match feeds your career: sc
 <ul>
   <li><strong>Capture the Flag with tickets.</strong> Raise your flag in contested zones: flags you hold drain the
     enemy's tickets, and every death costs your team one. Pick the ticket count before each match.</li>
-  <li><strong>Three large maps.</strong> The industrial <em>Test Arena</em>, <em>Crossroads</em> with its two
-    avenues crossing at the centre, and <em>Desert Village</em>: a windswept map with a ruined village, an oasis with
-    palms, dry-stone walls and wide dirt roads built for vehicles. Sand blows across the ground, palms sway in the
-    gusts. Every map is symmetric and has no dead ends: there is always another way round.</li>
+  <li><strong>Four large maps.</strong> The industrial <em>Test Arena</em>, <em>Crossroads</em> with its two
+    avenues crossing at the centre, <em>Desert Village</em>: a windswept map with a ruined village, an oasis with
+    palms, dry-stone walls and wide dirt roads built for vehicles, and <em>Countryside</em>: green farmland between
+    two zig-zag trench lines with sandbag parapets, hedgerows, orchards, shell craters and a farmhouse in the middle.
+    Every map is symmetric and has no dead ends: there is always another way round.</li>
   <li><strong>Vehicles.</strong> Drive a fast <strong>jeep</strong> with a mounted machine gun or a heavy
-    <strong>rocket tank</strong>. Armour shrugs off small arms fire: bring a rocket launcher or grenades. Ramming
-    enemies works too.</li>
+    <strong>rocket tank</strong>, or take to the air in an <strong>attack helicopter</strong> with a chin cannon and
+    rocket pods that flies over walls and trees. Armour shrugs off small arms fire: bring a rocket launcher or
+    grenades. Ramming enemies works too.</li>
   <li><strong>Weapons.</strong> Assault rifle, shotgun, pistol, frag grenades, and a shoulder-fired
     <strong>rocket launcher</strong> you carry next to your main gun. Fallen soldiers drop their weapons and grenades;
     map pickups respawn.</li>
@@ -86,7 +88,9 @@ pick up better weapons and jump into vehicles. Every match feeds your career: sc
 </table>
 <p><em>In a vehicle:</em> <strong>W</strong>/<strong>S</strong> accelerate and brake/reverse, <strong>A</strong>/<strong>D</strong>
 steer (on touch, push the left stick where you want to go); aim to turn the turret, fire for the machine gun,
-<strong>G</strong> for rockets, <strong>R</strong> to reload. Keys can be remapped in Options.</p>
+<strong>G</strong> for rockets, <strong>R</strong> to reload. <em>In the helicopter:</em> <strong>WASD</strong> flies in
+any direction and the nose follows your aim; <strong>E</strong> lands and gets you out (on open ground only).
+Keys can be remapped in Options, where you can also turn on <strong>auto reload</strong>.</p>
 
 <hr>
 
@@ -125,6 +129,34 @@ Source code licensed under the GNU GPL v3.</p>
   6. `main_menu.png` — Main menu, with a live AI battle running behind it.
   7. `apache_strike.png` — Attack helicopter run: rockets and cannon fire on the enemy trench line.
   8. `apache_rocket.png` — Enemy gunship over the desert: a rocket launcher is your best friend.
+
+## Release notes (devlog) — v1.0.2
+
+Title: **BAF2D 1.0.2 — Attack helicopters and a new Countryside map**
+
+**Attack helicopters**
+- New vehicle: an attack helicopter with a chin cannon and two rocket pods, one per team on Desert Village and
+  Countryside.
+- It takes off when you get in and flies over walls, water and trees; its shots and rockets pass over walls too.
+  WASD flies in any direction, the nose follows your aim. Press E to land and get out (only over open ground).
+- Rockets hit it hard, rifles and machine guns only scratch it. Grenades and ground explosions can't reach it in
+  the air, and a pilot in flight doesn't count towards capturing flags.
+- Bots fly it too: they patrol the flags and strafe enemies from above. On foot they shoot back at it instead of
+  running for cover, and jeeps engage it with their machine guns.
+
+**New map: Countryside**
+- Green farmland between two zig-zag trench lines with sandbag parapets and plenty of exits, a command post on
+  each base flag, a brick farmhouse to fight over in the middle, orchards, a pond, wheat fields, hedgerows, shell
+  craters and woods all around. Trees spread their canopy above the soldiers, and a light breeze carries seeds
+  and pollen.
+- Like the other maps it is symmetric and has no dead ends.
+
+**Reloading**
+- A flashing "RELOAD!" prompt appears when your magazine is empty.
+- New option: auto reload, which starts reloading as soon as the magazine runs dry (off by default).
+
+**Other**
+- Updated Test Arena description in the menu.
 
 ## Release notes (devlog) — v1.0.1
 
