@@ -91,6 +91,9 @@ config/
   levels/*.json       livelli
   lang/*.json         testi
 tools/serve.mjs       server statico (solo moduli Node built-in)
+tools/build-zip.mjs   zip HTML5 per itch.io in dist/ (gitignored): index.html, manifest, LICENSE, css, js, config,
+                      arts/icons; versione da game.json; percorsi con "/" (non usare Compress-Archive di PS 5.1)
+docs/itch-io.md       testi e impostazioni della pagina itch.io (inglese)
 tools/gen_desert.mjs  genera config/levels/level03.json (deserto 97x65, simmetrico, verifica raggiungibilità)
 ```
 

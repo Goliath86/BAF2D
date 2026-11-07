@@ -171,6 +171,8 @@ js/
                        pickups (oggetti a terra), props (decorazioni), weather (vento e sabbia)
 tools/serve.mjs        server statico di sviluppo (solo moduli Node built-in)
 tools/gen_desert.mjs   generatore della mappa del deserto (level03.json)
+tools/build-zip.mjs    zip per itch.io: node tools/build-zip.mjs -> dist/BAF2D-<versione>-html5.zip
+docs/itch-io.md        testi (in inglese) e impostazioni della pagina itch.io
 ```
 
 ## Rendering pixel-art
