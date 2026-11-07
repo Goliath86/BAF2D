@@ -775,7 +775,7 @@ button {
 }
 
 .step-value {
-  min-width: 48px;
+  min-width: 64px;
   text-align: center;
   font-size: 22px;
   font-weight: bold;

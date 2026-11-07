@@ -29,7 +29,8 @@
     "start": "Start",
     "flags": "{count} flags",
     "size": "{cols}×{rows}",
-    "summary": "You + {allies} vs {enemies}",
+    "summary": "You + {allies} vs {enemies} · {tickets} tickets",
+    "tickets": "Tickets",
     "procedural": "Procedural",
     "proceduralDesc": "A new map generated for every match.",
     "comingSoon": "Coming soon"

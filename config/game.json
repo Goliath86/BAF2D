@@ -26,6 +26,7 @@
     "team": "blue",
     "allies": { "min": 0, "max": 7, "default": 3 },
     "enemies": { "min": 1, "max": 8, "default": 4 },
+    "tickets": { "min": 100, "max": 1000, "step": 50, "default": 400 },
     "procedural": false,
     "thumbTile": 4,
     "volumeSound": "dry_fire",

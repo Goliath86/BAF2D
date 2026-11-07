@@ -29,7 +29,8 @@
     "start": "Inizia",
     "flags": "{count} bandiere",
     "size": "{cols}×{rows}",
-    "summary": "Tu + {allies} contro {enemies}",
+    "summary": "Tu + {allies} contro {enemies} · {tickets} ticket",
+    "tickets": "Ticket",
     "procedural": "Procedurale",
     "proceduralDesc": "Una mappa nuova generata a ogni partita.",
     "comingSoon": "Prossimamente"

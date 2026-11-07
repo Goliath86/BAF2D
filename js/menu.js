@@ -36,13 +36,25 @@ export class Menu {
 
     // ultima configurazione usata (salvata) o valori di default da game.json -> menu
     const last = settings.get('newGame', {});
-    const range = (r, def) => ({ min: r?.min ?? 0, max: r?.max ?? 8, def: r?.default ?? def });
-    this.limits = { allies: range(this.cfg.allies, 3), enemies: range(this.cfg.enemies, 4) };
+    const range = (r, def, max = 8, step = 1) => ({ min: r?.min ?? 0, max: r?.max ?? max, def: r?.default ?? def, step: r?.step ?? step });
+    const ticketsDef = typeof config.ctf?.tickets === 'number' ? config.ctf.tickets : 400;
+    this.limits = {
+      allies: range(this.cfg.allies, 3),
+      enemies: range(this.cfg.enemies, 4),
+      tickets: range(this.cfg.tickets, ticketsDef, 1000, 50), // ticket per squadra (chi li esaurisce perde)
+    };
+    // valore salvato o di default, nei limiti e sul passo dello stepper
+    const pick = (key) => {
+      const l = this.limits[key];
+      const v = Number(last[key] ?? l.def);
+      return clamp(l.min + Math.round(((Number.isFinite(v) ? v : l.def) - l.min) / l.step) * l.step, l.min, l.max);
+    };
     this.choice = {
       level: this._level(last.level)?.id || this._level(this.cfg.level)?.id || levels[0].id,
       team: this.teamIds.includes(last.team) ? last.team : this.teamIds.includes(this.cfg.team) ? this.cfg.team : this.teamIds[0],
-      allies: clamp(last.allies ?? this.limits.allies.def, this.limits.allies.min, this.limits.allies.max),
-      enemies: clamp(last.enemies ?? this.limits.enemies.def, this.limits.enemies.min, this.limits.enemies.max),
+      allies: pick('allies'),
+      enemies: pick('enemies'),
+      tickets: pick('tickets'),
     };
 
     this._buildMaps();
@@ -90,7 +102,7 @@ export class Menu {
     this._hide();
     const { game } = this;
     game.viewOffsetX = 0;
-    game.setup({ level: lvl.data, team: c.team, allies: c.allies, enemies: c.enemies, attract: false });
+    game.setup({ level: lvl.data, team: c.team, allies: c.allies, enemies: c.enemies, tickets: c.tickets, attract: false });
     game.running = true;
     this._play();
   }
@@ -392,7 +404,7 @@ export class Menu {
       minus.type = plus.type = 'button';
       const change = (d) => {
         const l = this.limits[key];
-        this.choice[key] = clamp(this.choice[key] + d, l.min, l.max);
+        this.choice[key] = clamp(this.choice[key] + d * l.step, l.min, l.max);
         this._renderChoice();
       };
       minus.addEventListener('click', () => change(-1));
@@ -412,7 +424,7 @@ export class Menu {
       s.minus.disabled = c[key] <= l.min;
       s.plus.disabled = c[key] >= l.max;
     }
-    $('newgame-summary').textContent = this.i18n.t('newGame.summary', { allies: c.allies, enemies: c.enemies });
+    $('newgame-summary').textContent = this.i18n.t('newGame.summary', { allies: c.allies, enemies: c.enemies, tickets: c.tickets });
   }
 
   // ---------- Opzioni ----------

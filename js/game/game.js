@@ -102,10 +102,12 @@ export class Game {
    * Prepara una partita: level = JSON del livello, team = squadra del giocatore,
    * allies / enemies = bot compagni / avversari, attract = partita dimostrativa (tutti bot, niente HUD né audio).
    */
-  setup({ level, team, allies = 0, enemies = 4, attract = false }) {
+  setup({ level, team, allies = 0, enemies = 4, tickets = null, attract = false }) {
     this.level = level;
     this.map = new TileMap(level, this.assets.tileset(level.tileset));
-    this.ctf = new Ctf(this.config.ctf, this.teams, this.map, level);
+    // tickets (opzionale, dal menu) = ticket iniziali di ogni squadra al posto di ctf.tickets (vale anche per la rivincita)
+    const ctfCfg = tickets > 0 ? { ...this.config.ctf, tickets: Math.round(tickets) } : this.config.ctf;
+    this.ctf = new Ctf(ctfCfg, this.teams, this.map, level);
     // decorazioni e meteo del livello (level.weather = tipo in effects.json -> weather)
     this.props.reset(this.map);
     this.weather = new Weather(level.weather ? this.effectsCfg.weather?.[level.weather] : null);

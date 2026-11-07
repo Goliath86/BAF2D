@@ -142,7 +142,7 @@ tools/gen_desert.mjs  genera config/levels/level03.json (deserto 97x65, simmetri
   `onMatchEnd(outcome)` (Menu riempie `#overlay-matchend` e mette `body.match-over match-<outcome>` = filtro CSS).
   `restart()` (pulsante Rivincita o `confirm` = Invio) solo dopo `restartDelay`; `_reset()` azzera ctf, ricrea
   squadre, Player e Hud, svuota proiettili/effetti/cadaveri e chiama `onRestart`. Game resta senza DOM: l'HTML è in menu.js.
-- Partita: `game.setup({ level, team, allies, enemies, attract })` (JSON del livello già caricato, bot per squadra in
+- Partita: `game.setup({ level, team, allies, enemies, tickets, attract })` (tickets = override di `ctf.tickets`, dal menu) (JSON del livello già caricato, bot per squadra in
   `botCounts`); il costruttore di Game non crea mappa né partita (`render` non disegna nulla finché `map` è null).
   `attract: true` = partita dimostrativa dietro al menu: anche il giocatore ha un `BotBrain` (`playerBrain`), niente
   HUD/mirino/stick, audio muto (`audio.setMuted`), a fine partita ricomincia da sola. `game.viewOffsetX` (px di gioco)

@@ -34,7 +34,8 @@ I tasti si possono cambiare da **Opzioni → Comandi** (due tasti per azione; sa
 - **Principale** (pannello a sinistra): *Nuova partita*, *Opzioni*; a destra gira una partita dimostrativa tutta di bot
   (senza HUD né audio), in basso a destra la versione (`version` in `game.json`).
 - **Nuova partita**: mappa (anteprima, numero di bandiere, dimensioni; la mappa procedurale è annunciata come
-  "prossimamente"), squadra blu/rossa, numero di compagni e di avversari (limiti in `menu.allies` / `menu.enemies`).
+  "prossimamente"), squadra blu/rossa, numero di compagni e di avversari (limiti in `menu.allies` / `menu.enemies`),
+  ticket per squadra (`menu.tickets`: `min`, `max`, `step`, `default`; vale anche per la rivincita).
   L'ultima scelta viene ricordata.
 - **Opzioni**: lingua, volume, comandi da tastiera (su touch: riepilogo dei comandi).
 - **Pausa** (Esc / P / pulsante touch): riprendi, opzioni, torna al menu principale.
