@@ -2,8 +2,9 @@
 //
 // Ogni bot ha un BotBrain che a ogni tick produce gli stessi comandi del giocatore umano
 // ({ move, aim, firing, reload, ... }, vedi Player.update). Priorità:
-// 1. obiettivo: catturare le bandiere non ancora della squadra (le più vicine, senza ammassarsi
-//    tutti sulla stessa); se le possiede tutte le presidia;
+// 1. obiettivo: la Squad divide i bot in coppie (il dispari fa un terzetto) e manda ogni gruppo su una
+//    bandiera diversa (Squad.plan): prima quelle da catturare, in difesa i gruppi che avanzano o se una
+//    bandiera è attaccata. Chi è più avanti va incontro al compagno rimasto indietro;
 // 2. combattimento: spara solo a un nemico in vista (dopo un tempo di reazione); se lo perde di vista
 //    continua per un po' a sparare dove l'ha visto l'ultima volta (fuoco di copertura). Ciclo tattico:
 //    "expose" (spara da una posizione scoperta) -> "cover" (si ripara dietro un muro, ricarica)
@@ -73,6 +74,124 @@ export class Squad {
   update(time, memory) {
     for (const [e, c] of this.contacts) if (e.dead || time - c.time > memory) this.contacts.delete(e);
   }
+
+  // ---------- Piano di squadra: gruppi (coppie/terzetti) distribuiti sulle bandiere ----------
+
+  /** Gruppo del bot "brain" ({ members, flag, bias }) o null. I gruppi sono legati al combattente (unit.combatant). */
+  groupOf(brain) {
+    return this.groups?.find((g) => g.members.includes(brain)) || null;
+  }
+
+  /**
+   * Ogni planInterval s (o quando cambia lo stato delle bandiere) rifà i gruppi e assegna una bandiera a ciascuno:
+   * coppie stabili (il dispari forma un terzetto), una sola bandiera per gruppo, gruppi sparsi sulle bandiere
+   * (spreadPenalty per ogni gruppo già mandato sulla stessa), in difesa solo se avanzano gruppi o se attaccata.
+   */
+  plan(game, cfg, dt) {
+    const flags = game.ctf.flags;
+    const key = flags.map((f) => `${f.owner}${f.claimant}${f.progress >= 1 ? 1 : 0}${f.contested ? 1 : 0}`).join('|');
+    this.planTimer = (this.planTimer ?? 0) - dt;
+    if (this.planTimer > 0 && key === this.planKey) return;
+    this.planTimer = cfg.planInterval ?? 2.5;
+    this.planKey = key;
+
+    const active = this.brains.filter((b) => !b.unit.dead && !b.unit.vehicle);
+    const id = (b) => b.unit.combatant || b.unit;
+    const maxSize = cfg.maxGroup ?? 3;
+    const breakDist = cfg.groupBreak ?? 360;
+    const pairRadius = cfg.pairRadius ?? 500;
+
+    // 1. gruppi precedenti: restano insieme i membri vivi vicini al primo (i cervelli cambiano al rientro)
+    const free = new Set(active);
+    const groups = [];
+    for (const old of this.groups || []) {
+      const members = [];
+      for (const oid of old.ids) {
+        const b = active.find((x) => id(x) === oid && free.has(x));
+        if (b && (!members.length || dist(b.unit, members[0].unit) <= breakDist)) members.push(b);
+      }
+      if (members.length < 2) continue;
+      for (const b of members) free.delete(b);
+      groups.push({ members, flag: old.flag, bias: old.bias });
+    }
+    // 2. i liberi: coppia col libero più vicino, altrimenti terzo in un gruppo vicino; se nessuno è vicino,
+    //    coppia col libero più vicino comunque (si ritrovano sull'obiettivo); da soli solo se non c'è altri
+    const centroid = (g) => {
+      let x = 0;
+      let y = 0;
+      for (const m of g.members) { x += m.unit.x; y += m.unit.y; }
+      return { x: x / g.members.length, y: y / g.members.length };
+    };
+    const trio = cfg.trioPenalty ?? 150;
+    while (free.size) {
+      const b = free.values().next().value;
+      free.delete(b);
+      let best = null;
+      let bestD = Infinity;
+      for (const o of free) {
+        const d = dist(o.unit, b.unit);
+        if (d < bestD) { bestD = d; best = o; }
+      }
+      let join = null;
+      let joinD = Infinity;
+      for (const g of groups) {
+        if (g.members.length >= maxSize) continue;
+        const d = dist(centroid(g), b.unit) + trio;
+        if (d < joinD) { joinD = d; join = g; }
+      }
+      if (best && (bestD <= pairRadius || !join || bestD <= joinD)) {
+        free.delete(best);
+        groups.push({ members: [b, best], flag: null, bias: {} });
+      } else if (join) join.members.push(b);
+      else groups.push({ members: [b], flag: null, bias: {} });
+    }
+
+    // 3. bandiere: da prendere; in difesa le proprie (costano defendCost in più, meno se attaccate)
+    const team = this.team;
+    const needs = (f) => f.owner !== team || f.claimant !== team || f.progress < 1;
+    const capture = flags.filter(needs);
+    const defend = flags.filter((f) => !needs(f));
+    const load = new Map();
+    const cost = (g, f, c) => {
+      if (g.bias[f.id] === undefined) g.bias[f.id] = Math.random() * (cfg.flagBias ?? 60);
+      let s = dist(c, f) + g.bias[f.id];
+      if (!needs(f)) s += (cfg.defendCost ?? 350) - (f.contested ? cfg.contestedBonus ?? 500 : 0);
+      if (g.flag === f) s -= cfg.groupStickiness ?? 150;
+      return s + (load.get(f) || 0) * (cfg.spreadPenalty ?? 800);
+    };
+    const pool = [...capture, ...defend];
+    const todo = groups.map((g) => ({ g, c: centroid(g) }));
+    while (todo.length && pool.length) {
+      let bi = -1;
+      let bf = null;
+      let bs = Infinity;
+      todo.forEach(({ g, c }, i) => {
+        for (const f of pool) {
+          const s = cost(g, f, c);
+          if (s < bs) { bs = s; bi = i; bf = f; }
+        }
+      });
+      const { g } = todo.splice(bi, 1)[0];
+      g.flag = bf;
+      load.set(bf, (load.get(bf) || 0) + Math.min(1, g.members.length / 2));
+    }
+    for (const g of groups) g.ids = g.members.map(id);
+    this.groups = groups;
+  }
+
+  /** Compagno di gruppo da aspettare: vivo, a piedi, lontano più di leash ma entro range. */
+  straggler(brain, leash, range) {
+    const g = this.groupOf(brain);
+    if (!g) return null;
+    let worst = null;
+    let worstD = leash;
+    for (const m of g.members) {
+      if (m === brain || m.unit.dead || m.unit.vehicle || m.target) continue;
+      const d = dist(m.unit, brain.unit);
+      if (d > worstD && d <= range) { worstD = d; worst = m; }
+    }
+    return worst;
+  }
 }
 
 export class BotBrain {
@@ -112,7 +231,8 @@ export class BotBrain {
     this.objective = null; // { flag, point }
     this.objTimer = 0;
     this.holdTimer = 0;
-    this.bias = {}; // preferenza casuale per bandiera (i bot non scelgono tutti la stessa)
+    this.bias = {}; // preferenza casuale per bandiera (solo senza piano di squadra)
+    this.waitTime = 0; // da quanto va incontro al compagno di coppia
 
     this.burstOn = false;
     this.burstTimer = 0;
@@ -442,6 +562,18 @@ export class BotBrain {
       this._stop();
       return;
     }
+    // in coppia: chi è più avanti verso l'obiettivo va incontro al compagno rimasto indietro
+    // (non durante la cattura, al massimo pairWaitMax s di fila)
+    const c = this.cfg;
+    const mate = !this._capturing(game) && this.waitTime < (c.pairWaitMax ?? 4)
+      ? this.squad.straggler(this, c.pairLeash ?? 64, c.pairWaitRange ?? 450)
+      : null;
+    if (mate && dist(this.unit, o.point) + 16 < dist(mate.unit, o.point)) {
+      this.waitTime += dt;
+      this._goTo(mate.unit, game);
+      return;
+    }
+    if (!mate) this.waitTime = 0;
     if (this._goTo(o.point, game)) {
       // arrivato: resta nell'area, ogni tanto cambia punto (più difficile da colpire);
       // se un compagno gli sta addosso si sposta subito
@@ -467,6 +599,16 @@ export class BotBrain {
       this.objective = b ? { flag: null, point: { x: b.x, y: b.y } } : null;
       return;
     }
+    // bandiera decisa dal piano di squadra (Squad.plan) per il gruppo di questo bot
+    const planned = this.squad.groupOf(this)?.flag;
+    if (planned && flags.includes(planned)) {
+      if (planned !== this.objective?.flag || !this.objective.point) {
+        this.objective = { flag: planned, point: this._zonePoint(planned, game) || { x: planned.x, y: planned.y } };
+        this.holdTimer = rand(c.holdTime, 3);
+      }
+      return;
+    }
+    // senza piano (es. primo tick): la più vicina, evitando di ammassarsi
     const squadSize = c.flagSquad ?? 2;
     let best = null;
     let bestS = Infinity;

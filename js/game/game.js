@@ -293,6 +293,8 @@ export class Game {
   }
 
   _updateBots(dt) {
+    // piano di squadra: coppie/terzetti distribuiti sulle bandiere (letto da BotBrain._chooseObjective)
+    for (const s of Object.values(this.squads)) s.plan(this, this.aiCfg, dt);
     for (const b of this.bots) {
       if (!b.unit.dead) {
         const u = b.unit;
