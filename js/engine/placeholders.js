@@ -538,58 +538,87 @@ const SPRITE_SHAPES = {
   },
 
   /**
-   * Elicottero d'attacco visto dall'alto, muso a destra. Frame 0 = normale, frame 1 = carcassa.
-   * Trave di coda con stabilizzatore e rotore di coda, pattini, alette con due lanciarazzi, fusoliera,
-   * cupola di vetro, mitragliatrice sotto il muso; segni di squadra sulla coda.
+   * Elicottero d'attacco in stile Apache visto dall'alto, muso a destra. Frame 0 = normale, frame 1 = carcassa.
+   * Fusoliera lunga e stretta, cabina in tandem a vetri piatti (pilota dietro e più in alto, cannoniere davanti),
+   * sensore tondo sul muso, cannoncino sotto la cabina, motori in gondole ai lati con scarichi verso il basso,
+   * alette con due lanciarazzi (interni) e rotaie di missili (esterne), carrello a ruote, trave di coda lunga
+   * con stabilizzatore orizzontale in fondo e rotore di coda di lato; segni di squadra su coda e stabilizzatore.
    */
   helicopter(g, w, h, p, frame) {
     const burnt = frame === 1;
     const C = burnt
-      ? { body: p.burnt, light: p.burntLight, dark: p.burntDark, glass: p.burntDark, glassLight: p.burntLight, skid: '#0e0e0e', pod: p.burntDark, podLight: p.burnt }
-      : { body: p.body, light: p.bodyLight, dark: p.bodyDark, glass: p.glass, glassLight: p.glassLight, skid: p.skid, pod: p.pod, podLight: p.podLight };
+      ? { body: p.burnt, light: p.burntLight, dark: p.burntDark, glass: p.burntDark, glassLight: p.burntLight, frame: '#0e0e0e', pod: p.burntDark, podLight: p.burnt, missile: p.burntDark, wheel: '#0e0e0e' }
+      : { body: p.body, light: p.bodyLight, dark: p.bodyDark, glass: p.glass, glassLight: p.glassLight, frame: p.canopyFrame || p.bodyDark, pod: p.pod, podLight: p.podLight, missile: p.missile, wheel: p.wheel };
     const cy = Math.floor(h / 2);
-    // pattini e montanti
-    for (const y of [cy - 10, cy + 9]) {
-      rect(g, 17, y, 22, 1, C.skid);
-      rect(g, 21, Math.min(y, cy) + (y < cy ? 1 : -3), 1, 3, C.skid);
-      rect(g, 33, Math.min(y, cy) + (y < cy ? 1 : -3), 1, 3, C.skid);
+    // stabilizzatore orizzontale in fondo alla coda e deriva (vista dall'alto: una riga scura)
+    rect(g, 3, cy - 6, 4, 13, C.dark);
+    rect(g, 3, cy - 6, 4, 1, C.light);
+    rect(g, 4, cy - 5, 2, 11, C.body);
+    rect(g, 9, cy + 2, 2, 1, C.wheel); // ruotino di coda
+    // trave di coda: sottile verso il fondo, più larga verso la fusoliera
+    rect(g, 2, cy - 1, 18, 3, C.dark);
+    rect(g, 3, cy - 1, 17, 1, C.body);
+    rect(g, 16, cy - 2, 7, 5, C.dark);
+    rect(g, 16, cy - 2, 7, 2, C.body);
+    // rotore di coda (di lato, visto di taglio: pale chiare a "X" accanto alla deriva)
+    if (!burnt) {
+      rect(g, 8, cy + 2, 5, 1, p.tailRotorLight || p.tailRotor);
+      rect(g, 10, cy + 2, 1, 2, p.tailRotor);
     }
-    // trave di coda, stabilizzatore, rotore di coda
-    rect(g, 3, cy - 1, 19, 3, C.dark);
-    rect(g, 3, cy - 1, 19, 1, C.body);
-    rect(g, 5, cy - 6, 3, 13, C.dark);
-    rect(g, 5, cy - 6, 1, 13, C.body);
-    if (!burnt) rect(g, 1, cy - 4, 1, 9, p.tailRotor);
-    // alette con i lanciarazzi
-    rect(g, 23, cy - 8, 4, 17, C.dark);
+    // alette: lanciarazzi interni (±7) e rotaie con 2+2 missili esterne
+    rect(g, 25, cy - 11, 4, 23, C.dark);
+    rect(g, 25, cy - 11, 4, 1, C.light);
     for (const y of [cy - 8, cy + 6]) {
-      rect(g, 21, y, 10, 3, C.pod);
-      rect(g, 21, y, 10, 1, C.podLight);
-      rect(g, 30, y + 1, 1, 1, '#0e0e0e');
+      rect(g, 22, y, 10, 3, C.pod);
+      rect(g, 22, y, 10, 1, C.podLight);
+      rect(g, 31, y + 1, 1, 1, '#0e0e0e');
     }
-    // fusoliera
-    ellipse(g, 30, cy + 0.5, 11.5, 6.5, C.dark);
-    ellipse(g, 30, cy + 0.5, 10.5, 5.5, C.body);
-    ellipse(g, 28, cy - 1.5, 7, 2.5, C.light);
-    // cupola (due posti in tandem) e mitragliatrice sotto il muso
-    ellipse(g, 37, cy + 0.5, 5, 3.5, C.dark);
-    ellipse(g, 37, cy + 0.5, 4, 2.6, C.glass);
-    rect(g, 36, cy - 1, 3, 1, C.glassLight);
-    rect(g, 41, cy, w - 42, 2, p.gun);
-    rect(g, 41, cy, w - 42, 1, burnt ? C.dark : '#4d4d4d');
-    // scarichi del motore
-    rect(g, 22, cy - 3, 2, 2, '#1a1a18');
-    rect(g, 22, cy + 2, 2, 2, '#1a1a18');
+    for (const y of [cy - 12, cy - 10, cy + 9, cy + 11]) {
+      rect(g, 23, y, 8, 1, C.missile);
+      if (!burnt) rect(g, 31, y, 1, 1, p.missileTip);
+    }
+    // gondole dei motori ai lati, con scarichi scuri verso la coda
+    for (const y of [cy - 5, cy + 3]) {
+      rect(g, 20, y, 11, 3, C.dark);
+      rect(g, 21, y, 9, 2, C.body);
+      rect(g, 21, y, 9, 1, C.light);
+      rect(g, 19, y, 2, 3, '#121210');
+      rect(g, 30, y + 1, 1, 1, C.dark); // presa d'aria
+    }
+    // ruote del carrello principale (sporgono sotto le gondole)
+    rect(g, 35, cy - 6, 3, 2, C.wheel);
+    rect(g, 35, cy + 5, 3, 2, C.wheel);
+    // fusoliera lunga e stretta
+    rect(g, 22, cy - 3, 24, 7, C.dark);
+    rect(g, 23, cy - 2, 22, 5, C.body);
+    rect(g, 23, cy - 2, 22, 1, C.light);
+    // cabina in tandem: pilota dietro (più ampia) e cannoniere davanti, vetri a pannelli con montanti
+    rect(g, 33, cy - 3, 6, 7, C.frame);
+    rect(g, 34, cy - 2, 4, 5, C.glass);
+    rect(g, 39, cy - 2, 5, 5, C.frame);
+    rect(g, 40, cy - 1, 3, 3, C.glass);
+    rect(g, 34, cy - 2, 2, 1, C.glassLight);
+    rect(g, 40, cy - 1, 1, 1, C.glassLight);
+    rect(g, 36, cy - 2, 1, 5, C.frame); // montante centrale
+    // muso con il sensore tondo e cannoncino sotto la cabina del cannoniere
+    rect(g, 44, cy - 2, 3, 5, C.dark);
+    disc(g, 47.5, cy + 0.5, 2.2, C.dark);
+    if (!burnt) rect(g, 47, cy, 2, 1, p.sensor);
+    rect(g, 40, cy + 3, w - 41, 1, p.gun);
+    rect(g, 40, cy + 3, 3, 2, p.gun);
     if (p.team && !burnt) {
-      rect(g, 10, cy - 1, 5, 3, p.teamDark);
-      rect(g, 10, cy - 1, 4, 2, p.team);
-      rect(g, 5, cy - 6, 3, 2, p.team);
-      rect(g, 5, cy + 5, 3, 2, p.team);
+      rect(g, 13, cy - 1, 4, 2, p.teamDark);
+      rect(g, 13, cy - 1, 3, 1, p.team);
+      rect(g, 4, cy - 6, 2, 1, p.team);
+      rect(g, 4, cy + 6, 2, 1, p.team);
     }
-    if (burnt) for (let i = 0; i < 7; i++) rect(g, 20 + i * 3, cy - 3 + (i % 3) * 3, 2, 1, p.burntLight);
+    if (burnt) for (let i = 0; i < 8; i++) rect(g, 18 + i * 3, cy - 3 + (i % 3) * 3, 2, 1, p.burntLight);
   },
 
-  /** Rotore principale (origine = mozzo): frame 0 = due pale con punte gialle, frame 1 = disco sfocato. */
+  /**
+   * Rotore principale (origine = mozzo): frame 0 = pale ("blades", 2 o 4) con punte gialle, frame 1 = disco
+   * sfocato.
+   */
   heli_rotor(g, w, h, p, frame) {
     const cx = w / 2;
     const cy = h / 2;
@@ -611,6 +640,12 @@ const SPRITE_SHAPES = {
     rect(g, cx - R, cy - 1, R * 2, 1, p.bladeLight);
     rect(g, cx - R, cy - 1, 3, 2, p.tip);
     rect(g, cx + R - 3, cy - 1, 3, 2, p.tip);
+    if ((p.blades ?? 2) >= 4) {
+      rect(g, cx - 1, cy - R, 2, R * 2, p.blade);
+      rect(g, cx - 1, cy - R, 1, R * 2, p.bladeLight);
+      rect(g, cx - 1, cy - R, 2, 3, p.tip);
+      rect(g, cx - 1, cy + R - 3, 2, 3, p.tip);
+    }
     disc(g, cx, cy, 2.5, p.hub);
     rect(g, cx - 1, cy - 1, 1, 1, p.bladeLight);
   },

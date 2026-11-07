@@ -504,7 +504,7 @@ export class Vehicle {
         drawSprite(ctx, r, 1, hub.x, hub.y, 0);
         ctx.globalAlpha = fade * 0.45;
         drawSprite(ctx, r, 0, hub.x, hub.y, this.rotor);
-        drawSprite(ctx, r, 0, hub.x, hub.y, this.rotor + Math.PI / 2);
+        drawSprite(ctx, r, 0, hub.x, hub.y, this.rotor + Math.PI / (d.rotorBlades ?? 2)); // a metà tra le pale
       } else {
         drawSprite(ctx, r, 0, hub.x, hub.y, this.rotor);
       }

@@ -75,7 +75,8 @@
       "sprite": "helicopter",
       "rotorSprite": "heli_rotor",
       "rotorPivot": [1, 0],
-      "rotorRate": 32,
+      "rotorBlades": 4,
+      "rotorRate": 26,
       "spinUp": 0.9,
       "flying": true,
       "airborneAlt": 0.35,
@@ -95,7 +96,7 @@
       "wreckFrame": 1,
       "shadow": [3, 4],
       "shadowLift": 5,
-      "muzzles": { "vehicle_mg": 19, "vehicle_rockets": 6 },
+      "muzzles": { "vehicle_mg": 25, "vehicle_rockets": 6 },
       "weapons": ["vehicle_mg", "vehicle_rockets"]
     }
   }

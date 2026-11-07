@@ -151,22 +151,23 @@
     "helicopter": {
       "src": null,
       "teamColored": true,
-      "frameWidth": 46,
+      "frameWidth": 52,
       "frameHeight": 26,
-      "origin": [25, 13],
+      "origin": [26, 13],
       "placeholder": {
         "shape": "helicopter", "frames": 2, "autoOutline": "#0d0f08",
-        "body": "#5a6640", "bodyLight": "#788656", "bodyDark": "#3a4228", "glass": "#2c3a48", "glassLight": "#6a8aa0",
-        "skid": "#2a2a26", "pod": "#3a3a34", "podLight": "#5a5a52", "gun": "#262626", "tailRotor": "#2a2a26",
+        "body": "#4c5434", "bodyLight": "#687048", "bodyDark": "#2e3320", "glass": "#1e2a30", "glassLight": "#5e7888",
+        "canopyFrame": "#22261a", "pod": "#3a3a32", "podLight": "#56564c", "missile": "#6a6e58", "missileTip": "#2a2a24",
+        "wheel": "#1a1a18", "gun": "#262626", "sensor": "#d8a040", "tailRotor": "#2a2a26", "tailRotorLight": "#8a8a80",
         "burnt": "#2a2622", "burntLight": "#3e3832", "burntDark": "#161412"
       }
     },
     "heli_rotor": {
       "src": null,
-      "frameWidth": 50,
-      "frameHeight": 50,
-      "origin": [25, 25],
-      "placeholder": { "shape": "heli_rotor", "frames": 2, "blade": "#1e1e1c", "bladeLight": "#4a4a44", "tip": "#c8a838", "hub": "#3a3a34", "blur": "#1a1a18" }
+      "frameWidth": 58,
+      "frameHeight": 58,
+      "origin": [29, 29],
+      "placeholder": { "shape": "heli_rotor", "frames": 2, "blades": 4, "blade": "#1e1e1c", "bladeLight": "#4a4a44", "tip": "#c8a838", "hub": "#3a3a34", "blur": "#1a1a18" }
     },
     "tank_turret": {
       "src": null,
