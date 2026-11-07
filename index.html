@@ -32,6 +32,8 @@
           <button type="button" class="menu-item" data-go="newGame" data-i18n="menu.newGame"></button>
           <button type="button" class="menu-item" data-go="options" data-i18n="menu.options"></button>
         </nav>
+        <!-- grado e punti di carriera del giocatore (riempito da menu.js) -->
+        <div id="menu-career" class="career compact"></div>
       </section>
 
       <section class="menu-screen" data-screen="pause">
@@ -99,11 +101,13 @@
   <!-- pausa su touch (su desktop: Esc / P) -->
   <button type="button" id="pause-button" class="pause-button hidden" data-i18n-title="menu.pause"></button>
 
-  <!-- titolo e sottotitolo impostati da main.js in base all'esito (matchEnd.victory/defeat/draw) -->
+  <!-- titolo e sottotitolo in base all'esito (matchEnd.victory/defeat/draw), classifica e carriera: menu.js -->
   <div id="overlay-matchend" class="overlay hidden">
-    <div class="panel">
+    <div class="panel matchend-panel">
       <h1 id="matchend-title" class="matchend-title"></h1>
       <p id="matchend-subtitle"></p>
+      <div id="scoreboard" class="scoreboard"></div>
+      <div id="matchend-career" class="career"></div>
       <div class="matchend-actions">
         <button type="button" class="menu-item primary" data-action="rematch" data-i18n="matchEnd.rematch"></button>
         <button type="button" class="menu-item" data-action="menu" data-i18n="matchEnd.menu"></button>

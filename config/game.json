@@ -19,7 +19,8 @@
     "thumbTile": 4,
     "volumeSound": "dry_fire",
     "attract": { "level": "crossroads", "team": "blue", "allies": 3, "enemies": 4, "panelOffset": 0.5 },
-    "storageKey": "baf2d.settings"
+    "storageKey": "baf2d.settings",
+    "scoreboardColumn": 9
   },
 
   "i18n": {
@@ -155,7 +156,87 @@
       "respawnY": 0.7,
       "respawnFontSize": 10,
       "killedColor": "#e8463a"
+    },
+    "rank": {
+      "show": true,
+      "fontSize": 6,
+      "gap": 3,
+      "maxHeight": 20,
+      "nameColor": "#ffd36b",
+      "barWidth": 36,
+      "barHeight": 2,
+      "barColor": "#ffd36b",
+      "barBack": "#1a1a22"
+    },
+    "score": {
+      "fontSize": 6,
+      "life": 1.4,
+      "rise": 10,
+      "offset": 16,
+      "max": 4,
+      "color": "#ffd36b"
+    },
+    "promotion": {
+      "time": 4,
+      "fadeIn": 0.25,
+      "fadeOut": 0.6,
+      "y": 0.17,
+      "scale": 3,
+      "insigniaHeight": 44,
+      "growStep": 0.06,
+      "titleSize": 8,
+      "nameSize": 10,
+      "color": "#ffd36b",
+      "band": "#05050a",
+      "bandAlpha": 0.65
     }
+  },
+
+  "scoring": {
+    "points": {
+      "kill": 100,
+      "assist": 30,
+      "defend": 40,
+      "capture": 150,
+      "neutralize": 75,
+      "victory": 500,
+      "draw": 250,
+      "defeat": 150,
+      "debug": 500
+    },
+    "assistDamage": 35,
+    "botRankSpread": 2,
+    "killSound": "score_kill",
+    "promotionSound": "promotion",
+    "popupColors": { "victory": "#ffd36b", "defeat": "#c8c8d0", "draw": "#c8c8d0" }
+  },
+
+  "ranks": {
+    "outline": "#0b0b12",
+    "colors": {
+      "gold": ["#ffd36b", "#b8862a"],
+      "silver": ["#e4e4ee", "#8a8a9e"]
+    },
+    "list": [
+      { "id": "private", "xp": 0, "insignia": [{ "shape": "chevron", "count": 1, "color": "silver" }] },
+      { "id": "privateFirstClass", "xp": 1500, "insignia": [{ "shape": "chevron", "count": 2, "color": "silver" }] },
+      { "id": "corporal", "xp": 4000, "insignia": [{ "shape": "chevron", "count": 1, "color": "gold" }] },
+      { "id": "corporalMajor", "xp": 8000, "insignia": [{ "shape": "chevron", "count": 2, "color": "gold" }] },
+      { "id": "sergeant", "xp": 13000, "insignia": [{ "shape": "chevron", "count": 3, "color": "gold" }] },
+      { "id": "staffSergeant", "xp": 20000, "insignia": [{ "shape": "chevron", "count": 3, "color": "gold" }, { "shape": "rocker", "count": 1, "color": "gold" }] },
+      { "id": "masterSergeant", "xp": 29000, "insignia": [{ "shape": "chevron", "count": 3, "color": "gold" }, { "shape": "rocker", "count": 2, "color": "gold" }] },
+      { "id": "warrantOfficer", "xp": 40000, "insignia": [{ "shape": "bar", "count": 2, "color": "gold" }] },
+      { "id": "secondLieutenant", "xp": 54000, "insignia": [{ "shape": "star", "count": 1, "color": "gold" }] },
+      { "id": "lieutenant", "xp": 70000, "insignia": [{ "shape": "star", "count": 2, "color": "gold" }] },
+      { "id": "captain", "xp": 90000, "insignia": [{ "shape": "star", "count": 3, "color": "gold" }] },
+      { "id": "major", "xp": 115000, "insignia": [{ "shape": "star", "count": 1, "color": "gold" }, { "shape": "bar", "count": 1, "color": "gold" }] },
+      { "id": "lieutenantColonel", "xp": 145000, "insignia": [{ "shape": "star", "count": 2, "color": "gold" }, { "shape": "bar", "count": 1, "color": "gold" }] },
+      { "id": "colonel", "xp": 180000, "insignia": [{ "shape": "star", "count": 3, "color": "gold" }, { "shape": "bar", "count": 1, "color": "gold" }] },
+      { "id": "brigadierGeneral", "xp": 220000, "insignia": [{ "shape": "star", "count": 1, "color": "silver" }, { "shape": "bar", "count": 2, "color": "gold" }] },
+      { "id": "majorGeneral", "xp": 270000, "insignia": [{ "shape": "star", "count": 2, "color": "silver" }, { "shape": "bar", "count": 2, "color": "gold" }] },
+      { "id": "lieutenantGeneral", "xp": 330000, "insignia": [{ "shape": "star", "count": 3, "color": "silver" }, { "shape": "bar", "count": 2, "color": "gold" }] },
+      { "id": "general", "xp": 400000, "insignia": [{ "shape": "star", "count": 4, "color": "silver" }, { "shape": "bar", "count": 2, "color": "gold" }] }
+    ]
   },
 
   "camera": {
@@ -265,7 +346,8 @@
       "debugHurt": ["F5"],
       "debugHeal": ["F6"],
       "debugGrenade": ["F7"],
-      "debugTeam": ["F8"]
+      "debugTeam": ["F8"],
+      "debugScore": ["F9"]
     },
     "mouse": {
       "fireButton": 0

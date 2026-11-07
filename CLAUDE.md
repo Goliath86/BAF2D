@@ -72,6 +72,8 @@ js/game/
   ctf.js              Ctf: modalità Capture The Flag (bandiere, catture, ticket, punti di rientro, disegno pennoni)
   nav.js              Nav: griglia dei tile per l'IA (A* 8 direzioni + percorso 'tirato', reach() = Dijkstra limitato, los)
   ai.js               Squad (lavagna di squadra: bot, nemici avvistati) + BotBrain (IA di un bot -> comandi come l'umano)
+  scores.js           Scores: record per combattente, punti (kill/assist/defend/capture/...), classifica
+  ranks.js            Ranks (gradi da game.json -> ranks, insegne a pixel in canvas) + Career (xp in localStorage)
 config/
   game.json           parametri generali (version, levels, menu, display, i18n, player + arma iniziale, input,
                       camera, audio, mobile, teams, ctf, death, matchEnd, hud, combat, bots)
@@ -161,6 +163,18 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
   o cadono vicino al bersaglio. Proiettili con `team`/`owner`: `_unitHit` (hitbox + `combat.hitPadding`, niente
   fuoco amico), a fine corsa `_hitJustBeyond` (`endHitReach`). `player.damage(n, { unit, x, y })` -> `hurtBy` letto
   dall'IA. Esplosioni feriscono tutte le unità. F3 disegna percorsi/coperture dei bot.
+- Punteggi (`scores.js`, `game.json -> scoring`): `game.scores` ha un record per combattente (`unit.combatant`,
+  persistente tra i rientri: `game.playerRecord`, `slot.record` dei bot, nomi da `i18n.list('scoreboard.botNames')`).
+  `Player.damage` registra `damageLog` (assist) e `killer` (`source.by ?? source.unit`; le granate passano
+  `by: owner` lasciando `unit: null` per l'IA). `scores.onDeath(unit, ctf)` va chiamato quando si rileva la morte
+  (giocatore e bot), `onFlagEvent(e)` in `_onFlagEvent`, `endMatch(winner)` in `_endMatch`. Ogni assegnazione chiama
+  `Game._onAward`: solo per il giocatore umano (non attract) popup HUD + `career.add(n)` (salvato subito) + promozioni.
+- Gradi (`ranks.js`, `game.json -> ranks`): `Ranks.progress(xp)`, `insignia(i)` = canvas a 1 px/pixel di gioco con
+  contorno (HUD lo scala di `u`, il menu lo copia in un `<canvas class="insignia">`). `Career` creata in main.js
+  con Settings (chiave `career: { xp }`) e passata a Game (`game.career`, `game.ranks`). HUD: `hud.popup(text)`,
+  `hud.promote({ name, insignia })`, blocco grado sotto le granate (`mode.rank`; `topHeight` ne tiene conto).
+  Fine partita: `game.matchSummary` -> `Menu._renderScoreboard` / `_renderCareer` (anche nel menu principale).
+  F9 = +`points.debug` punti. Soglie tarate con partite simulate (~4000-6000 punti a partita per soldato).
 - Audio posizionale: `audio.play(nome, { x, y })` attenua con la distanza da `audio.listener` (centro visuale,
   `audio.hearing.near/far`).
 - Sprite con `extends`: ereditano tutto tranne `src`, `placeholder` fuso campo per campo.
@@ -218,7 +232,8 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
   morti e bandiere, rientro alla bandiera più vicina o alla base, cadaveri persistenti, vittoria/sconfitta e nuova partita),
   squadra avversaria IA (cattura bandiere, coperture, fuoco di copertura, aggiramento coordinato, ricarica),
   menu desktop/mobile (nuova partita con mappa/squadra/numero di bot, opzioni lingua/volume/tasti, pausa,
-  rivincita), seconda mappa "Crocevia" (5 bandiere, simmetrica).
+  rivincita), seconda mappa "Crocevia" (5 bandiere, simmetrica), punteggi con classifica di fine partita
+  (nomi fittizi per i bot), 18 gradi con insegne a pixel, promozioni in partita e carriera salvata in localStorage.
 - Non ancora presenti: mappa procedurale, raccolta armi/granate da terra, riserva di munizioni (ora infinita),
   granate lanciate dai bot, asset grafici reali.
 - Controlli touch (stick + pulsante ricarica) verificati dall'utente su un dispositivo reale (2026-11-02).

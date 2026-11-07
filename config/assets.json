@@ -364,6 +364,25 @@
       "volume": 0.14,
       "placeholder": { "wave": "triangle", "freqStart": 700, "freqEnd": 420, "duration": 0.12 }
     },
+    "promotion": {
+      "src": null,
+      "volume": 0.16,
+      "placeholder": [
+        { "wave": "square", "freqStart": 523, "freqEnd": 523, "duration": 0.1 },
+        { "wave": "square", "freqStart": 659, "freqEnd": 659, "duration": 0.1, "at": [0.12] },
+        { "wave": "square", "freqStart": 784, "freqEnd": 784, "duration": 0.1, "at": [0.24] },
+        { "wave": "square", "freqStart": 1047, "freqEnd": 1047, "duration": 0.35, "at": [0.36] },
+        { "wave": "triangle", "freqStart": 262, "freqEnd": 262, "duration": 0.6, "at": [0.36], "volume": 0.8 }
+      ]
+    },
+    "score_kill": {
+      "src": null,
+      "volume": 0.08,
+      "placeholder": [
+        { "wave": "square", "freqStart": 1200, "freqEnd": 1200, "duration": 0.04 },
+        { "wave": "square", "freqStart": 1600, "freqEnd": 1600, "duration": 0.06, "at": [0.05] }
+      ]
+    },
     "respawn": {
       "src": null,
       "volume": 0.14,

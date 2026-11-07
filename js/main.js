@@ -8,6 +8,7 @@ import { Input } from './engine/input.js';
 import { Game } from './game/game.js';
 import { Weapons } from './game/weapons.js';
 import { GrenadeTypes } from './game/grenades.js';
+import { Ranks, Career } from './game/ranks.js';
 import { Menu } from './menu.js';
 import { Settings } from './settings.js';
 
@@ -74,7 +75,9 @@ async function boot() {
     const urlDebug = new URLSearchParams(location.search).get('debug') === '1';
     const input = new Input(display, config.input, { debug: urlDebug });
     input.setBindings(settings.get('keys', {})); // tasti personalizzati dalle opzioni
-    const game = new Game({ config, assets, audio, display, input, effectsCfg, weapons, grenadeTypes, i18n });
+    // gradi (game.json -> ranks) e punti di carriera del giocatore salvati tra una partita e l'altra
+    const career = new Career(settings, new Ranks(config.ranks));
+    const game = new Game({ config, assets, audio, display, input, effectsCfg, weapons, grenadeTypes, i18n, career });
 
     const menu = new Menu({
       config,

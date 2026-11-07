@@ -20,6 +20,11 @@ export class Hud {
     this.flash = 0; // lampeggio dopo un danno
     this.cc = cfg.ctf || {};
     this.toast = null; // { text, color, time } messaggio temporaneo (es. bandiera conquistata)
+    this.rc = cfg.rank || {};
+    this.sc = cfg.score || {};
+    this.pc = cfg.promotion || {};
+    this.popups = []; // "+100 UCCISIONE" sopra il giocatore: { text, color, age }
+    this.promotions = []; // coda delle promozioni da mostrare: { name, insignia, age }
   }
 
   /** Mostra un messaggio temporaneo sotto il pannello dei ticket. */
@@ -27,9 +32,26 @@ export class Hud {
     this.toast = { text, color: color || this.cfg.text || '#fff', time: this.cc.toastTime ?? 2.5 };
   }
 
+  /** Punti guadagnati: testo che sale sopra il giocatore e svanisce. */
+  popup(text, color) {
+    this.popups.push({ text, color: color || this.sc.color || '#ffd36b', age: 0 });
+    const max = this.sc.max ?? 4;
+    while (this.popups.length > max) this.popups.shift();
+  }
+
+  /** Nuovo grado: { name, insignia (canvas) }, mostrato al centro per promotion.time secondi (in coda). */
+  promote(p) {
+    this.promotions.push({ ...p, age: 0 });
+  }
+
   update(dt, player) {
     this.time += dt;
     if (this.toast && (this.toast.time -= dt) <= 0) this.toast = null;
+    const life = this.sc.life ?? 1.4;
+    for (const p of this.popups) p.age += dt;
+    this.popups = this.popups.filter((p) => p.age < life);
+    const pr = this.promotions[0];
+    if (pr && (pr.age += dt) >= (this.pc.time ?? 4)) this.promotions.shift();
     const ratio = player.health / player.maxHealth;
     if (this.trail === null) this.trail = ratio;
     if (this.lastHealth !== null && player.health < this.lastHealth) {
@@ -51,16 +73,24 @@ export class Hud {
   topHeight(display) {
     const u = display.cssPerPixel;
     const m = this.cfg.margin ?? 5;
-    return (m * 2 + (this.cfg.fontSize ?? 7) + (this.wc.ammoFontSize ?? 10) + 16) * u;
+    const weapon = m * 2 + (this.cfg.fontSize ?? 7) + (this.wc.ammoFontSize ?? 10) + 16;
+    // sotto vita e granate c'è il grado (insegna alta fino a rank.maxHeight)
+    const rank = this.rc.show === false ? 0 : this._rankTop() + (this.rc.maxHeight ?? 20) + m;
+    return Math.max(weapon, rank) * u;
   }
 
-  /** mode (opzionale) = { ctf, team, zone, respawnIn } per la modalità Capture The Flag. */
+  /**
+   * mode (opzionale) = { ctf, team, zone, respawnIn } per la modalità Capture The Flag,
+   * + rank = { insignia, name, ratio, score } (grado del giocatore) e screen = { x, y } (giocatore sullo schermo).
+   */
   draw(ui, display, player, mode) {
     const u = display.cssPerPixel;
     ui.save();
     ui.imageSmoothingEnabled = false;
     this._drawHealth(ui, u, player);
     this._drawGrenades(ui, u, player);
+    if (mode?.rank && this.rc.show !== false) this._drawRank(ui, u, mode.rank);
+    if (mode?.screen) this._drawPopups(ui, u, mode.screen);
     this._drawWeapon(ui, u, display.cssWidth, player);
     if (mode?.ctf) {
       const W = Math.floor(display.cssWidth / u);
@@ -69,7 +99,98 @@ export class Hud {
       if (this.toast) this._text(ui, u, this.toast.text, Math.floor(W / 2), y + 2, this.cfg.fontSize ?? 7, this.toast.color, 'center');
       if (mode.respawnIn !== null && mode.respawnIn !== undefined) this._drawRespawn(ui, u, W, Math.floor(display.cssHeight / u), mode.respawnIn);
     }
+    if (this.promotions.length) this._drawPromotion(ui, u, Math.floor(display.cssWidth / u), Math.floor(display.cssHeight / u));
     ui.restore();
+  }
+
+  // ---------- Punteggio e grado ----------
+
+  /** y (pixel di gioco) del blocco del grado: sotto la riga delle granate. */
+  _rankTop() {
+    const m = this.cfg.margin ?? 5;
+    return m + (this.hc.height ?? 5) + 4 + (this.cfg.fontSize ?? 7) + 4;
+  }
+
+  /** In alto a sinistra sotto le granate: insegna, nome breve del grado, barra verso il prossimo grado e punti. */
+  _drawRank(ui, u, r) {
+    const rc = this.rc;
+    const m = this.cfg.margin ?? 5;
+    const size = rc.fontSize ?? 6;
+    const y = this._rankTop();
+    const ins = r.insignia;
+    // insegna con un po' di margine (il canvas ha già il contorno di 1 px)
+    ui.drawImage(ins, m * u - u, y * u - u, ins.width * u, ins.height * u);
+    const x = m + ins.width - 2 + (rc.gap ?? 3);
+    this._text(ui, u, r.name, x, y, size, rc.nameColor || '#ffd36b');
+    const by = y + size + 3;
+    const bw = rc.barWidth ?? 36;
+    const bh = rc.barHeight ?? 2;
+    this._px(ui, u, x - 1, by - 1, bw + 2, bh + 2, this.cfg.shadow || '#000');
+    this._px(ui, u, x, by, bw, bh, rc.barBack || '#1a1a22');
+    const fill = Math.round(bw * r.ratio);
+    if (fill > 0) this._px(ui, u, x, by, fill, bh, rc.barColor || '#ffd36b');
+    this._text(ui, u, this.i18n.t('hud.score', { score: r.score }), x + bw + 4, by + bh / 2 - size / 2, size, this.cfg.text || '#fff');
+  }
+
+  /** "+N EVENTO" sopra il giocatore: il più recente in basso, salgono e svaniscono. */
+  _drawPopups(ui, u, screen) {
+    const sc = this.sc;
+    const life = sc.life ?? 1.4;
+    const size = sc.fontSize ?? 6;
+    const line = size + 2;
+    const n = this.popups.length;
+    this.popups.forEach((p, i) => {
+      const k = p.age / life;
+      const y = Math.round(screen.y - (sc.offset ?? 16) - p.age * (sc.rise ?? 10) - (n - 1 - i) * line);
+      ui.globalAlpha = k < 0.7 ? 1 : Math.max(0, 1 - (k - 0.7) / 0.3);
+      this._text(ui, u, p.text, Math.round(screen.x), y, size, p.color, 'center');
+    });
+    ui.globalAlpha = 1;
+  }
+
+  /** Promozione: fascia al centro con titolo, insegna ingrandita (a scatti di pixel interi) e nome del grado. */
+  _drawPromotion(ui, u, W, H) {
+    const pc = this.pc;
+    const p = this.promotions[0];
+    const T = pc.time ?? 4;
+    const fadeIn = pc.fadeIn ?? 0.25;
+    const fadeOut = pc.fadeOut ?? 0.6;
+    const alpha = Math.min(1, p.age / fadeIn, (T - p.age) / fadeOut);
+    if (alpha <= 0) return;
+    const titleSize = pc.titleSize ?? 8;
+    const nameSize = pc.nameSize ?? 10;
+    const ins = p.insignia;
+    // scala intera più grande possibile entro insigniaHeight (insegne alte = scala minore)
+    const maxScale = Math.max(1, Math.min(pc.scale ?? 3, Math.floor((pc.insigniaHeight ?? 44) / ins.height)));
+    // l'insegna "cresce" di un pixel di scala alla volta, poi resta ferma
+    const scale = Math.min(maxScale, 1 + Math.floor(p.age / (pc.growStep ?? 0.06)));
+    const insH = ins.height * maxScale;
+    const pad = 5;
+    const bandH = pad + titleSize + 4 + insH + 4 + nameSize + pad;
+    const top = Math.round(H * (pc.y ?? 0.22));
+    const cx = Math.floor(W / 2);
+
+    ui.globalAlpha = alpha * (pc.bandAlpha ?? 0.65);
+    this._px(ui, u, 0, top, W, bandH, pc.band || '#05050a');
+    ui.globalAlpha = alpha;
+    const line = pc.color || '#ffd36b';
+    this._px(ui, u, 0, top, W, 1, line);
+    this._px(ui, u, 0, top + bandH - 1, W, 1, line);
+    // lampo iniziale della fascia
+    if (p.age < 0.15) {
+      ui.globalAlpha = alpha * (1 - p.age / 0.15) * 0.5;
+      this._px(ui, u, 0, top, W, bandH, '#ffffff');
+      ui.globalAlpha = alpha;
+    }
+    let y = top + pad;
+    this._text(ui, u, this.i18n.t('hud.promoted'), cx, y, titleSize, line, 'center');
+    y += titleSize + 4;
+    const iw = ins.width * scale;
+    const ih = ins.height * scale;
+    ui.drawImage(ins, (cx - Math.floor(iw / 2)) * u, (y + Math.floor((insH - ih) / 2)) * u, iw * u, ih * u);
+    y += insH + 4;
+    this._text(ui, u, p.name, cx, y, nameSize, this.cfg.text || '#fff', 'center');
+    ui.globalAlpha = 1;
   }
 
   // ---------- Capture The Flag ----------

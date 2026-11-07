@@ -108,6 +108,8 @@
     "grenades": "x{count}",
     "killed": "KILLED IN ACTION",
     "respawnIn": "Respawning in {seconds}",
+    "score": "{score} PTS",
+    "promoted": "PROMOTED",
     "flag": {
       "capturing": "CAPTURING {flag}",
       "securing": "SECURING {flag}",
@@ -118,6 +120,67 @@
       "neutralized": "Flag {flag} neutralized",
       "enemyCaptured": "The enemy captured flag {flag}"
     }
+  },
+  "score": {
+    "events": {
+      "kill": "KILL",
+      "assist": "ASSIST",
+      "defend": "DEFENSE",
+      "capture": "CAPTURE",
+      "neutralize": "NEUTRALIZED",
+      "victory": "VICTORY",
+      "draw": "DRAW",
+      "defeat": "MATCH PLAYED",
+      "debug": "DEBUG"
+    }
+  },
+  "scoreboard": {
+    "you": "You",
+    "position": "#",
+    "name": "Soldier",
+    "kills": "K",
+    "deaths": "D",
+    "assists": "A",
+    "captures": "F",
+    "score": "Pts",
+    "killsTitle": "Kills",
+    "deathsTitle": "Deaths",
+    "assistsTitle": "Assists",
+    "capturesTitle": "Flags captured",
+    "scoreTitle": "Points",
+    "botNames": [
+      "Ricci", "Moretti", "Novak", "Hansen", "Duval", "Okafor", "Tanaka", "Silva",
+      "Brennan", "Volkov", "Lindqvist", "Marino", "Ferraro", "Reyes", "Becker", "O'Hara",
+      "Dubois", "Petrov", "Mendes", "Kaur", "Yilmaz", "Kowalski", "Santoro", "Nakamura"
+    ]
+  },
+  "career": {
+    "xp": "{xp} XP",
+    "progress": "{xp} / {next} XP",
+    "next": "Next: {rank}",
+    "maxRank": "Highest rank reached",
+    "gained": "+{xp} XP this match",
+    "promoted": "Promoted!"
+  },
+  "ranks": {
+    "private": { "name": "Private", "short": "PVT" },
+    "privateFirstClass": { "name": "Private First Class", "short": "PFC" },
+    "corporal": { "name": "Corporal", "short": "CPL" },
+    "corporalMajor": { "name": "Senior Corporal", "short": "SCPL" },
+    "sergeant": { "name": "Sergeant", "short": "SGT" },
+    "staffSergeant": { "name": "Staff Sergeant", "short": "SSG" },
+    "masterSergeant": { "name": "Master Sergeant", "short": "MSG" },
+    "warrantOfficer": { "name": "Warrant Officer", "short": "WO" },
+    "secondLieutenant": { "name": "Second Lieutenant", "short": "2LT" },
+    "lieutenant": { "name": "Lieutenant", "short": "LT" },
+    "captain": { "name": "Captain", "short": "CPT" },
+    "major": { "name": "Major", "short": "MAJ" },
+    "lieutenantColonel": { "name": "Lieutenant Colonel", "short": "LTC" },
+    "colonel": { "name": "Colonel", "short": "COL" },
+    "brigadierGeneral": { "name": "Brigadier General", "short": "BG" },
+    "majorGeneral": { "name": "Major General", "short": "MG" },
+    "lieutenantGeneral": { "name": "Lieutenant General", "short": "LTG" },
+    "general": { "name": "General", "short": "GEN" }
   },
   "weapons": {
     "pistol": "Pistol",

@@ -31,6 +31,10 @@ export class Player {
     this.maxHealth = cfg.maxHealth ?? 100;
     this.health = this.maxHealth;
     this.hurtBy = null; // { unit, x, y } dell'ultimo colpo subito (letto e azzerato dall'IA)
+    // Punteggi: danni ricevuti per soldato (assist), chi ha dato il colpo mortale, record in classifica
+    this.damageLog = new Map();
+    this.killer = null;
+    this.combatant = null;
     // Soldati dell'IA: gittata dei colpi = distanza dal punto mirato (null = regole del giocatore umano)
     this.aimDistance = null;
     this.isBot = false;
@@ -98,20 +102,25 @@ export class Player {
 
   /**
    * Subisce "amount" danni; restituisce i danni effettivamente applicati.
-   * source (opzionale) = { unit, x, y } di chi ha colpito: l'IA lo usa per reagire a chi non vede.
+   * source (opzionale) = { unit, x, y } di chi ha colpito: l'IA lo usa per reagire a chi non vede;
+   * source.by = soldato a cui va il merito se diverso da unit (es. chi ha lanciato la granata).
    */
   damage(amount, source = null) {
     if (this.dead) return 0;
     if (source) this.hurtBy = source;
     const before = this.health;
     this.health = Math.max(0, this.health - Math.max(0, amount));
+    const dealt = before - this.health;
+    const by = source?.by ?? source?.unit ?? null;
+    if (by && by !== this && dealt > 0) this.damageLog.set(by, (this.damageLog.get(by) || 0) + dealt);
     if (this.dead) {
       // morto: la ricarica si interrompe e il corpo cade all'indietro rispetto alla mira
       this.reload?.sound?.stop();
       this.reload = null;
       this.deathAngle = this.angle;
+      this.killer = by;
     }
-    return before - this.health;
+    return dealt;
   }
 
   /** Recupera "amount" punti vita (fino al massimo); restituisce quanto recuperato. Non resuscita. */

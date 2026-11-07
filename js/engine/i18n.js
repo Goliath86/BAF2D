@@ -106,6 +106,17 @@ export class I18n {
     return format(s, params);
   }
 
+  /** Lista di stringhe (array nel file lingua, es. nomi dei bot); [] se la chiave manca. */
+  list(key) {
+    let a = lookup(this.strings, key);
+    if (!Array.isArray(a)) a = lookup(this.fallback, key);
+    if (!Array.isArray(a)) {
+      console.warn(`Missing translation list: "${key}"`);
+      return [];
+    }
+    return a.filter((s) => typeof s === 'string');
+  }
+
   /** Traduce l'errore se ha una chiave nota, altrimenti restituisce il messaggio originale. */
   error(e) {
     return e && e.key && this.has(e.key) ? this.t(e.key, e.params) : e?.message || String(e);

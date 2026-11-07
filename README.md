@@ -25,7 +25,7 @@ Apri `http://localhost:8080/`. Per provarlo su un telefono collegato alla stessa
 | R: ricarica | Pulsante tondo sopra lo stick destro: ricarica |
 | G: lancia una granata (verso il mirino) | Pulsante con la granata, a sinistra dello stick destro |
 | Esc / P: pausa | Pulsante pausa in alto a sinistra (sotto la vita) |
-| F3: overlay di debug · F4: arma successiva · F5/F6: togli/ridai vita · F7: +1 granata · F8: cambia squadra (debug) | |
+| F3: overlay di debug · F4: arma successiva · F5/F6: togli/ridai vita · F7: +1 granata · F8: cambia squadra · F9: +500 punti (debug) | |
 
 I tasti si possono cambiare da **Opzioni → Comandi** (due tasti per azione; salvati nel browser).
 
@@ -63,7 +63,22 @@ Sulla mappa ci sono delle bandiere: un pennone con un drappo che parte da terra.
 - **Rientro**: da morto (resta il corpo con la pozza e l'arma caduta), dopo `death.respawnDelay` secondi si rientra
   alla bandiera della propria squadra (non contesa) più vicina al punto della morte, o alla base se è più vicina.
 - **Fine partita**: la squadra che arriva a 0 ticket perde; schermata di vittoria/sconfitta (pareggio se finiscono
-  insieme). Pulsanti *Rivincita* (anche Invio) e *Menu principale*.
+  insieme) con la **classifica** di tutti i soldati (punti, uccisioni, morti, assist, bandiere; i bot hanno nomi e
+  gradi fittizi) e il grado del giocatore. Pulsanti *Rivincita* (anche Invio) e *Menu principale*.
+
+### Punteggi e gradi
+
+- **Punti** (`scoring.points`): uccisione, assist (almeno `assistDamage` danni a un nemico ucciso da altri), difesa
+  (uccisione nell'area di una bandiera della propria squadra), conquista/neutralizzazione (a chi è nell'area),
+  bonus di fine partita a tutta la squadra (vittoria/pareggio/sconfitta). Le granate danno il merito a chi le lancia.
+  Durante la partita i punti guadagnati compaiono sopra il soldato ("+100 UCCISIONE").
+- **Carriera**: ogni punto del giocatore si somma ai punti di carriera salvati in localStorage (chiave `career`
+  delle impostazioni), anche se si esce a metà partita. Superata la soglia del grado successivo compare la
+  schermata di **promozione** (insegna ingrandita + nome del grado), senza fermare il gioco.
+- **Gradi** (`ranks.list`): 18, da Soldato a Generale, soglie con distacchi crescenti (tarate su partite simulate:
+  ~4000–6000 punti a partita → prima promozione a metà della prima partita, ufficiale dopo ~10 partite, Generale
+  dopo ~80). Insegne disegnate a pixel (galloni, archi, barre, stelle). Il grado resta visibile in piccolo nell'HUD
+  (sotto le granate: insegna, nome breve, barra verso il grado successivo, punti della partita) e nel menu principale.
 
 ### Squadra avversaria (IA)
 
@@ -109,7 +124,7 @@ js/
   settings.js          impostazioni del giocatore in localStorage
   engine/              display, input, touch (joystick), assets, placeholder, tilemap, camera, audio, loader, i18n
   game/                game (loop, proiettili, render), player, weapons (catalogo armi), grenades, hud, effects (decal e particelle),
-                       ctf (bandiere, ticket, rientro)
+                       ctf (bandiere, ticket, rientro), scores (punti della partita), ranks (gradi, insegne, carriera)
 tools/serve.mjs        server statico di sviluppo (solo moduli Node built-in)
 ```
 
@@ -352,6 +367,16 @@ lo stick sinistro due pulsanti a forma di cuore: "−" toglie vita (come F5), "+
   `hud.grenades`: `show`, `icon` (sprite), `iconScale`, `emptyColor`. `hud.ctf`: pannello ticket/bandiere
   (`ticketFontSize`, `barWidth`, `lowTickets` = frazione sotto cui il numero lampeggia, `flagGap`, ...), barra della
   cattura (`zoneBarWidth`, `contestedColor`), messaggi (`toastTime`) e scritta di rientro (`respawnY`, `killedColor`).
+  `hud.rank`: grado in alto a sinistra (`fontSize`, `barWidth`/`barHeight`, colori, `maxHeight` = spazio riservato
+  all'insegna). `hud.score`: punti sopra il soldato (`life`, `rise`, `offset`, `max`). `hud.promotion`: schermata
+  di promozione (`time`, `fadeIn`/`fadeOut`, `y` = frazione dell'altezza, `scale` massima dell'insegna entro
+  `insigniaHeight` px, `growStep`, colori della fascia).
+- `scoring`: `points` (`kill`, `assist`, `defend`, `capture`, `neutralize`, `victory`, `draw`, `defeat`, `debug` = F9),
+  `assistDamage`, `botRankSpread` (gradi dei bot attorno a quello del giocatore), `killSound`, `promotionSound`,
+  `popupColors` (colore del "+N" per tipo). Nomi dei bot in `scoreboard.botNames` dei file lingua.
+- `ranks`: `list` (`{ id, xp, insignia: [{ shape: chevron|rocker|bar|star, count, color }] }`, strati dall'alto in
+  basso; nomi in `ranks.<id>.name/short` dei file lingua), `colors` (`{ nome: [chiaro, scuro] }`), `outline`.
+- `menu.scoreboardColumn`: oltre questo numero di soldati la classifica va su due colonne.
 - `combat`: `hitImpact` (tipo di impatto in `effects.json` quando un colpo prende un soldato), `hitPadding` (px in
   più attorno alla hitbox), `endHitReach` (a fine corsa il colpo prende anche un soldato fino a questi px oltre),
   `friendlyFire`.

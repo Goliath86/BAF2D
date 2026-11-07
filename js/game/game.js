@@ -8,6 +8,7 @@ import { Grenades } from './grenades.js';
 import { Ctf } from './ctf.js';
 import { Nav } from './nav.js';
 import { BotBrain, Squad } from './ai.js';
+import { Scores } from './scores.js';
 
 const STEP = 1 / 60; // update a timestep fisso
 const BULLET_SUBSTEP = 2; // px: passo massimo del controllo collisioni dei proiettili
@@ -22,7 +23,7 @@ function rand(v, def = 0) {
 
 export class Game {
   /** La partita vera e propria si prepara con setup() (mappa, squadra, numero di bot). */
-  constructor({ config, assets, audio, display, input, effectsCfg, weapons, grenadeTypes, i18n }) {
+  constructor({ config, assets, audio, display, input, effectsCfg, weapons, grenadeTypes, i18n, career }) {
     this.config = config;
     this.i18n = i18n; // per i testi di HUD/menu: this.i18n.t('chiave')
     this.assets = assets;
@@ -72,6 +73,15 @@ export class Game {
     this.playerBrain = null; // IA del giocatore nella partita dimostrativa
     this.time = 0; // secondi di gioco (memoria dell'IA)
 
+    // Punteggi della partita (game.json -> scoring) e carriera del giocatore (gradi, ranks.js)
+    this.scoringCfg = config.scoring || {};
+    this.scores = new Scores(this.scoringCfg);
+    this.scores.onAward = (rec, type, n) => this._onAward(rec, type, n);
+    this.career = career;
+    this.ranks = career.ranks;
+    this.playerRecord = null;
+    this.matchStartXp = 0;
+
     this._fps = { value: 0, frames: 0, time: 0 };
   }
 
@@ -99,6 +109,7 @@ export class Game {
     this.squads = {};
     for (const t of this.ctf.teamIds) this.squads[t] = new Squad(t);
     this.playerBrain = null;
+    this._resetScores();
     const base = this.ctf.spawnPoint(this.playerTeam, null);
     this._spawnPlayer(base.x, base.y);
     this.hud = new Hud(this.config.hud, this.i18n, this.assets);
@@ -118,8 +129,68 @@ export class Game {
     this.camera.snap(this.player.x - this.viewOffsetX, this.player.y, 0, display.width, display.height, this.map);
   }
 
+  /** Classifica vuota: record del giocatore (grado della carriera) e nomi fittizi per i bot. */
+  _resetScores() {
+    this.scores.reset();
+    this.matchStartXp = this.career.xp;
+    const names = [...this.i18n.list('scoreboard.botNames')];
+    for (let i = names.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [names[i], names[j]] = [names[j], names[i]];
+    }
+    this._botNames = names;
+    this._botNameIndex = 0;
+    this.playerRecord = this.scores.add({
+      name: this.attract ? this._nextBotName() : this.i18n.t('scoreboard.you'),
+      team: this.playerTeam,
+      human: !this.attract,
+      rank: this.career.rankIndex,
+    });
+  }
+
+  _nextBotName() {
+    const i = this._botNameIndex++;
+    const list = this._botNames;
+    if (!list.length) return `Bot ${i + 1}`;
+    // lista finita: si riparte con un numero (es. "Ricci 2")
+    const round = Math.floor(i / list.length);
+    return round ? `${list[i % list.length]} ${round + 1}` : list[i];
+  }
+
+  /** Grado casuale di un bot: attorno a quello del giocatore (scoring.botRankSpread). */
+  _botRank() {
+    const s = this.scoringCfg.botRankSpread ?? 2;
+    const r = this.career.rankIndex + Math.round((Math.random() * 2 - 1) * s);
+    return Math.max(0, Math.min(this.ranks.count - 1, r));
+  }
+
+  /** Punti assegnati: per il giocatore umano messaggio "+N", suono e carriera (con eventuali promozioni). */
+  _onAward(rec, type, n) {
+    if (rec !== this.playerRecord || this.attract) return;
+    const c = this.scoringCfg;
+    this.hud.popup(`+${n} ${this.i18n.t(`score.events.${type}`)}`, c.popupColors?.[type]);
+    if (type === 'kill' && c.killSound) this.audio.play(c.killSound);
+    for (const i of this.career.add(n)) {
+      rec.rank = i;
+      const rank = this.ranks.get(i);
+      this.hud.promote({ name: this.i18n.t(`ranks.${rank.id}.name`), insignia: this.ranks.insignia(i) });
+      if (c.promotionSound) this.audio.play(c.promotionSound);
+    }
+  }
+
+  /** Riepilogo per la schermata di fine partita (Menu). */
+  get matchSummary() {
+    return {
+      ranking: this.scores.ranking(),
+      player: this.playerRecord,
+      xpBefore: this.matchStartXp,
+      xpAfter: this.career.xp,
+    };
+  }
+
   _spawnPlayer(x, y) {
     this.player = new Player(this.config.player, x, y, this.assets, this.weapons, this.grenadeTypes, this.playerTeam);
+    this.player.combatant = this.playerRecord;
     if (!this.attract) return;
     // partita dimostrativa: il giocatore è guidato da un BotBrain come gli altri soldati
     this.player.isBot = true;
@@ -150,6 +221,7 @@ export class Game {
       }
       for (let i = 0; i < count; i++) {
         const slot = { team, weapon: weapons[i % weapons.length] || this.config.player.weapon, unit: null, brain: null, respawn: null };
+        slot.record = this.scores.add({ name: this._nextBotName(), team, rank: this._botRank() });
         this.bots.push(slot);
         this._spawnBot(slot, null);
       }
@@ -164,6 +236,7 @@ export class Game {
     const pos = this.ctf.spawnPoint(slot.team, near, hw, hh, { preferFlags: true, spread: this.botsCfg.baseSpread || [6, 22] });
     const unit = new Player(cfg, pos.x, pos.y, this.assets, this.weapons, this.grenadeTypes, slot.team);
     unit.isBot = true;
+    unit.combatant = slot.record;
     // guarda verso il centro della mappa
     unit.angle = Math.atan2(this.map.pixelHeight / 2 - pos.y, this.map.pixelWidth / 2 - pos.x);
     unit.legsAngle = unit.angle;
@@ -184,7 +257,8 @@ export class Game {
         continue;
       }
       if (!b.respawn) {
-        // appena morto: cadavere, ticket in meno, conto alla rovescia
+        // appena morto: punti, cadavere, ticket in meno, conto alla rovescia
+        this.scores.onDeath(b.unit, this.ctf);
         this._addCorpse(b.unit);
         this.ctf.onDeath(b.team);
         b.respawn = { time: 0, delay: this.botsCfg.respawnDelay ?? this.deathCfg.respawnDelay ?? 5, x: b.unit.x, y: b.unit.y };
@@ -277,6 +351,7 @@ export class Game {
     if (input.wasPressed('debugHeal')) this.player.heal(this.config.debugDamage ?? 10);
     if (input.wasPressed('debugGrenade')) this.player.addGrenades(1);
     if (input.wasPressed('debugTeam')) this._cycleTeam();
+    if (input.wasPressed('debugScore')) this.scores.award(this.playerRecord, 'debug');
 
     this.time += dt;
     if (!this.ended) {
@@ -294,7 +369,7 @@ export class Game {
     for (const c of this.corpses) c.time += dt;
     this.hud.update(dt, this.player);
     this._updateBullets(dt);
-    this.grenades.update(dt, this.map, (g) => this.explode(g.def, g.x, g.y));
+    this.grenades.update(dt, this.map, (g) => this.explode(g.def, g.x, g.y, g.owner));
     this.effects.update(dt, this.map);
     this.shake.time = Math.max(0, this.shake.time - dt);
 
@@ -329,11 +404,11 @@ export class Game {
       x = player.x;
       y = player.y;
     }
-    this.grenades.spawn(def, x, y, player.angle, dist, player.vx, player.vy);
+    this.grenades.spawn(def, x, y, player.angle, dist, player.vx, player.vy, player);
   }
 
-  /** Esplosione della granata "def" in (x, y): effetti, scossa della camera, danni. */
-  explode(def, x, y) {
+  /** Esplosione della granata "def" in (x, y) lanciata da "owner": effetti, scossa della camera, danni. */
+  explode(def, x, y, owner = null) {
     if (def.explosion) this.effects.explosion(def.explosion, x, y, this.map);
     if (def.shake) {
       this.shake.amount = def.shake.amount ?? 3;
@@ -348,7 +423,8 @@ export class Game {
       const d = Math.hypot(p.x - x, p.y - y);
       if (p.dead || d >= radius || !this._lineOfSight(x, y, p.x, p.y)) continue;
       const k = 1 - (d / radius) * (1 - (def.minDamageFactor ?? 0.2));
-      p.damage(Math.round((def.damage ?? 80) * k), { unit: null, x, y });
+      // unit: null = l'IA non "vede" chi l'ha lanciata; by = a chi vanno uccisione e assist
+      p.damage(Math.round((def.damage ?? 80) * k), { unit: null, x, y, by: owner });
     }
   }
 
@@ -367,6 +443,7 @@ export class Game {
   /** Il giocatore è appena morto: cadavere a terra, ticket in meno, conto alla rovescia per il rientro. */
   _onPlayerDeath() {
     const p = this.player;
+    this.scores.onDeath(p, this.ctf);
     this._addCorpse(p);
     this.ctf.onDeath(p.team);
     this.respawn = { time: 0, delay: this.deathCfg.respawnDelay ?? 5, x: p.x, y: p.y };
@@ -449,6 +526,7 @@ export class Game {
     const c = this.config.ctf || {};
     const mine = e.team === this.playerTeam;
     const flag = e.flag.id;
+    this.scores.onFlagEvent(e);
     let key;
     let sound;
     let team;
@@ -470,6 +548,7 @@ export class Game {
     const outcome = w === null ? 'draw' : w === this.playerTeam ? 'victory' : 'defeat';
     this.ended = { time: 0, shown: false, outcome };
     this.respawn = null;
+    this.scores.endMatch(w);
   }
 
   _updateMatchEnd(dt) {
@@ -493,6 +572,7 @@ export class Game {
     if (!ids.length) return;
     this.playerTeam = ids[(ids.indexOf(this.playerTeam) + 1) % ids.length];
     this.player.setTeam(this.playerTeam);
+    this.playerRecord.team = this.playerTeam;
   }
 
   // ---------- Proiettili ----------
@@ -744,11 +824,19 @@ export class Game {
     }
     if (live) {
       const r = this.respawn;
+      const pr = this.ranks.progress(this.career.xp);
       this.hud.draw(ui, display, this.player, {
         ctf: this.ctf,
         team: this.playerTeam,
         zone: this.ended ? null : this.ctf.zoneStatus(this.player),
         respawnIn: r ? Math.max(0, r.delay - r.time) : null,
+        rank: {
+          insignia: this.ranks.insignia(pr.index),
+          name: this.i18n.t(`ranks.${pr.rank.id}.short`),
+          ratio: pr.ratio,
+          score: this.playerRecord.score,
+        },
+        screen: { x: this.player.x - cx, y: this.player.y - cy }, // posizione del giocatore sullo schermo (px di gioco)
       });
     }
     if (this.debug) this._drawDebug(ui);
@@ -802,6 +890,7 @@ export class Game {
       `grenades ${player.grenades} (G: throw, F7: +1) live ${this.grenades.list.length} blasts ${effects.blasts.length}`,
       `team ${this.playerTeam} (F8: switch) tickets ${this.ctf.teamIds.map((t) => `${t} ${this.ctf.tickets[t]}`).join(' / ')}`,
       `flags ${this.ctf.flags.map((f) => `${f.id}:${f.owner || '-'} ${Math.round(f.progress * 100)}%`).join('  ')}`,
+      `score ${this.playerRecord.score} career xp ${this.career.xp} rank ${this.career.rankIndex} (F9: +${this.scoringCfg.points?.debug ?? 0})`,
       `bots ${this.bots.map((b) => (b.unit.dead ? 'x' : `${b.brain.mode === 'combat' ? `${b.brain.role}/${b.brain.phase}` : 'obj'}`)).join(' ')}`,
       `bullets ${this.bullets.length} decals ${effects.decals.length} particles ${effects.particles.length} casings ${effects.casings.length} flashes ${effects.flashes.length}`,
     ];

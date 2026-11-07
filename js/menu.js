@@ -71,6 +71,7 @@ export class Menu {
     this.mode = 'menu';
     this.stack = [];
     this._open('main');
+    this._renderCareer($('menu-career'), game.career.xp);
     game.setup({ level: lvl.data, team: a.team, allies: a.allies ?? 3, enemies: a.enemies ?? 4, attract: true });
     game.running = true;
     this._updatePauseButton();
@@ -126,6 +127,9 @@ export class Menu {
     const ov = $('overlay-matchend');
     $('matchend-title').textContent = this.i18n.t(`matchEnd.${outcome}`);
     $('matchend-subtitle').textContent = this.i18n.t(`matchEnd.${outcome}Subtitle`);
+    const summary = this.game.matchSummary;
+    this._renderScoreboard($('scoreboard'), summary);
+    this._renderCareer($('matchend-career'), summary.xpAfter, summary.xpBefore);
     ov.dataset.outcome = outcome;
     document.body.classList.add('match-over', `match-${outcome}`);
     ov.classList.remove('hidden');
@@ -135,6 +139,80 @@ export class Menu {
     document.body.classList.remove('match-over', 'match-victory', 'match-defeat', 'match-draw');
     $('overlay-matchend').classList.add('hidden');
     if (this.mode === 'ended') this._play();
+  }
+
+  // ---------- Punteggi e carriera ----------
+
+  /** Insegna del grado "index" come canvas DOM ingrandito di "scale" (pixel nitidi). */
+  _insignia(index, scale) {
+    const src = this.game.ranks.insignia(index);
+    const c = el('canvas', 'insignia');
+    c.width = src.width;
+    c.height = src.height;
+    c.getContext('2d').drawImage(src, 0, 0);
+    c.style.width = `${src.width * scale}px`;
+    c.style.height = `${src.height * scale}px`;
+    return c;
+  }
+
+  /**
+   * Scheda del grado: insegna, nome, barra verso il prossimo grado e punti di carriera.
+   * xpBefore (opzionale, fine partita) = punti a inizio partita: mostra i punti guadagnati e "Promosso!".
+   */
+  _renderCareer(box, xp, xpBefore = null) {
+    const { i18n } = this;
+    const ranks = this.game.ranks;
+    const p = ranks.progress(xp);
+    box.textContent = '';
+    box.append(this._insignia(p.index, box.classList.contains('compact') ? 2 : 3));
+    const info = el('div', 'career-info');
+    const name = el('div', 'career-rank', i18n.t(`ranks.${p.rank.id}.name`));
+    if (xpBefore !== null && p.index > ranks.indexFor(xpBefore)) name.append(el('span', 'career-badge', i18n.t('career.promoted')));
+    const bar = el('div', 'career-bar');
+    const fill = el('span');
+    fill.style.width = `${Math.round(p.ratio * 100)}%`;
+    bar.append(fill);
+    const parts = [];
+    if (xpBefore !== null) parts.push(i18n.t('career.gained', { xp: xp - xpBefore }));
+    parts.push(p.next ? i18n.t('career.progress', { xp, next: p.next.xp }) : i18n.t('career.xp', { xp }));
+    parts.push(p.next ? i18n.t('career.next', { rank: i18n.t(`ranks.${p.next.id}.name`) }) : i18n.t('career.maxRank'));
+    info.append(name, bar, el('div', 'career-xp', parts.join(' · ')));
+    box.append(info);
+  }
+
+  /** Classifica di fine partita: tutti i soldati per punti, in due colonne se sono tanti. */
+  _renderScoreboard(box, summary) {
+    const { i18n } = this;
+    const teams = this.config.teams || {};
+    const list = summary.ranking;
+    box.textContent = '';
+    const cols = list.length > (this.cfg.scoreboardColumn ?? 9) ? 2 : 1;
+    const per = Math.ceil(list.length / cols);
+    const stats = ['kills', 'deaths', 'assists', 'captures', 'score'];
+    for (let c = 0; c < cols; c++) {
+      const col = el('div', 'score-col');
+      const head = el('div', 'score-row score-head');
+      head.append(el('span', 'score-pos', i18n.t('scoreboard.position')), el('span'), el('span', 'score-name', i18n.t('scoreboard.name')));
+      for (const s of stats) {
+        const h = el('span', `score-stat score-${s}`, i18n.t(`scoreboard.${s}`));
+        h.title = i18n.t(`scoreboard.${s}Title`);
+        head.append(h);
+      }
+      col.append(head);
+      list.slice(c * per, (c + 1) * per).forEach((rec, i) => {
+        const pos = c * per + i + 1;
+        const row = el('div', 'score-row');
+        if (rec === summary.player) row.classList.add('me');
+        if (pos === 1) row.classList.add('first');
+        row.style.setProperty('--team', teams[rec.team]?.color || '#888');
+        const name = el('span', 'score-name', rec.name);
+        name.title = `${i18n.t(`ranks.${this.game.ranks.get(rec.rank).id}.name`)} ${rec.name}`;
+        row.append(el('span', 'score-pos', String(pos)), this._insignia(rec.rank, 1), name);
+        for (const s of stats) row.append(el('span', `score-stat score-${s}`, String(rec[s])));
+        col.append(row);
+      });
+      box.append(col);
+    }
   }
 
   // ---------- Schermate ----------
@@ -481,6 +559,7 @@ export class Menu {
     }
     this._renderChoice();
     this._renderLang();
+    this._renderCareer($('menu-career'), this.game.career.xp);
     if (this.stack[this.stack.length - 1] === 'options') this._renderKeys();
   }
 

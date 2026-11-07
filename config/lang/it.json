@@ -108,6 +108,8 @@
     "grenades": "x{count}",
     "killed": "SEI STATO UCCISO",
     "respawnIn": "Rientro tra {seconds}",
+    "score": "{score} PT",
+    "promoted": "PROMOZIONE",
     "flag": {
       "capturing": "CONQUISTA {flag}",
       "securing": "RIPRISTINO {flag}",
@@ -118,6 +120,67 @@
       "neutralized": "Bandiera {flag} neutralizzata",
       "enemyCaptured": "Il nemico ha conquistato la bandiera {flag}"
     }
+  },
+  "score": {
+    "events": {
+      "kill": "UCCISIONE",
+      "assist": "ASSIST",
+      "defend": "DIFESA",
+      "capture": "CONQUISTA",
+      "neutralize": "NEUTRALIZZATA",
+      "victory": "VITTORIA",
+      "draw": "PAREGGIO",
+      "defeat": "PARTITA GIOCATA",
+      "debug": "DEBUG"
+    }
+  },
+  "scoreboard": {
+    "you": "Tu",
+    "position": "#",
+    "name": "Soldato",
+    "kills": "U",
+    "deaths": "M",
+    "assists": "A",
+    "captures": "B",
+    "score": "Punti",
+    "killsTitle": "Uccisioni",
+    "deathsTitle": "Morti",
+    "assistsTitle": "Assist",
+    "capturesTitle": "Bandiere conquistate",
+    "scoreTitle": "Punti",
+    "botNames": [
+      "Ricci", "Moretti", "Novak", "Hansen", "Duval", "Okafor", "Tanaka", "Silva",
+      "Brennan", "Volkov", "Lindqvist", "Marino", "Ferraro", "Reyes", "Becker", "O'Hara",
+      "Dubois", "Petrov", "Mendes", "Kaur", "Yilmaz", "Kowalski", "Santoro", "Nakamura"
+    ]
+  },
+  "career": {
+    "xp": "{xp} PE",
+    "progress": "{xp} / {next} PE",
+    "next": "Prossimo: {rank}",
+    "maxRank": "Grado massimo raggiunto",
+    "gained": "+{xp} PE in questa partita",
+    "promoted": "Promosso!"
+  },
+  "ranks": {
+    "private": { "name": "Soldato", "short": "Sol." },
+    "privateFirstClass": { "name": "Soldato scelto", "short": "Sol. sc." },
+    "corporal": { "name": "Caporale", "short": "C.le" },
+    "corporalMajor": { "name": "Caporal maggiore", "short": "C.le magg." },
+    "sergeant": { "name": "Sergente", "short": "Serg." },
+    "staffSergeant": { "name": "Sergente maggiore", "short": "Serg. m." },
+    "masterSergeant": { "name": "Sergente maggiore capo", "short": "Serg. m. c." },
+    "warrantOfficer": { "name": "Maresciallo", "short": "Mar." },
+    "secondLieutenant": { "name": "Sottotenente", "short": "S.ten." },
+    "lieutenant": { "name": "Tenente", "short": "Ten." },
+    "captain": { "name": "Capitano", "short": "Cap." },
+    "major": { "name": "Maggiore", "short": "Magg." },
+    "lieutenantColonel": { "name": "Tenente colonnello", "short": "Ten. col." },
+    "colonel": { "name": "Colonnello", "short": "Col." },
+    "brigadierGeneral": { "name": "Generale di brigata", "short": "Gen. B." },
+    "majorGeneral": { "name": "Generale di divisione", "short": "Gen. D." },
+    "lieutenantGeneral": { "name": "Generale di corpo d'armata", "short": "Gen. C.A." },
+    "general": { "name": "Generale", "short": "Gen." }
   },
   "weapons": {
     "pistol": "Pistola",

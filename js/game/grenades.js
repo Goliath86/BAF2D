@@ -52,9 +52,9 @@ export class Grenades {
 
   /**
    * Lancia una granata "def" da (x, y) verso "angle" in modo che tocchi terra la prima volta
-   * a "dist" px; (vx, vy) = velocità del lanciatore (ereditata in parte, inherit).
+   * a "dist" px; (vx, vy) = velocità del lanciatore (ereditata in parte, inherit); owner = chi l'ha lanciata.
    */
-  spawn(def, x, y, angle, dist, vx = 0, vy = 0) {
+  spawn(def, x, y, angle, dist, vx = 0, vy = 0, owner = null) {
     const sp = dist / Grenades.flightTime(def);
     const inherit = def.inherit ?? 0.4;
     const sprite = this.assets.sprite(def.sprite);
@@ -71,6 +71,7 @@ export class Grenades {
       spin: range(def.spinDeg, 720) * DEG * (Math.random() < 0.5 ? -1 : 1),
       fuse: range(def.fuse, 2),
       time: 0,
+      owner,
     });
     if (def.throwSound) this.audio.play(def.throwSound, { x, y });
   }
