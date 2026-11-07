@@ -1,6 +1,6 @@
 {
   "title": "BAF2D",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "assets": "config/assets.json",
   "effects": "config/effects.json",
   "weapons": "config/weapons.json",
