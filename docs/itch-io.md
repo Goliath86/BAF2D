@@ -27,57 +27,77 @@ Top-down pixel-art capture the flag: squad AI, jeeps, rocket tanks and a career 
 
 ## Description
 
-BAF2D is a fast top-down shooter in crisp pixel art. Two teams, a handful of flags and a pool of tickets: capture and
-hold the flags, and make every enemy death count. The team that runs out of tickets loses.
+In the itch.io editor, switch the description field to **HTML** (the `<>` button) and paste the whole block below.
 
-You fight alongside (and against) AI soldiers that take cover, peek around corners, flank in pairs, throw grenades,
-pick up better weapons and jump into vehicles. Every match feeds your career: score points, climb 18 ranks from
-Private to General, and see where you ended up on the end-of-match leaderboard.
+```html
+<h2>Capture the flag. Hold the line. Bring a rocket launcher.</h2>
 
-### Features
+<p><strong>BAF2D</strong> is a fast top-down shooter in crisp pixel art. Two teams, a handful of flags and a pool of
+tickets: capture and hold the flags, and make every enemy death count. <strong>The team that runs out of tickets
+loses.</strong></p>
 
-- **Capture the Flag with tickets.** Raise your flag in contested zones; flags you hold drain the enemy's tickets,
-  and every death costs your team one. Pick the ticket count before each match.
-- **Three maps.** A compact test arena, the symmetric *Crossroads*, and the large *Desert Village*: a windswept map
-  with a ruined village, an oasis with palms, dry-stone walls and wide dirt roads built for vehicles. Sand blows
-  across the ground, palms sway in the gusts.
-- **Vehicles.** Drive a fast **jeep** with a mounted machine gun or a heavy **rocket tank**. Armour shrugs off small
-  arms fire: bring a rocket launcher or grenades. Ramming enemies works too.
-- **Weapons.** Assault rifle, shotgun, pistol, frag grenades, and a shoulder-fired **rocket launcher** you carry next to
-  your main gun. Fallen soldiers drop their weapons and grenades; map pickups respawn.
-- **Squad AI.** Bots capture objectives, use cover, suppress, flank, dodge grenades, switch to rockets against armour
-  and drive vehicles to the flags. Up to 8 vs 8.
-- **Career and ranks.** Points for kills, assists, defending, capturing and destroying vehicles. Your rank is saved in
-  the browser and grows from match to match, with a promotion screen when you rank up.
-- **Desktop and mobile.** Keyboard and mouse, or twin virtual sticks on touch screens (landscape).
-- **English and Italian.**
+<p>You fight alongside (and against) AI soldiers that take cover, peek around corners, flank in pairs, throw grenades,
+pick up better weapons and jump into vehicles. Every match feeds your career: score points, climb
+<strong>18 ranks from Private to General</strong>, and see where you ended up on the end-of-match leaderboard.</p>
 
-### Controls
+<hr>
 
-| Action | Keyboard & mouse | Touch (landscape) |
-|---|---|---|
-| Move | WASD / arrow keys | Left stick |
-| Aim | Mouse | Right stick |
-| Fire | Left click / Space | Push the right stick past the dashed ring |
-| Reload | R | Reload button |
-| Throw grenade | G | Grenade button |
-| Pick up weapon / get in or out of a vehicle | E (or F) | Button that appears when available |
-| Switch weapon (rocket launcher) | Q | Swap button (with two weapons) |
-| Pause | Esc / P | Pause button |
+<h3>Features</h3>
+<ul>
+  <li><strong>Capture the Flag with tickets.</strong> Raise your flag in contested zones: flags you hold drain the
+    enemy's tickets, and every death costs your team one. Pick the ticket count before each match.</li>
+  <li><strong>Three maps.</strong> A compact test arena, the symmetric <em>Crossroads</em>, and the large
+    <em>Desert Village</em>: a windswept map with a ruined village, an oasis with palms, dry-stone walls and wide
+    dirt roads built for vehicles. Sand blows across the ground, palms sway in the gusts.</li>
+  <li><strong>Vehicles.</strong> Drive a fast <strong>jeep</strong> with a mounted machine gun or a heavy
+    <strong>rocket tank</strong>. Armour shrugs off small arms fire: bring a rocket launcher or grenades. Ramming
+    enemies works too.</li>
+  <li><strong>Weapons.</strong> Assault rifle, shotgun, pistol, frag grenades, and a shoulder-fired
+    <strong>rocket launcher</strong> you carry next to your main gun. Fallen soldiers drop their weapons and grenades;
+    map pickups respawn.</li>
+  <li><strong>Squad AI.</strong> Bots capture objectives, use cover, suppress, flank, dodge grenades, switch to rockets
+    against armour and drive vehicles to the flags. Up to 8 vs 8.</li>
+  <li><strong>Career and ranks.</strong> Points for kills, assists, defending, capturing and destroying vehicles. Your
+    rank is saved in the browser and grows from match to match, with a promotion screen when you rank up.</li>
+  <li><strong>Desktop and mobile.</strong> Keyboard and mouse, or twin virtual sticks on touch screens
+    (landscape).</li>
+  <li><strong>English and Italian.</strong></li>
+</ul>
 
-In a vehicle: move to drive, aim to turn the turret, fire for the machine gun, **G** for rockets, **R** to reload.
-Keys can be remapped in Options.
+<hr>
 
-### Notes
+<h3>Controls</h3>
+<table>
+  <thead>
+    <tr><th>Action</th><th>Keyboard &amp; mouse</th><th>Touch (landscape)</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Move</td><td>WASD / arrow keys</td><td>Left stick</td></tr>
+    <tr><td>Aim</td><td>Mouse</td><td>Right stick</td></tr>
+    <tr><td>Fire</td><td>Left click / Space</td><td>Push the right stick past the dashed ring</td></tr>
+    <tr><td>Reload</td><td>R</td><td>Reload button</td></tr>
+    <tr><td>Throw grenade</td><td>G</td><td>Grenade button</td></tr>
+    <tr><td>Pick up weapon / get in or out of a vehicle</td><td>E (or F)</td><td>Button that appears when available</td></tr>
+    <tr><td>Switch weapon (rocket launcher)</td><td>Q</td><td>Swap button (with two weapons)</td></tr>
+    <tr><td>Pause</td><td>Esc / P</td><td>Pause button</td></tr>
+  </tbody>
+</table>
+<p><em>In a vehicle:</em> move to drive, aim to turn the turret, fire for the machine gun, <strong>G</strong> for
+rockets, <strong>R</strong> to reload. Keys can be remapped in Options.</p>
 
-- Progress (rank, settings) is stored in your browser's local storage.
-- On phones, play in landscape; the game asks for fullscreen on the first tap.
-- All graphics and sounds are generated in code: no external assets, about 0.5 MB to download.
+<hr>
 
-### Credits
+<h3>Notes</h3>
+<ul>
+  <li>Progress (rank, settings) is stored in your browser's local storage.</li>
+  <li>On phones, play in landscape: the game asks for fullscreen on the first tap.</li>
+  <li>All graphics and sounds are generated in code: no external assets, about 0.5&nbsp;MB to download.</li>
+</ul>
 
-Made with plain JavaScript and HTML5 Canvas, no engine or libraries.
-Source code licensed under the GNU GPL v3.
+<h3>Credits</h3>
+<p>Made with plain JavaScript and HTML5 Canvas, no engine or libraries.<br>
+Source code licensed under the GNU GPL v3.</p>
+```
 
 ## Details (Metadata)
 
