@@ -21,6 +21,9 @@
 // 5. armi a terra: ogni tanto cerca un'arma che valuta meglio della sua (weaponValues + preferenza personale
 //    casuale weaponBias) entro weaponSearch px (weaponCombatReach se sta combattendo) e va a prenderla;
 //    arrivato imposta pickupNow e Game fa lo scambio (Game._updatePickups).
+// 6. mezzi nemici (Squad.armor): chi non ha l'anticarro li segnala alla squadra; se i bot con un lanciarazzi
+//    sono pochi, i più vicini a un lanciarazzi a terra vanno a prenderlo ovunque sia (launcherHunt); chi ce
+//    l'ha va a caccia del mezzo avvistato; i gruppi senza anticarro evitano le bandiere presidiate da un mezzo.
 
 const DEG = Math.PI / 180;
 
@@ -72,7 +75,71 @@ export class Squad {
 
   /** Dimentica i nemici morti o non visti da più di "memory" secondi. */
   update(time, memory) {
-    for (const [e, c] of this.contacts) if (e.dead || time - c.time > memory) this.contacts.delete(e);
+    for (const [e, c] of this.contacts) if (e.dead || e.destroyed || time - c.time > memory) this.contacts.delete(e);
+  }
+
+  // ---------- Piano anticarro ----------
+
+  /**
+   * Con mezzi nemici in campo (ogni antiArmor.interval s): se i bot con un'arma anticarro sono meno di
+   * perVehicle per mezzo, manda i più vicini senza anticarro a prendere un lanciarazzi a terra ovunque sia
+   * (brain.launcherHunt, evitando quelli vicini al mezzo); chi ha già l'anticarro ed è libero va a caccia
+   * del mezzo avvistato più vicino (posizione dalla lavagna di squadra, entro seekRange).
+   */
+  armor(game, cfg, dt) {
+    const ac = cfg.antiArmor || {};
+    this.armorTimer = (this.armorTimer ?? 0) - dt;
+    if (this.armorTimer > 0) return;
+    this.armorTimer = ac.interval ?? 1;
+    const team = this.team;
+    const threats = game.vehicles.filter((v) => !v.destroyed && v.occupied && v.team !== team);
+    const active = this.brains.filter((b) => !b.unit.dead && !b.unit.vehicle);
+    for (const b of active) {
+      if (b.launcherHunt && (!threats.length || b.antiVehicle || !game.pickups?.list.includes(b.launcherHunt))) b.launcherHunt = null;
+    }
+    if (!threats.length) return;
+
+    // 1. a caccia del mezzo: chi ha l'anticarro, è libero e conosce la posizione di un mezzo
+    const seek = ac.seekRange ?? 900;
+    for (const b of active) {
+      if (!b.antiVehicle || !b.available(game)) continue;
+      let best = null;
+      let bestD = seek;
+      for (const v of threats) {
+        const k = this.contact(v);
+        if (!k) continue;
+        const d = dist(k, b.unit);
+        if (d < bestD) { bestD = d; best = v; }
+      }
+      if (best) b.seekVehicle(best, this.contact(best));
+    }
+
+    // 2. a prendere un lanciarazzi
+    const carriers = active.filter((b) => b.antiVehicle).length;
+    const hunters = active.filter((b) => b.launcherHunt).length;
+    let need = Math.ceil(threats.length * (ac.perVehicle ?? 2)) - carriers - hunters;
+    if (need <= 0 || !game.pickups) return;
+    const claimed = new Set(this.brains.map((b) => b.launcherHunt || b.weaponGoal).filter(Boolean));
+    const launchers = game.pickups.list.filter((it) => it.kind === 'weapon' && !claimed.has(it) && game.weapons.get(it.weapon)?.antiVehicle);
+    const free = active.filter((b) => !b.antiVehicle && !b.launcherHunt && !b._capturing(game));
+    const near = ac.threatRadius ?? 120;
+    while (need > 0 && launchers.length && free.length) {
+      let bb = -1;
+      let bl = -1;
+      let bs = Infinity;
+      free.forEach((b, i) => {
+        launchers.forEach((it, j) => {
+          let s = dist(it, b.unit);
+          // lanciarazzi vicino a un mezzo nemico: meglio un altro
+          if (threats.some((v) => dist(v, it) < near)) s += ac.threatPenalty ?? 400;
+          if (s < bs) { bs = s; bb = i; bl = j; }
+        });
+      });
+      const b = free.splice(bb, 1)[0];
+      const it = launchers.splice(bl, 1)[0];
+      b.huntLauncher(it, ac.huntTime ?? 30);
+      need--;
+    }
   }
 
   // ---------- Piano di squadra: gruppi (coppie/terzetti) distribuiti sulle bandiere ----------
@@ -152,9 +219,13 @@ export class Squad {
     const capture = flags.filter(needs);
     const defend = flags.filter((f) => !needs(f));
     const load = new Map();
+    // bandiere presidiate da un mezzo nemico avvistato: i gruppi senza anticarro ci vanno solo se non c'è altro
+    const armorNear = (f) => [...this.contacts.keys()].some((e) => e.isVehicle && !e.destroyed && e.occupied
+      && dist(this.contacts.get(e), f) < f.radius + (cfg.antiArmor?.flagRadius ?? 60));
     const cost = (g, f, c) => {
       if (g.bias[f.id] === undefined) g.bias[f.id] = Math.random() * (cfg.flagBias ?? 60);
       let s = dist(c, f) + g.bias[f.id];
+      if (!g.members.some((m) => m.antiVehicle) && armorNear(f)) s += cfg.antiArmor?.flagAvoid ?? 600;
       if (!needs(f)) s += (cfg.defendCost ?? 350) - (f.contested ? cfg.contestedBonus ?? 500 : 0);
       if (g.flag === f) s -= cfg.groupStickiness ?? 150;
       return s + (load.get(f) || 0) * (cfg.spreadPenalty ?? 800);
@@ -252,6 +323,7 @@ export class BotBrain {
     this.weaponTimer = rand(cfg.weaponScanInterval, 1.5);
     this.weaponBias = {};
     this.pickupNow = null; // oggetto da raccogliere in questo tick (letto da Game)
+    this.launcherHunt = null; // lanciarazzi a terra da andare a prendere ovunque sia (Squad.armor)
 
     // mezzi: guidatore per indole (vehicles.driverChance), mezzo da raggiungere, salita (letta da Game),
     // riparo da un mezzo nemico (senza armi anticarro)
@@ -397,6 +469,12 @@ export class BotBrain {
     } else if (this.target?.isVehicle) {
       this._dropTarget(); // ha cambiato arma: il mezzo non è più un bersaglio utile
       return;
+    } else {
+      // senza anticarro non lo attacca, ma lo segnala alla squadra (chi ha un lanciarazzi andrà a cercarlo)
+      for (const v of game.vehicles) {
+        if (v.destroyed || !v.occupied || v.team === u.team) continue;
+        if (dist(v, u) <= view && nav.los(u.x, u.y, v.x, v.y)) this.squad.report(v, this.time);
+      }
     }
 
     if (best) {
@@ -518,6 +596,30 @@ export class BotBrain {
   /** Libero di accettare un bersaglio comunicato: nessun bersaglio e non sta catturando una bandiera. */
   available(game) {
     return !this.target && !this._capturing(game);
+  }
+
+  /** Piano anticarro: va a prendere il lanciarazzi "it" (anche lontano e combattendo) entro "time" s. */
+  huntLauncher(it, time) {
+    this.launcherHunt = it;
+    this.weaponGoal = it;
+    this.weaponGoalUntil = this.time + time;
+    this.unreachable = false;
+  }
+
+  /** Piano anticarro: ha un'arma anticarro e va verso l'ultima posizione nota del mezzo "v". */
+  seekVehicle(v, k) {
+    this.target = v;
+    this.mode = 'combat';
+    this.visible = false;
+    this.zone = null;
+    this.role = 'fix';
+    this.lastSeen = { x: k.x, y: k.y, time: k.time };
+    this.reactAt = this.time + rand(this.cfg.reactionTime, 0.35);
+    this.phase = 'expose';
+    this.phaseTimer = rand(this.cfg.exposeTime, 1.8);
+    this.cover = null;
+    this.peek = null;
+    this.flankPoint = null;
   }
 
   /** Bersaglio comunicato da un compagno: lo aggira partendo dalla posizione nota. */
@@ -988,8 +1090,14 @@ export class BotBrain {
     if (c.pickWeapons === false || !game.pickups) return false;
     const fighting = this.target && this.visible;
     const combatReach = c.weaponCombatReach ?? 28;
+    // piano anticarro: il lanciarazzi assegnato dalla squadra si va a prendere anche combattendo
+    if (this.launcherHunt && (this.antiVehicle || !game.pickups.list.includes(this.launcherHunt) || this.time > this.weaponGoalUntil || this.unreachable)) {
+      this.launcherHunt = null;
+      this.weaponGoal = null;
+    }
+    if (this.launcherHunt) this.weaponGoal = this.launcherHunt;
     let goal = this.weaponGoal;
-    if (goal && (!game.pickups.list.includes(goal) || this.time > this.weaponGoalUntil || this.unreachable
+    if (goal && goal !== this.launcherHunt && (!game.pickups.list.includes(goal) || this.time > this.weaponGoalUntil || this.unreachable
       || (fighting && dist(goal, u) > combatReach))) {
       goal = this.weaponGoal = null;
     }

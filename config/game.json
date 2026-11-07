@@ -442,6 +442,16 @@
       "pairLeash": 64,
       "pairWaitRange": 450,
       "pairWaitMax": 4,
+      "antiArmor": {
+        "interval": 1,
+        "perVehicle": 2,
+        "huntTime": 30,
+        "threatRadius": 120,
+        "threatPenalty": 400,
+        "seekRange": 900,
+        "flagRadius": 60,
+        "flagAvoid": 600
+      },
       "separation": 12,
       "repathInterval": 0.5,
       "arriveDistance": 4,

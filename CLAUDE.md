@@ -180,7 +180,12 @@ tools/check_level.mjs controllo livelli: celle irraggiungibili e vicoli ciechi (
   bandiere): gruppi per combattente (coppie stabili, il dispari fa un terzetto, `maxGroup`/`pairRadius`/
   `groupBreak`), una bandiera per gruppo con `spreadPenalty` per ogni gruppo già sulla stessa; difesa delle proprie
   con `defendCost` (meno `contestedBonus` se attaccate). `_chooseObjective` usa `squad.groupOf(brain).flag`; in
-  `_objectiveTick` chi è più avanti va incontro al compagno (`squad.straggler`, `pairLeash`, `pairWaitMax`). BotBrain:
+  `_objectiveTick` chi è più avanti va incontro al compagno (`squad.straggler`, `pairLeash`, `pairWaitMax`).
+  Piano anticarro `Squad.armor` (`bots.ai.antiArmor`): i bot senza anticarro segnalano i mezzi nemici
+  (`squad.report`); se i portatori di anticarro sono meno di `perVehicle` per mezzo, i più vicini a un lanciarazzi
+  a terra lo vanno a prendere ovunque sia (`brain.huntLauncher` -> `launcherHunt`, seguito anche combattendo in
+  `_weaponTick`); chi ha l'anticarro ed è libero va verso il mezzo avvistato (`seekVehicle`); in `plan` i gruppi
+  senza anticarro evitano le bandiere presidiate da un mezzo (`flagAvoid`). BotBrain:
   modo `objective` (bandiere da catturare, poi presidio) o `combat` con ruolo `fix`/`flank` e fasi
   `expose`/`cover`/`peek`; spara solo con bersaglio in vista (dopo `reactionTime`), poi fuoco di copertura
   su `suppressPoint` per `suppressTime`; avvisa i compagni liberi entro `commRadius` (`receive` -> aggiramento).
