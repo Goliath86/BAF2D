@@ -375,6 +375,23 @@
         { "wave": "triangle", "freqStart": 262, "freqEnd": 262, "duration": 0.6, "at": [0.36], "volume": 0.8 }
       ]
     },
+    "pickup_weapon": {
+      "src": null,
+      "volume": 0.16,
+      "placeholder": [
+        { "wave": "noise", "duration": 0.04 },
+        { "wave": "square", "freqStart": 300, "freqEnd": 300, "duration": 0.04, "at": [0.06] },
+        { "wave": "square", "freqStart": 420, "freqEnd": 420, "duration": 0.05, "at": [0.11], "volume": 0.8 }
+      ]
+    },
+    "pickup_grenade": {
+      "src": null,
+      "volume": 0.12,
+      "placeholder": [
+        { "wave": "triangle", "freqStart": 900, "freqEnd": 900, "duration": 0.04 },
+        { "wave": "triangle", "freqStart": 1300, "freqEnd": 1300, "duration": 0.06, "at": [0.05] }
+      ]
+    },
     "score_kill": {
       "src": null,
       "volume": 0.08,

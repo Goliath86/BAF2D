@@ -91,6 +91,12 @@ export class Hud {
     this._drawGrenades(ui, u, player);
     if (mode?.rank && this.rc.show !== false) this._drawRank(ui, u, mode.rank);
     if (mode?.screen) this._drawPopups(ui, u, mode.screen);
+    if (mode?.pickup && mode.screen) {
+      // invito a raccogliere l'arma, sotto il soldato
+      const pc = this.cfg.pickup || {};
+      this._text(ui, u, mode.pickup, Math.round(mode.screen.x), Math.round(mode.screen.y + (pc.offset ?? 10)),
+        pc.fontSize ?? 6, pc.color || '#ffd36b', 'center');
+    }
     this._drawWeapon(ui, u, display.cssWidth, player);
     if (mode?.ctf) {
       const W = Math.floor(display.cssWidth / u);

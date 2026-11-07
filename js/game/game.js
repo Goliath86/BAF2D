@@ -9,6 +9,8 @@ import { Ctf } from './ctf.js';
 import { Nav } from './nav.js';
 import { BotBrain, Squad } from './ai.js';
 import { Scores } from './scores.js';
+import { Pickups } from './pickups.js';
+import { keyName } from '../engine/input.js';
 
 const STEP = 1 / 60; // update a timestep fisso
 const BULLET_SUBSTEP = 2; // px: passo massimo del controllo collisioni dei proiettili
@@ -82,6 +84,11 @@ export class Game {
     this.playerRecord = null;
     this.matchStartXp = 0;
 
+    // Armi e granate a terra (game.json -> pickups); pickupOffer = arma che il giocatore può raccogliere ora
+    this.pickupsCfg = config.pickups || {};
+    this.pickups = new Pickups(this.pickupsCfg, assets, weapons);
+    this.pickupOffer = null;
+
     this._fps = { value: 0, frames: 0, time: 0 };
   }
 
@@ -118,6 +125,8 @@ export class Game {
     this.shake.time = 0;
     this.effects.clear();
     this.corpses.length = 0;
+    this.pickups.reset(this.map);
+    this.pickupOffer = null;
     this.respawn = null; // { time, delay, x, y } mentre il giocatore è morto
     this.ended = null; // { time, shown, outcome } a partita finita
     this._spawnBots();
@@ -359,6 +368,7 @@ export class Game {
       this.player.update(dt, this, ctrl);
       this._updateBots(dt);
       if (this.player.dead && !this.respawn) this._onPlayerDeath();
+      this._updatePickups(dt);
       if (this.respawn) this._updateRespawn(dt);
       this.ctf.update(dt, this.units);
       for (const e of this.ctf.takeEvents()) this._onFlagEvent(e);
@@ -488,24 +498,62 @@ export class Game {
       ? { sprite: poolSprite, x: p.x - Math.cos(a) * back, y: p.y - Math.sin(a) * back, angle: Math.floor(Math.random() * 4) * (Math.PI / 2) }
       : null;
 
-    // l'arma cade a terra davanti al corpo, un po' di lato
-    let drop = null;
-    const dropSprite = g.dropWeapon !== false && p.weapon.pickupSprite && this.assets.sprites.get(p.weapon.pickupSprite);
-    if (dropSprite) {
-      const dist = g.dropDistance ?? 9;
-      const first = Math.random() < 0.5 ? -1 : 1;
-      // prova un lato, poi l'altro, se l'arma finirebbe dentro un muro
-      for (const side of [first, -first]) {
-        const da = a + side * (0.5 + Math.random() * 0.6);
+    // l'arma cade a terra davanti al corpo da un lato, le granate dall'altro: diventano oggetti raccoglibili
+    const dist = g.dropDistance ?? 9;
+    const first = Math.random() < 0.5 ? -1 : 1;
+    const spot = (side) => {
+      // prova il lato richiesto, poi l'altro, se l'oggetto finirebbe dentro un muro
+      for (const s of [side, -side]) {
+        const da = a + s * (0.5 + Math.random() * 0.6);
         const x = p.x + Math.cos(da) * dist;
         const y = p.y + Math.sin(da) * dist;
-        if (this.map.isSolidAt(x, y)) continue;
-        drop = { sprite: dropSprite, x, y, angle: a + side * (0.8 + Math.random()) };
-        break;
+        if (!this.map.isSolidAt(x, y)) return { x, y, side: s };
       }
+      return { x: p.x, y: p.y, side };
+    };
+    if (g.dropWeapon !== false) {
+      const s = spot(first);
+      this.pickups.dropWeapon(p.weapon.id, p.ammo, s.x, s.y, a + s.side * (0.8 + Math.random()));
+    }
+    if (g.dropGrenades !== false && p.grenades > 0) {
+      const s = spot(-first);
+      this.pickups.dropGrenades(p.grenades, s.x, s.y);
     }
 
-    return { time: 0, body, pool, drop };
+    return { time: 0, body, pool };
+  }
+
+  // ---------- Oggetti a terra ----------
+
+  /** Granate raccolte passandoci sopra (tutti); scambio d'arma del giocatore umano con l'azione "pickup". */
+  _updatePickups(dt) {
+    this.pickups.update(dt, this.units, (u, n) => {
+      if (this.pickupsCfg.grenadeSound) this.audio.play(this.pickupsCfg.grenadeSound, u);
+      if (u === this.player && !this.attract) this.hud.popup(this.i18n.t('pickup.grenades', { count: n }), this.pickupsCfg.popupColor);
+    });
+    const p = this.player;
+    this.pickupOffer = !p.dead && !this.attract ? this.pickups.nearestWeapon(p) : null;
+    if (this.pickupOffer && this.input.wasPressed('pickup')) this._swapWeapon(p, this.pickupOffer);
+  }
+
+  /** Testo dell'HUD sopra un'arma raccoglibile: "[E] Raccogli Fucile a pompa" (su touch senza tasto). */
+  _pickupPrompt() {
+    const it = this.pickupOffer;
+    if (!it) return null;
+    const w = this.weapons.get(it.weapon);
+    const weapon = this.i18n.t(w.name || w.id);
+    if (this.input.mode === 'touch') return this.i18n.t('hud.pickupTouch', { weapon });
+    return this.i18n.t('hud.pickup', { key: keyName(this.input.bindings.pickup?.[0], this.i18n), weapon });
+  }
+
+  /** L'unità prende l'arma "item" (con i colpi rimasti) e lascia a terra quella che impugnava. */
+  _swapWeapon(u, item) {
+    this.pickups.take(item);
+    const prev = u.equip(item.weapon, item.ammo ?? undefined);
+    if (prev) this.pickups.dropWeapon(prev.id, prev.ammo, u.x, u.y, u.angle + Math.PI / 2);
+    if (this.pickupsCfg.weaponSound) this.audio.play(this.pickupsCfg.weaponSound, u);
+    if (u === this.player) this.hud.popup(this.i18n.t(u.weapon.name || u.weapon.id), this.pickupsCfg.popupColor);
+    this.pickupOffer = null;
   }
 
   _drawCorpses(ctx) {
@@ -519,7 +567,6 @@ export class Game {
       }
     }
     for (const c of this.corpses) {
-      if (c.drop) drawSprite(ctx, c.drop.sprite, 0, c.drop.x, c.drop.y, c.drop.angle);
       if (c.body) drawSprite(ctx, c.body.sprite, 0, c.body.x, c.body.y, c.body.angle);
     }
   }
@@ -551,6 +598,7 @@ export class Game {
     const outcome = w === null ? 'draw' : w === this.playerTeam ? 'victory' : 'defeat';
     this.ended = { time: 0, shown: false, outcome };
     this.respawn = null;
+    this.pickupOffer = null;
     this.scores.endMatch(w);
   }
 
@@ -790,7 +838,9 @@ export class Game {
     this.ctf.drawZones(ctx);
     this.effects.drawCasings(ctx, false); // bossoli a terra
     this.grenades.draw(ctx, false); // granate a terra
+    this.pickups.drawPads(ctx);
     this._drawCorpses(ctx);
+    this.pickups.draw(ctx, this.attract ? null : this.pickupOffer);
     // pennoni e soldati ordinati per y: chi sta più in alto sullo schermo è "dietro"
     // (a parità di y prima il pennone; sort stabile)
     const sorted = [...this.ctf.flags, ...this.units.filter((u) => !u.dead)].sort((a, b) => a.y - b.y);
@@ -823,6 +873,7 @@ export class Game {
       input.sticks.draw(ui, {
         reload: { label: String(p.ammo), progress: p.reloadProgress, alert: p.ammo === 0 && !p.reloading },
         grenade: { badge: String(p.grenades), disabled: p.grenades <= 0 },
+        pickup: { hidden: !this.pickupOffer }, // compare solo sopra un'arma raccoglibile
       });
     }
     if (live) {
@@ -840,6 +891,7 @@ export class Game {
           score: this.playerRecord.score,
         },
         screen: { x: this.player.x - cx, y: this.player.y - cy }, // posizione del giocatore sullo schermo (px di gioco)
+        pickup: playing ? this._pickupPrompt() : null,
       });
     }
     if (this.debug) this._drawDebug(ui);

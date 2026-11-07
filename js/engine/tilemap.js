@@ -1,7 +1,7 @@
 // Mappa a tile costruita da un livello JSON.
 // Il livello usa righe di caratteri + una "legend" che mappa ogni carattere a un tile
 // (per nome o id) e, opzionalmente, a uno spawn: { "tile": "floor", "spawn": "blue" }
-// o a una bandiera: { "tile": "floor", "flag": "A" }.
+// o a una bandiera: { "tile": "floor", "flag": "A" }, o a un oggetto raccoglibile: { "tile": "floor", "pickup": "shotgun" }.
 
 import { LocalizedError } from './errors.js';
 
@@ -11,6 +11,7 @@ export class TileMap {
     this.size = tileset.size;
     this.spawns = {};
     this.flags = []; // bandiere (CTF): { id, x, y } dai caratteri con { "tile", "flag": "A" }
+    this.pickups = []; // oggetti raccoglibili fissi: { type, x, y } da { "tile", "pickup": "shotgun" }
 
     const rows = level.map || [];
     this.rows = rows.length;
@@ -37,6 +38,9 @@ export class TileMap {
             }
             if (entry.flag) {
               this.flags.push({ id: String(entry.flag), x: (x + 0.5) * this.size, y: (y + 0.5) * this.size });
+            }
+            if (entry.pickup) {
+              this.pickups.push({ type: String(entry.pickup), x: (x + 0.5) * this.size, y: (y + 0.5) * this.size });
             }
           } else {
             id = this._resolveTile(entry);

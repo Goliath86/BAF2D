@@ -66,6 +66,16 @@ Sulla mappa ci sono delle bandiere: un pennone con un drappo che parte da terra.
   insieme) con la **classifica** di tutti i soldati (punti, uccisioni, morti, assist, bandiere; i bot hanno nomi e
   gradi fittizi) e il grado del giocatore. Pulsanti *Rivincita* (anche Invio) e *Menu principale*.
 
+### Armi e granate a terra
+
+- Chi muore lascia a terra l'arma (con i colpi rimasti nel caricatore) e le granate che aveva; restano
+  `pickups.life` secondi (lampeggiano negli ultimi `blinkTime`).
+- Sulle mappe ci sono punti fissi (piazzola con gli angoli gialli) con fucili a pompa e granate, che ricompaiono
+  `respawn` secondi dopo la raccolta.
+- **Granate**: si raccolgono passandoci sopra (anche i bot), fino a `maxGrenades`.
+- **Armi**: sopra un'arma diversa dalla propria compare una freccetta e la scritta "[E] Raccogli ..."; con **E**
+  (o F, o il pulsante touch che appare solo in quel momento) la si prende e quella impugnata resta a terra.
+
 ### Punteggi e gradi
 
 - **Punti** (`scoring.points`): uccisione, assist (almeno `assistDamage` danni a un nemico ucciso da altri), difesa
@@ -381,6 +391,11 @@ lo stick sinistro due pulsanti a forma di cuore: "−" toglie vita (come F5), "+
 - `ranks`: `list` (`{ id, xp, insignia: [{ shape: chevron|rocker|bar|star, count, color }] }`, strati dall'alto in
   basso; nomi in `ranks.<id>.name/short` dei file lingua), `colors` (`{ nome: [chiaro, scuro] }`), `outline`.
 - `menu.scoreboardColumn`: oltre questo numero di soldati la classifica va su due colonne.
+- `pickups`: `radius` (px di raccolta), `life`/`blinkTime` (oggetti lasciati), `maxDropped`, piazzole (`pad`,
+  `padSize`, `padColor`), `highlightColor`, `popupColor`, suoni `weaponSound`/`grenadeSound`, `types` (tipi per la
+  legend dei livelli: `{ "weapon": id, "respawn": s }` o `{ "grenades": n, "respawn": s }`). Nel livello:
+  `"s": { "tile": "floor", "pickup": "shotgun" }`. `death.dropWeapon`/`dropGrenades` = cosa lasciano i caduti.
+  `hud.pickup`: scritta di raccolta (`fontSize`, `offset` sotto il soldato, `color`).
 - `combat`: `hitImpact` (tipo di impatto in `effects.json` quando un colpo prende un soldato), `hitPadding` (px in
   più attorno alla hitbox), `endHitReach` (a fine corsa il colpo prende anche un soldato fino a questi px oltre),
   `friendlyFire`.

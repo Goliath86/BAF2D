@@ -66,6 +66,7 @@
       "fire": "Spara",
       "reload": "Ricarica",
       "grenade": "Granata",
+      "pickup": "Raccogli arma",
       "pause": "Pausa"
     }
   },
@@ -110,6 +111,8 @@
     "respawnIn": "Rientro tra {seconds}",
     "score": "{score} PT",
     "promoted": "PROMOZIONE",
+    "pickup": "[{key}] Raccogli {weapon}",
+    "pickupTouch": "Raccogli {weapon}",
     "flag": {
       "capturing": "CONQUISTA {flag}",
       "securing": "RIPRISTINO {flag}",
@@ -120,6 +123,9 @@
       "neutralized": "Bandiera {flag} neutralizzata",
       "enemyCaptured": "Il nemico ha conquistato la bandiera {flag}"
     }
+  },
+  "pickup": {
+    "grenades": "+{count} GRANATE"
   },
   "score": {
     "events": {

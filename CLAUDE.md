@@ -73,6 +73,7 @@ js/game/
   nav.js              Nav: griglia dei tile per l'IA (A* 8 direzioni + percorso 'tirato', reach() = Dijkstra limitato, los)
   ai.js               Squad (lavagna di squadra: bot, nemici avvistati) + BotBrain (IA di un bot -> comandi come l'umano)
   scores.js           Scores: record per combattente, punti (kill/assist/defend/capture/...), classifica
+  pickups.js          Pickups: armi/granate a terra (lasciate dai caduti o da punti fissi della mappa con respawn)
   ranks.js            Ranks (gradi da game.json -> ranks, insegne a pixel in canvas) + Career (xp in localStorage)
 config/
   game.json           parametri generali (version, levels, menu, display, i18n, player + arma iniziale, input,
@@ -177,6 +178,12 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
   `hud.promote({ name, insignia })`, blocco grado sotto le granate (`mode.rank`; `topHeight` ne tiene conto).
   Fine partita: `game.matchSummary` -> `Menu._renderScoreboard` / `_renderCareer` (anche nel menu principale).
   F9 = +`points.debug` punti. Soglie tarate con partite simulate (~4000-6000 punti a partita per soldato).
+- Oggetti a terra (`pickups.js`, `game.json -> pickups`): `_makeCorpse` chiama `pickups.dropWeapon/dropGrenades`
+  (il cadavere non ha più l'arma disegnata). Punti fissi da legend `{ "tile", "pickup": tipo }` (`TileMap.pickups`,
+  tipi in `pickups.types`). `Game._updatePickups`: granate automatiche per tutte le unità, `pickupOffer` = arma
+  raccoglibile dal giocatore umano -> azione `pickup` (E/F, pulsante touch con `hidden` gestito da `state.hidden`)
+  -> `_swapWeapon` (equip + vecchia arma a terra). `keyName(code, i18n)` in input.js (usato da menu e HUD).
+  I bot raccolgono solo le granate (passandoci sopra), non le armi.
 - Audio posizionale: `audio.play(nome, { x, y })` attenua con la distanza da `audio.listener` (centro visuale,
   `audio.hearing.near/far`).
 - Sprite con `extends`: ereditano tutto tranne `src`, `placeholder` fuso campo per campo.
@@ -236,6 +243,7 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
   menu desktop/mobile (nuova partita con mappa/squadra/numero di bot, opzioni lingua/volume/tasti, pausa,
   rivincita), seconda mappa "Crocevia" (5 bandiere, simmetrica), punteggi con classifica di fine partita
   (nomi fittizi per i bot), 18 gradi con insegne a pixel, promozioni in partita e carriera salvata in localStorage.
-- Non ancora presenti: mappa procedurale, raccolta armi/granate da terra, riserva di munizioni (ora infinita),
+- Fatto anche: raccolta di armi (scambio con E) e granate da terra, punti fissi con respawn sulle mappe.
+- Non ancora presenti: mappa procedurale, raccolta armi da parte dei bot, riserva di munizioni (ora infinita),
   asset grafici reali.
 - Controlli touch (stick + pulsante ricarica) verificati dall'utente su un dispositivo reale (2026-11-02).

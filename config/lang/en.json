@@ -66,6 +66,7 @@
       "fire": "Fire",
       "reload": "Reload",
       "grenade": "Grenade",
+      "pickup": "Pick up weapon",
       "pause": "Pause"
     }
   },
@@ -110,6 +111,8 @@
     "respawnIn": "Respawning in {seconds}",
     "score": "{score} PTS",
     "promoted": "PROMOTED",
+    "pickup": "[{key}] Pick up {weapon}",
+    "pickupTouch": "Pick up {weapon}",
     "flag": {
       "capturing": "CAPTURING {flag}",
       "securing": "SECURING {flag}",
@@ -120,6 +123,9 @@
       "neutralized": "Flag {flag} neutralized",
       "enemyCaptured": "The enemy captured flag {flag}"
     }
+  },
+  "pickup": {
+    "grenades": "+{count} GRENADES"
   },
   "score": {
     "events": {

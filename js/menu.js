@@ -4,6 +4,7 @@
 // Game resta senza DOM: qui si chiamano game.setup / restart e si leggono onMatchEnd / onRestart.
 
 import { TileMap } from './engine/tilemap.js';
+import { keyName } from './engine/input.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -483,14 +484,7 @@ export class Menu {
   }
 
   _keyName(code) {
-    const t = (k, p) => this.i18n.t(k, p);
-    if (!code) return t('options.unbound');
-    if (this.i18n.has(`keys.${code}`)) return t(`keys.${code}`);
-    let m = /^Key([A-Z])$/.exec(code) || /^Digit(\d)$/.exec(code);
-    if (m) return m[1];
-    m = /^Numpad(.+)$/.exec(code);
-    if (m) return t('keys.numpad', { key: m[1] });
-    return code;
+    return keyName(code, this.i18n);
   }
 
   _startRebind(action, slot, button) {

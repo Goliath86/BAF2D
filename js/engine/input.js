@@ -3,6 +3,17 @@
 
 import { TouchSticks } from './touch.js';
 
+/** Nome leggibile di un tasto (KeyboardEvent.code), tradotto se c'è keys.<code> nei file lingua. */
+export function keyName(code, i18n) {
+  if (!code) return i18n.t('options.unbound');
+  if (i18n.has(`keys.${code}`)) return i18n.t(`keys.${code}`);
+  let m = /^Key([A-Z])$/.exec(code) || /^Digit(\d)$/.exec(code);
+  if (m) return m[1];
+  m = /^Numpad(.+)$/.exec(code);
+  if (m) return i18n.t('keys.numpad', { key: m[1] });
+  return code;
+}
+
 export class Input {
   /** options.debug: abilita i pulsanti touch di debug (vedi TouchSticks). */
   constructor(display, cfg = {}, options = {}) {

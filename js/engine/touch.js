@@ -53,6 +53,7 @@ export class TouchSticks {
         icon: b.icon || null,
         color: b.color || null, // colore del bordo/icona (default bianco)
         id: null, // pointerId che lo tiene premuto
+        hidden: !!b.hidden, // nascosto (né disegnato né toccabile): lo decide il gioco con state.hidden
       }));
     this.pressed = new Set();
   }
@@ -82,6 +83,7 @@ export class TouchSticks {
 
   _buttonAt(x, y) {
     for (const b of this.buttons) {
+      if (b.hidden) continue;
       const g = this.buttonGeometry(b);
       // area di tocco un po' più larga del disegno
       if (Math.hypot(x - g.x, y - g.y) <= g.r * 1.25) return b;
@@ -187,12 +189,17 @@ export class TouchSticks {
 
   /**
    * state: stato dei pulsanti fornito dal gioco, per azione:
-   * { label (testo breve, es. colpi), progress (0..1, anello di avanzamento), alert (evidenziato) }
+   * { label (testo breve, es. colpi), progress (0..1, anello di avanzamento), alert (evidenziato),
+   *   hidden (pulsante nascosto e non toccabile fino al prossimo draw) }
    */
   draw(ctx, state = {}) {
     this._drawStick(ctx, this.left, false);
     this._drawStick(ctx, this.right, true);
-    for (const b of this.buttons) this._drawButton(ctx, b, state[b.action] || {});
+    for (const b of this.buttons) {
+      const st = state[b.action] || {};
+      if (st.hidden !== undefined) b.hidden = !!st.hidden;
+      if (!b.hidden) this._drawButton(ctx, b, st);
+    }
   }
 
   _drawButton(ctx, b, st) {
@@ -267,6 +274,29 @@ export class TouchSticks {
       ctx.beginPath(); // anello della sicura
       ctx.arc(x - s * 0.9, y - s * 1.2, s * 0.35, 0, TAU);
       ctx.lineWidth = Math.max(1.5, r * 0.05);
+      ctx.stroke();
+    }
+
+    if (b.icon === 'pickup') {
+      // freccia verso il basso su un vassoio a "U" (raccogli)
+      const s = r * 0.42;
+      const lw = Math.max(2, r * 0.1);
+      ctx.lineWidth = lw;
+      ctx.strokeStyle = accent;
+      ctx.beginPath();
+      ctx.moveTo(x, y - s * 1.1);
+      ctx.lineTo(x, y + s * 0.15);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x - s * 0.5, y - s * 0.25);
+      ctx.lineTo(x, y + s * 0.35);
+      ctx.lineTo(x + s * 0.5, y - s * 0.25);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x - s, y + s * 0.2);
+      ctx.lineTo(x - s, y + s * 0.85);
+      ctx.lineTo(x + s, y + s * 0.85);
+      ctx.lineTo(x + s, y + s * 0.2);
       ctx.stroke();
     }
 
