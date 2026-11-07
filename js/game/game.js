@@ -534,6 +534,19 @@ export class Game {
     const p = this.player;
     this.pickupOffer = !p.dead && !this.attract ? this.pickups.nearestWeapon(p) : null;
     if (this.pickupOffer && this.input.wasPressed('pickup')) this._swapWeapon(p, this.pickupOffer);
+
+    // bot (e giocatore della partita dimostrativa) arrivati sull'arma scelta dall'IA
+    const r = (this.pickupsCfg.radius ?? 9) + 2;
+    const brains = this.bots.map((b) => b.brain);
+    if (this.playerBrain) brains.push(this.playerBrain);
+    for (const br of brains) {
+      const it = br?.pickupNow;
+      if (!it) continue;
+      br.pickupNow = null;
+      const u = br.unit;
+      if (u.dead || !this.pickups.list.includes(it) || Math.hypot(u.x - it.x, u.y - it.y) > r) continue;
+      this._swapWeapon(u, it);
+    }
   }
 
   /** Testo dell'HUD sopra un'arma raccoglibile: "[E] Raccogli Fucile a pompa" (su touch senza tasto). */
@@ -552,8 +565,10 @@ export class Game {
     const prev = u.equip(item.weapon, item.ammo ?? undefined);
     if (prev) this.pickups.dropWeapon(prev.id, prev.ammo, u.x, u.y, u.angle + Math.PI / 2);
     if (this.pickupsCfg.weaponSound) this.audio.play(this.pickupsCfg.weaponSound, u);
-    if (u === this.player) this.hud.popup(this.i18n.t(u.weapon.name || u.weapon.id), this.pickupsCfg.popupColor);
-    this.pickupOffer = null;
+    if (u === this.player && !this.attract) {
+      this.hud.popup(this.i18n.t(u.weapon.name || u.weapon.id), this.pickupsCfg.popupColor);
+      this.pickupOffer = null;
+    }
   }
 
   _drawCorpses(ctx) {
@@ -927,6 +942,7 @@ export class Game {
       if (b.target && b.lastSeen) mark(b.lastSeen, b.visible ? '#f44' : '#f84');
       mark(b.throwPlan?.point, '#fa0');
       mark(b.evade?.point, '#4ff');
+      mark(b.weaponGoal, '#fff');
     }
     ctx.restore();
   }

@@ -183,7 +183,8 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
   tipi in `pickups.types`). `Game._updatePickups`: granate automatiche per tutte le unità, `pickupOffer` = arma
   raccoglibile dal giocatore umano -> azione `pickup` (E/F, pulsante touch con `hidden` gestito da `state.hidden`)
   -> `_swapWeapon` (equip + vecchia arma a terra). `keyName(code, i18n)` in input.js (usato da menu e HUD).
-  I bot raccolgono solo le granate (passandoci sopra), non le armi.
+  Bot: `BotBrain._weaponTick` sceglie `weaponGoal` (valore `weaponValues` + `weaponBias` personale), ci va e
+  imposta `pickupNow`; `Game._updatePickups` fa lo scambio per bot e `playerBrain` (dopo `_updateBots`).
 - Audio posizionale: `audio.play(nome, { x, y })` attenua con la distanza da `audio.listener` (centro visuale,
   `audio.hearing.near/far`).
 - Sprite con `extends`: ereditano tutto tranne `src`, `placeholder` fuso campo per campo.
@@ -243,7 +244,7 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
   menu desktop/mobile (nuova partita con mappa/squadra/numero di bot, opzioni lingua/volume/tasti, pausa,
   rivincita), seconda mappa "Crocevia" (5 bandiere, simmetrica), punteggi con classifica di fine partita
   (nomi fittizi per i bot), 18 gradi con insegne a pixel, promozioni in partita e carriera salvata in localStorage.
-- Fatto anche: raccolta di armi (scambio con E) e granate da terra, punti fissi con respawn sulle mappe.
-- Non ancora presenti: mappa procedurale, raccolta armi da parte dei bot, riserva di munizioni (ora infinita),
+- Fatto anche: raccolta di armi (scambio con E, anche i bot) e granate da terra, punti fissi con respawn sulle mappe.
+- Non ancora presenti: mappa procedurale, riserva di munizioni (ora infinita),
   asset grafici reali.
 - Controlli touch (stick + pulsante ricarica) verificati dall'utente su un dispositivo reale (2026-11-02).

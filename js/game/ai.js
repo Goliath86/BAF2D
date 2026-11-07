@@ -17,6 +17,9 @@
 // 4. granate: ogni tanto (grenadeInterval) valuta un lancio sul bersaglio, anche nascosto dietro un angolo
 //    (punto d'arrivo in vista sia dal bot sia dal bersaglio), mai se un compagno o lui stesso sarebbero
 //    nell'esplosione; scappa dalle granate vicine (di chiunque) dopo un tempo di reazione.
+// 5. armi a terra: ogni tanto cerca un'arma che valuta meglio della sua (weaponValues + preferenza personale
+//    casuale weaponBias) entro weaponSearch px (weaponCombatReach se sta combattendo) e va a prenderla;
+//    arrivato imposta pickupNow e Game fa lo scambio (Game._updatePickups).
 
 const DEG = Math.PI / 180;
 
@@ -122,6 +125,13 @@ export class BotBrain {
     this.throwPlan = null; // { point, until }
     this.evade = null; // { g, point, retarget }
     this.grenadeReaction = rand(cfg.grenadeReaction, 0.4);
+
+    // armi a terra: oggetto da raggiungere, scadenza, prossima ricerca, preferenze personali
+    this.weaponGoal = null;
+    this.weaponGoalUntil = 0;
+    this.weaponTimer = rand(cfg.weaponScanInterval, 1.5);
+    this.weaponBias = {};
+    this.pickupNow = null; // oggetto da raccogliere in questo tick (letto da Game)
   }
 
   // ---------- Tick ----------
@@ -137,7 +147,9 @@ export class BotBrain {
 
     // una granata vicina ha la precedenza su tutto: via dall'esplosione
     if (this._grenadeDanger(dt, game)) this._goTo(this.evade.point, game);
-    else if (this.target) this._combat(dt, game);
+    else if (this._weaponTick(dt, game)) {
+      // sta andando a prendere un'arma (mira e fuoco continuano sotto)
+    } else if (this.target) this._combat(dt, game);
     else this._objectiveTick(dt, game);
     this._considerGrenade(dt, game);
 
@@ -667,6 +679,66 @@ export class BotBrain {
       }
     }
     return null;
+  }
+
+  // ---------- Armi a terra ----------
+
+  /** Valore dell'arma "id" per questo bot: weaponValues + preferenza personale casuale (±weaponBias). */
+  _weaponValue(id) {
+    const c = this.cfg;
+    if (this.weaponBias[id] === undefined) this.weaponBias[id] = (Math.random() * 2 - 1) * (c.weaponBias ?? 0.5);
+    return (c.weaponValues?.[id] ?? 1) + this.weaponBias[id];
+  }
+
+  /** Ricerca / raggiungimento di un'arma migliore a terra. true = il movimento di questo tick è per l'arma. */
+  _weaponTick(dt, game) {
+    const c = this.cfg;
+    const u = this.unit;
+    this.pickupNow = null;
+    if (c.pickWeapons === false || !game.pickups) return false;
+    const fighting = this.target && this.visible;
+    const combatReach = c.weaponCombatReach ?? 28;
+    let goal = this.weaponGoal;
+    if (goal && (!game.pickups.list.includes(goal) || this.time > this.weaponGoalUntil || this.unreachable
+      || (fighting && dist(goal, u) > combatReach))) {
+      goal = this.weaponGoal = null;
+    }
+    if (!goal) {
+      if ((this.weaponTimer -= dt) > 0) return false;
+      this.weaponTimer = rand(c.weaponScanInterval, 1.5);
+      const reach = fighting ? combatReach : c.weaponSearch ?? 110;
+      const own = this._weaponValue(u.weapon.id);
+      const minGain = c.weaponMinGain ?? 0.3;
+      // non lascia l'area della bandiera che sta catturando
+      const hold = this.zone || (this._capturing(game) ? this.objective.flag : null);
+      let bestS = -Infinity;
+      for (const it of game.pickups.list) {
+        if (it.kind !== 'weapon' || it.weapon === u.weapon.id) continue;
+        const d = dist(it, u);
+        const gain = this._weaponValue(it.weapon) - own;
+        if (d > reach || gain < minGain) continue;
+        // un compagno ci sta già andando
+        if (this.squad.brains.some((b) => b !== this && !b.unit.dead && b.weaponGoal === it)) continue;
+        if (hold && !game.ctf.inZone(hold, it.x, it.y)) continue;
+        const s = gain * 100 - d;
+        if (s > bestS) {
+          bestS = s;
+          goal = it;
+        }
+      }
+      if (!goal) return false;
+      this.weaponGoal = goal;
+      this.weaponGoalUntil = this.time + (c.weaponGoalTime ?? 6);
+      this.unreachable = false;
+    }
+    if (dist(goal, u) <= Math.max(2, (game.pickupsCfg?.radius ?? 9) - 3)) {
+      this.pickupNow = goal;
+      this.weaponGoal = null;
+      this._stop();
+      return true;
+    }
+    this._goTo(goal, game);
+    return true;
   }
 
   // ---------- Granate ----------
