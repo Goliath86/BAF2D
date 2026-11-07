@@ -344,9 +344,11 @@ export class BotBrain {
       return;
     }
     if (this._goTo(o.point, game)) {
-      // arrivato: resta nell'area, ogni tanto cambia punto (più difficile da colpire)
+      // arrivato: resta nell'area, ogni tanto cambia punto (più difficile da colpire);
+      // se un compagno gli sta addosso si sposta subito
       this.holdTimer -= dt;
-      if (this.holdTimer <= 0) {
+      const crowded = o.flag && this._crowded(this.unit, (this.cfg.holdSpacing ?? 24) * 0.6);
+      if (this.holdTimer <= 0 || crowded) {
         this.holdTimer = rand(this.cfg.holdTime, 3);
         if (o.flag) o.point = this._zonePoint(o.flag, game) || o.point;
       }
@@ -387,21 +389,51 @@ export class BotBrain {
     }
   }
 
-  /** Punto casuale percorribile nell'area di cattura di f, preferibilmente vicino a un muro (riparo). */
+  /**
+   * Punto percorribile nell'area di cattura di f, distanziato dai compagni (posizioni e punti già scelti)
+   * di almeno holdSpacing px, lontano dal pennone e preferibilmente vicino a un muro (riparo).
+   */
   _zonePoint(f, game) {
     const nav = game.nav;
-    let fallback = null;
-    for (let i = 0; i < 16; i++) {
+    const c = this.cfg;
+    const spacing = c.holdSpacing ?? 24;
+    const inner = f.radius * (c.holdInner ?? 0.3);
+    const others = [];
+    for (const b of this.squad.brains) {
+      if (b === this || b.unit.dead) continue;
+      others.push(b.unit);
+      if (b.objective?.flag === f && b.objective.point) others.push(b.objective.point);
+    }
+    let best = null;
+    let bestS = -Infinity;
+    for (let i = 0; i < 24; i++) {
       const a = Math.random() * Math.PI * 2;
-      const r = Math.random() * f.radius * 0.75;
+      const r = inner + Math.random() * (f.radius * 0.8 - inner);
       const idx = nav.nearestWalkable(f.x + Math.cos(a) * r, f.y + Math.sin(a) * r, 1);
       if (idx < 0) continue;
       const p = nav.center(idx);
       if (!game.ctf.inZone(f, p.x, p.y)) continue;
-      if (nav.nearWall(idx)) return p;
-      fallback = fallback || p;
+      // distanza dal compagno più vicino (oltre spacing non conta più)
+      let near = spacing;
+      for (const o of others) near = Math.min(near, dist(o, p));
+      let s = near * 2 - (near < spacing ? 100 : 0);
+      if (nav.nearWall(idx)) s += 10;
+      if (dist(p, f) < inner) s -= 20;
+      s += Math.random() * 4;
+      if (s > bestS) {
+        bestS = s;
+        best = p;
+      }
     }
-    return fallback;
+    return best;
+  }
+
+  /** Un compagno vivo (diverso da sé) è a meno di r px da p. */
+  _crowded(p, r) {
+    for (const b of this.squad.brains) {
+      if (b !== this && !b.unit.dead && dist(b.unit, p) < r) return true;
+    }
+    return false;
   }
 
   // ---------- Combattimento ----------

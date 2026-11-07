@@ -345,7 +345,7 @@ lo stick sinistro due pulsanti a forma di cuore: "−" toglie vita (come F5), "+
   ciclo tattico (`exposeTime`, `coverTime`, `hurtCoverChance`, `lowAmmo`, `coverReload`, `coverSearch`/`peekSearch`
   in tile, `minCoverDistance`, `preferredRange`, `strafe*`), squadra (`squadRadius`, `commRadius`, `alertInterval`,
   `flankAngleDeg`, `flankDistance`, `flankSearch`, `flankRetarget`), bandiere (`captureCommit`, `objectiveInterval`,
-  `holdTime`, `flagSquad` = bot per bandiera prima della penalità `crowdPenalty`, `flagBias`), movimento
+  `holdTime`, `holdSpacing` = distanza minima tra compagni nell'area, `holdInner` = frazione del raggio vicino al pennone da evitare, `flagSquad` = bot per bandiera prima della penalità `crowdPenalty`, `flagBias`), movimento
   (`separation`, `repathInterval`, `arriveDistance`, `waypointReach`, `destTolerance`).
 - `audio.hearing`: `near`/`far` px dal centro della visuale (i suoni lontani si attenuano fino a sparire).
 - `camera.smoothing`, `camera.lookAhead` (px di anticipo nella direzione di mira).

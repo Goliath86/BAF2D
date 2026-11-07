@@ -219,6 +219,8 @@
       "objectiveInterval": [0.8, 1.3],
       "objectiveStickiness": 40,
       "holdTime": [2, 4.5],
+      "holdSpacing": 24,
+      "holdInner": 0.3,
       "flagSquad": 2,
       "crowdPenalty": 150,
       "flagBias": 60,
