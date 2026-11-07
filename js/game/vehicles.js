@@ -500,9 +500,9 @@ export class Vehicle {
       const hub = this._rotorHub();
       if (this.rotorSpeed > 0.6) {
         // pale veloci: disco sfocato + due posizioni delle pale semitrasparenti
-        ctx.globalAlpha = fade * 0.55;
+        ctx.globalAlpha = fade * 0.4;
         drawSprite(ctx, r, 1, hub.x, hub.y, 0);
-        ctx.globalAlpha = fade * 0.45;
+        ctx.globalAlpha = fade * 0.28;
         drawSprite(ctx, r, 0, hub.x, hub.y, this.rotor);
         drawSprite(ctx, r, 0, hub.x, hub.y, this.rotor + Math.PI / (d.rotorBlades ?? 2)); // a metà tra le pale
       } else {

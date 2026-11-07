@@ -123,6 +123,8 @@ Source code licensed under the GNU GPL v3.</p>
   4. `promotion.png` — Rank up mid-match: 18 ranks from Private to General.
   5. `leaderboard.png` — End-of-match leaderboard and career progress.
   6. `main_menu.png` — Main menu, with a live AI battle running behind it.
+  7. `apache_strike.png` — Attack helicopter run: rockets and cannon fire on the enemy trench line.
+  8. `apache_rocket.png` — Enemy gunship over the desert: a rocket launcher is your best friend.
 
 ## Release notes (devlog) — v1.0.1
 
