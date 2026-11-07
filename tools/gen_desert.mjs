@@ -3,6 +3,7 @@
 // Le modifiche fatte a mano a level03.json vengono sovrascritte: modificare qui e rigenerare, oppure solo a mano.
 import fs from 'node:fs';
 import path from 'node:path';
+import { checkGrid, report, walkGrid } from './check_level.mjs';
 
 const W = 97;
 const H = 65;
@@ -117,7 +118,7 @@ for (let i = 0; i < 16; i++) {
   if (get(x, y) === '.' || get(x, y) === 'b') set(x, y, 'P');
 }
 // orti cintati vicino all'oasi
-lowwall(28, 6, 35, 6, [3]);
+lowwall(28, 6, 35, 6, [3, 6]); // il secondo varco evita il vicolo cieco tra il muretto e la roccia
 lowwall(28, 6, 28, 11);
 lowwall(35, 6, 35, 11, [2]);
 lowwall(28, 11, 35, 11, [5]);
@@ -133,7 +134,7 @@ house(29, 38, 35, 43, { wall: 'H', doors: [[32, 38], [35, 41]], ruin: 0.35 });
 house(39, 30, 44, 34, { wall: 'H', doors: [[44, 32], [41, 30]], ruin: 0.15 });
 // cortili e muretti tra le case
 lowwall(38, 29, 38, 35, [3]);
-lowwall(30, 28, 37, 28, [2, 5]);
+lowwall(30, 28, 37, 28, [2, 4]); // varco davanti alla porta sud della prima casa
 // piazza centrale: sabbia, palme, pozzo
 fill(46, 29, 48, 35, '.', ['f', 'F', 'r', 'R', 'W', 'H', 'm']);
 set(45, 29, 'P', ['.', '=']);
@@ -158,7 +159,7 @@ house(4, 30, 8, 34, { wall: 'W', doors: [[8, 32]], ruin: 0.4 });
 // muretti sparsi come coperture in campo aperto (solo su sabbia libera)
 const covers = [
   [22, 30, 26, 30], [30, 47, 30, 50], [40, 47, 43, 47], [20, 60, 23, 60], [5, 40, 8, 40],
-  [26, 24, 26, 27], [52, 46, 55, 46], [58, 40, 58, 44], [62, 50, 66, 50], [40, 4, 43, 4],
+  [26, 24, 26, 27], [52, 46, 55, 46], [62, 50, 66, 50], [40, 4, 43, 4],
 ];
 for (const [a, b, c, d] of covers) {
   const n = Math.max(Math.abs(c - a), Math.abs(d - b));
@@ -303,6 +304,17 @@ const level = {
   },
   map: G.map((r) => r.join('')),
 };
+
+// vicoli ciechi e celle isolate: non scrivere un livello che non passa il controllo
+{
+  const assets = JSON.parse(fs.readFileSync(path.join(process.argv[2] || '.', 'config/assets.json'), 'utf8'));
+  const walk = walkGrid(level, assets);
+  if (!report('level03', walk, checkGrid(walk))) {
+    console.log(level.map.join('\n'));
+    console.error('level not written: fix the problems above');
+    process.exit(1);
+  }
+}
 
 // JSON con una riga per voce della legend e per riga di mappa (leggibile e modificabile a mano)
 const legend = Object.entries(level.legend).map(([k, v]) => `    ${JSON.stringify(k)}: ${JSON.stringify(v).replace(/,"/g, ', "').replace(/":/g, '": ')}`).join(',\n');

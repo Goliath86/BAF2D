@@ -95,7 +95,16 @@ tools/build-zip.mjs   zip HTML5 per itch.io in dist/ (gitignored): index.html, m
                       arts/icons; versione da game.json; percorsi con "/" (non usare Compress-Archive di PS 5.1)
 docs/itch-io.md       testi e impostazioni della pagina itch.io (inglese)
 tools/gen_desert.mjs  genera config/levels/level03.json (deserto 97x65, simmetrico, verifica raggiungibilità)
+tools/gen_arena.mjs   genera config/levels/level01.json (Test Arena 97x65, 3 bandiere)
+tools/gen_crossroads.mjs genera config/levels/level02.json (Crossroads 97x65, 5 bandiere)
+tools/levelgen.mjs    utilità dei generatori: griglia simmetrica (rotazione 180°), room/line/fill, writeLevel
+tools/check_level.mjs controllo livelli: celle irraggiungibili e vicoli ciechi (node tools/check_level.mjs <file...>)
 ```
+
+- **Mappe**: grandi quanto il deserto (97x65), simmetriche per rotazione di 180° e **senza vicoli ciechi**
+  (ogni zona deve avere almeno due uscite: stanze con 2+ porte che danno su spazio libero). I livelli si
+  modificano nei generatori `tools/gen_*.mjs`, che rifiutano di scrivere un livello che non passa `check_level`.
+  Vicolo cieco = zona profonda ≥ 4 tile raggiungibile da un solo varco largo 1-3 tile.
 
 ## Convenzioni e dettagli importanti
 
