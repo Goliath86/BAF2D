@@ -56,6 +56,11 @@ export class Player {
     this.reload = null; // { time, duration, sound } durante la ricarica
     this.sprite = null;
     this.anim = null;
+    // Seconda arma: un'arma "special" (lanciarazzi) si porta in più di quella principale; quella non in mano sta
+    // in holster = { id, ammo }. reserve = colpi di scorta delle armi con munizioni finite ("reserve" nel def).
+    this.holster = null;
+    this.reserve = {};
+    this.switchCooldown = 0; // dopo un cambio d'arma non si spara per un attimo
     this.equip(cfg.weapon);
 
     // Gambe opzionali su livello separato: ruotano verso la direzione di marcia
@@ -98,6 +103,81 @@ export class Player {
     // appena impugnata non spara finché non si rilascia
     this.shotQueued = false;
     return previous;
+  }
+
+  // ---------- Due armi: principale + speciale ----------
+
+  /** Id dell'arma principale (in mano o nella fondina) e dell'arma speciale (o null). */
+  get primaryId() {
+    if (!this.weapon.special) return this.weapon.id;
+    return this.holster && !this.weapons.get(this.holster.id).special ? this.holster.id : null;
+  }
+
+  get specialId() {
+    if (this.weapon.special) return this.weapon.id;
+    return this.holster && this.weapons.get(this.holster.id).special ? this.holster.id : null;
+  }
+
+  /** Porta un'arma che ferisce i mezzi (in mano o nella fondina). */
+  get hasAntiVehicle() {
+    const id = this.specialId;
+    return !!this.weapon.antiVehicle || (!!id && !!this.weapons.get(id).antiVehicle);
+  }
+
+  /** Scambia l'arma in mano con quella nella fondina. */
+  switchWeapon() {
+    if (!this.holster || this.switchCooldown > 0) return false;
+    const h = this.holster;
+    this.holster = this.equip(h.id, h.ammo);
+    this.switchCooldown = this.cfg.switchTime ?? 0.5;
+    return true;
+  }
+
+  /** Dà un'arma speciale nella fondina (es. bot anticarro a inizio vita), con la scorta piena. */
+  giveSpecial(id) {
+    const w = this.weapons.get(id);
+    this.holster = { id, ammo: w.magazine };
+    if (w.reserve !== undefined) this.reserve[id] = w.reserve;
+  }
+
+  /**
+   * Raccoglie l'arma "id" (ammo nel caricatore, reserve di scorta; default pieni). Un'arma speciale si aggiunge
+   * a quella principale (e va in mano); un'arma normale sostituisce la principale. Restituisce le armi lasciate
+   * [{ id, ammo, reserve }] da far cadere a terra.
+   */
+  pickUp(id, ammo, reserve) {
+    const w = this.weapons.get(id);
+    const dropped = [];
+    const info = (p) => {
+      if (!p) return;
+      dropped.push({ id: p.id, ammo: p.ammo, reserve: this.reserve[p.id] });
+      if (p.id !== id) delete this.reserve[p.id];
+    };
+    if (w.special) {
+      if (this.weapon.special) info(this.equip(id, ammo)); // sostituisce la speciale in mano
+      else {
+        if (this.holster && this.weapons.get(this.holster.id).special) info(this.holster);
+        this.holster = this.equip(id, ammo); // la principale va nella fondina
+      }
+      if (w.reserve !== undefined) this.reserve[id] = reserve ?? w.reserve;
+    } else if (this.weapon.special && this.holster) {
+      info(this.holster); // in mano la speciale: si cambia la principale nella fondina
+      this.holster = { id, ammo: ammo ?? w.magazine };
+    } else {
+      info(this.equip(id, ammo));
+    }
+    return dropped;
+  }
+
+  /** Arma speciale senza più colpi (né in canna né di scorta): si butta e si torna alla principale. */
+  _discardEmptySpecial() {
+    const w = this.weapon;
+    if (!w.special || this.reload || this.ammo > 0 || (this.reserve[w.id] ?? 0) > 0 || !this.holster) return;
+    delete this.reserve[w.id];
+    const h = this.holster;
+    this.holster = null;
+    this.equip(h.id, h.ammo);
+    this.switchCooldown = this.cfg.switchTime ?? 0.5;
   }
 
   get dead() {
@@ -164,6 +244,8 @@ export class Player {
   startReload(game) {
     const w = this.weapon;
     if (this.reload || this.ammo >= w.magazine) return false;
+    // armi con munizioni contate: serve scorta
+    if (w.reserve !== undefined && (this.reserve[w.id] ?? 0) <= 0) return false;
     this.reload = { time: 0, duration: Math.max(0.01, w.reloadTime), sound: null, dropped: false };
     this.shotQueued = false;
     if (w.reloadSound) this.reload.sound = game.audio.play(w.reloadSound, this);
@@ -180,7 +262,14 @@ export class Player {
       this._eject(game, w.reloadDrop, w.reloadDropPort);
     }
     if (this.reload.time >= this.reload.duration) {
-      this.ammo = this.weapon.magazine;
+      if (w.reserve !== undefined) {
+        // munizioni contate: si prende dalla scorta solo quello che manca
+        const take = Math.min(w.magazine - this.ammo, this.reserve[w.id] ?? 0);
+        this.ammo += take;
+        this.reserve[w.id] = (this.reserve[w.id] ?? 0) - take;
+      } else {
+        this.ammo = w.magazine;
+      }
       this.reload = null;
     }
   }
@@ -193,6 +282,11 @@ export class Player {
   update(dt, game, ctrl) {
     if (this.dead) return; // nessun controllo da morto
     const { map } = game;
+
+    // Cambio d'arma (Q / pulsante touch / IA); arma speciale scarica e senza scorta: via
+    this.switchCooldown = Math.max(0, this.switchCooldown - dt);
+    if (ctrl.switchWeapon) this.switchWeapon();
+    this._discardEmptySpecial();
     const w = this.weapon;
 
     // Ricarica: avanza il tempo, avvio manuale (R / pulsante touch / IA)
@@ -252,7 +346,7 @@ export class Player {
       if (firing && w.autoReload) this.startReload(game);
     } else {
       if (pressed) this.shotQueued = true;
-      if ((this.shotQueued || (auto && firing)) && this.cooldown <= 0) {
+      if ((this.shotQueued || (auto && firing)) && this.cooldown <= 0 && this.switchCooldown <= 0) {
         this.cooldown = 1 / (w.fireRate || 8);
         this.shotQueued = false;
         this.ammo--;

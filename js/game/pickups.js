@@ -54,9 +54,12 @@ export class Pickups {
     return { kind, x, y, angle: 0, age: 0, life: this.cfg.life ?? 30, spawner: null, weapon: null, ammo: null, count: 0, ...extra };
   }
 
-  /** Arma lasciata a terra (ammo = colpi nel caricatore). */
-  dropWeapon(id, ammo, x, y, angle = 0) {
-    this.list.push(this._item('weapon', x, y, { weapon: id, ammo, angle }));
+  /** Arma lasciata a terra (ammo = colpi nel caricatore, reserve = scorta per le armi a munizioni contate). */
+  dropWeapon(id, ammo, x, y, angle = 0, reserve = null) {
+    // un'arma a munizioni contate completamente scarica non vale la pena lasciarla
+    const w = this.weapons.get(id);
+    if (w.reserve !== undefined && !ammo && !reserve) return;
+    this.list.push(this._item('weapon', x, y, { weapon: id, ammo, angle, reserve }));
     this._trim();
   }
 
@@ -121,13 +124,23 @@ export class Pickups {
     }
   }
 
-  /** Arma a terra più vicina all'unità (entro radius) diversa da quella impugnata, o null. */
+  /**
+   * Arma a terra più vicina all'unità (entro radius) diversa da quelle che porta, o null. Un'arma speciale uguale
+   * alla propria vale solo se la scorta non è piena (si raccoglie per i colpi).
+   */
   nearestWeapon(unit) {
     const r = this.cfg.radius ?? 9;
     let best = null;
     let bestD = r;
+    const special = unit.specialId;
     for (const it of this.list) {
-      if (it.kind !== 'weapon' || it.weapon === unit.weapon.id) continue;
+      if (it.kind !== 'weapon') continue;
+      if (it.weapon === unit.primaryId) continue;
+      if (it.weapon === special) {
+        const w = this.weapons.get(special);
+        const loaded = unit.weapon.id === special ? unit.ammo : unit.holster?.ammo ?? 0;
+        if ((unit.reserve[special] ?? 0) + loaded >= (w.reserve ?? 0) + w.magazine) continue;
+      }
       const d = Math.hypot(unit.x - it.x, unit.y - it.y);
       if (d <= bestD) {
         bestD = d;

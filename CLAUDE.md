@@ -209,6 +209,12 @@ tools/gen_desert.mjs  genera config/levels/level03.json (deserto 97x65, simmetri
   (`wreckTime`), rientro dopo `respawn` s; mezzo vuoto lontano dalla base per `abandonTime` s = rimosso e ricreato.
   `_vehicleContacts`: soldati spinti fuori (o investiti, `runover`), mezzi separati. Percorsi dei mezzi:
   `nav.findPath(..., minClear = nav.clearanceFor(hw))` (`Nav.clear` = distanza dai solidi).
+- Due armi: `player.holster = { id, ammo }` (l'arma non in mano), `player.reserve[id]` = scorta delle armi con
+  `reserve` (munizioni contate; `startReload` la consuma). Le armi `special` (lanciarazzi) si aggiungono:
+  `pickUp(id, ammo, reserve)` restituisce le armi da lasciare a terra; `switchWeapon()` (azione `switchWeapon`, Q,
+  `switchTime`), `giveSpecial(id)` (bot "rifle+launcher"), `_discardEmptySpecial()`, getter `primaryId`/`specialId`/
+  `hasAntiVehicle`. I caduti lasciano anche l'arma della fondina. IA: `BotBrain._wantSwitch` (anticarro solo contro
+  i mezzi), in `_weaponTick` la speciale vale `specialValue` (+ bonus con mezzi nemici) solo se non ne ha già una.
 - Razzi (`rockets.js`): arma con `projectile: "rocket"` + `rocket` (tipo in weapons.json -> `rockets`); gittata come i
   proiettili (`Game._shotRange`), scia `effects.json -> trails`; IA: armi `antiVehicle` mirano ai mezzi, mai sotto
   `minSafeRange`; senza anticarro la fanteria si ripara (`BotBrain._vehicleDanger`).

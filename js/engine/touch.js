@@ -320,6 +320,24 @@ export class TouchSticks {
       ctx.restore();
     }
 
+    if (icon === 'swap') {
+      // due frecce opposte (cambio arma)
+      const s = r * 0.42;
+      ctx.lineWidth = Math.max(2, r * 0.1);
+      ctx.strokeStyle = accent;
+      for (const [dy, dir] of [[-s * 0.4, 1], [s * 0.4, -1]]) {
+        const x0 = x - dir * s;
+        const x1 = x + dir * s;
+        ctx.beginPath();
+        ctx.moveTo(x0, y + dy);
+        ctx.lineTo(x1, y + dy);
+        ctx.moveTo(x1 - dir * s * 0.4, y + dy - s * 0.3);
+        ctx.lineTo(x1, y + dy);
+        ctx.lineTo(x1 - dir * s * 0.4, y + dy + s * 0.3);
+        ctx.stroke();
+      }
+    }
+
     if (icon === 'enter' || icon === 'exit') {
       // porta (rettangolo) con freccia che entra o esce
       const s = r * 0.42;

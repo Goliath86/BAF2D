@@ -145,9 +145,21 @@ export class BotBrain {
     this.enemyArmor = false; // ci sono mezzi nemici in campo (le armi anticarro valgono di più)
   }
 
-  /** L'arma impugnata ferisce i mezzi (lanciarazzi). */
+  /** Porta un'arma che ferisce i mezzi (lanciarazzi, in mano o nella fondina). */
   get antiVehicle() {
-    return !!this.unit.weapon?.antiVehicle;
+    return !!this.unit.hasAntiVehicle;
+  }
+
+  /**
+   * Arma giusta per il bersaglio: quella anticarro contro i mezzi, la principale contro i soldati (e senza
+   * bersaglio). true = cambiare arma in questo tick.
+   */
+  _wantSwitch() {
+    const u = this.unit;
+    if (!u.holster || u.switchCooldown > 0) return false;
+    const wantAnti = !!this.target?.isVehicle;
+    const holding = !!u.weapon.antiVehicle;
+    return wantAnti !== holding;
   }
 
   // ---------- Tick ----------
@@ -199,6 +211,9 @@ export class BotBrain {
     const onTarget = Math.abs(angleDiff(desired, this.angle)) <= (c.fireConeDeg ?? 6) * DEG;
     // lanciarazzi: mai contro un bersaglio troppo vicino (l'esplosione colpirebbe anche lui)
     if (wantFire && u.weapon.projectile && aimPt && dist(aimPt, u) < (u.weapon.minSafeRange ?? 50)) wantFire = false;
+    // un mezzo con un'arma che non lo scalfisce: niente colpi sprecati (sta cambiando arma)
+    if (this.target?.isVehicle && !u.weapon.antiVehicle) wantFire = false;
+    const switchWeapon = this._wantSwitch();
     const firing = wantFire && onTarget && !u.reloading && u.ammo > 0;
     u.aimDistance = aimPt ? dist(aimPt, u) : null;
 
@@ -218,8 +233,9 @@ export class BotBrain {
       move,
       aim: () => this.angle,
       firing,
-      reload: !plan && this._wantReload(wantFire),
+      reload: !plan && !switchWeapon && this._wantReload(wantFire),
       grenade,
+      switchWeapon,
       repeat: true,
       faceMove: false,
     };
@@ -839,15 +855,23 @@ export class BotBrain {
       if ((this.weaponTimer -= dt) > 0) return false;
       this.weaponTimer = rand(c.weaponScanInterval, 1.5);
       const reach = fighting ? combatReach : c.weaponSearch ?? 110;
-      const own = this._weaponValue(u.weapon.id);
+      // armi normali: confronto con la principale; arma speciale (lanciarazzi): si aggiunge se non ne ha una
+      // (più ambita se ci sono mezzi nemici)
+      const primary = u.primaryId;
+      const own = primary ? this._weaponValue(primary) : 0;
+      const hasSpecial = !!u.specialId;
       const minGain = c.weaponMinGain ?? 0.3;
       // non lascia l'area della bandiera che sta catturando
       const hold = this.zone || (this._capturing(game) ? this.objective.flag : null);
       let bestS = -Infinity;
       for (const it of game.pickups.list) {
-        if (it.kind !== 'weapon' || it.weapon === u.weapon.id) continue;
+        if (it.kind !== 'weapon' || it.weapon === primary) continue;
+        const special = !!game.weapons.get(it.weapon).special;
+        if (special && hasSpecial) continue;
         const d = dist(it, u);
-        const gain = this._weaponValue(it.weapon) - own;
+        const gain = special
+          ? (c.specialValue ?? 0.8) + (this.enemyArmor ? c.vehicles?.antiVehicleBonus ?? 1.5 : 0)
+          : this._weaponValue(it.weapon) - own;
         if (d > reach || gain < minGain) continue;
         // un compagno ci sta già andando
         if (this.squad.brains.some((b) => b !== this && !b.unit.dead && b.weaponGoal === it)) continue;

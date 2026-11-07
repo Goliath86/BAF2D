@@ -81,8 +81,11 @@ Sulla mappa ci sono delle bandiere: un pennone con un drappo che parte da terra.
   oscillatori/rumore, `rpm` = moltiplicatore di frequenza da fermo a pieno regime, `lowpass`/`lowpassOpen`, `throb` =
   pulsazione dei cilindri, `idle` = volume al minimo). Il regime segue la velocità (e l'acceleratore, `throttleRev`);
   si sente solo vicino, tace in pausa. Con `src` (file in loop) il regime cambia la velocità di riproduzione.
-- **Lanciarazzi** (`weapons.json` → `launcher`, razzi in `rockets`): un colpo per ricarica, sulle mappe come oggetto
-  raccoglibile e assegnato a un bot su quattro.
+- **Lanciarazzi** (`weapons.json` → `launcher`, razzi in `rockets`): arma **speciale** (`special: true`) che si porta
+  *in più* di quella principale: si passa dall'una all'altra con **Q** (o il pulsante touch con le due frecce, visibile
+  solo con due armi). Razzi contati (`reserve`: scorta oltre a quello caricato, "+N" nell'HUD); finiti i razzi si butta
+  e si torna all'arma principale; raccoglierne un altro ricarica la scorta. Sulle mappe come oggetto raccoglibile;
+  un bot su quattro nasce con "rifle+launcher" (`bots.weapons`). I bot impugnano il lanciarazzi solo contro i mezzi.
 - **IA**: i bot "guidatori" (`bots.ai.vehicles`) salgono sui mezzi liberi e li portano alle bandiere (`bots.ai.vehicle`,
   `js/game/vehicle_ai.js`); chi ha il lanciarazzi attacca i mezzi, gli altri si riparano.
 

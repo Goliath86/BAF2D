@@ -72,6 +72,7 @@
       "reload": "Ricarica",
       "grenade": "Granata",
       "pickup": "Raccogli / mezzo",
+      "switchWeapon": "Cambia arma",
       "pause": "Pausa"
     }
   },
@@ -118,6 +119,7 @@
     "promoted": "PROMOZIONE",
     "pickup": "[{key}] Raccogli {weapon}",
     "pickupTouch": "Raccogli {weapon}",
+    "holster": "[{key}] {weapon}",
     "enter": "[{key}] Sali: {vehicle}",
     "enterTouch": "Sali: {vehicle}",
     "exit": "[{key}] Scendi",

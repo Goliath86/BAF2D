@@ -72,6 +72,7 @@
       "reload": "Reload",
       "grenade": "Grenade",
       "pickup": "Pick up / vehicle",
+      "switchWeapon": "Switch weapon",
       "pause": "Pause"
     }
   },
@@ -118,6 +119,7 @@
     "promoted": "PROMOTED",
     "pickup": "[{key}] Pick up {weapon}",
     "pickupTouch": "Pick up {weapon}",
+    "holster": "[{key}] {weapon}",
     "enter": "[{key}] Get in: {vehicle}",
     "enterTouch": "Get in: {vehicle}",
     "exit": "[{key}] Get out",

@@ -327,7 +327,7 @@
 
   "bots": {
     "teams": { "red": 4, "blue": 0 },
-    "weapons": ["rifle", "rifle", "shotgun", "launcher"],
+    "weapons": ["rifle", "rifle", "shotgun", "rifle+launcher"],
     "respawnDelay": 5,
     "baseSpread": [6, 22],
     "player": { "speed": 78, "faceMoveWhenIdle": false, "grenades": 2 },
@@ -448,6 +448,7 @@
       "reload": ["KeyR"],
       "grenade": ["KeyG"],
       "pickup": ["KeyE", "KeyF"],
+      "switchWeapon": ["KeyQ"],
       "confirm": ["Enter", "NumpadEnter"],
       "pause": ["Escape", "KeyP"],
       "debug": ["F3"],
@@ -461,7 +462,7 @@
     "mouse": {
       "fireButton": 0
     },
-    "rebindable": ["up", "down", "left", "right", "fire", "reload", "grenade", "pickup", "pause"],
+    "rebindable": ["up", "down", "left", "right", "fire", "reload", "grenade", "pickup", "switchWeapon", "pause"],
     "touch": {
       "radius": 0.16,
       "deadZone": 0.12,
@@ -473,6 +474,7 @@
       "buttons": {
         "reload": { "anchor": "right", "offset": [0, -2.1], "radius": 0.07, "icon": "reload" },
         "grenade": { "anchor": "right", "offset": [-1.9, -1.3], "radius": 0.065, "icon": "grenade" },
+        "switchWeapon": { "anchor": "right", "offset": [-1.3, -3.1], "radius": 0.055, "icon": "swap", "hidden": true },
         "pickup": { "anchor": "right", "offset": [-2.4, 0.2], "radius": 0.065, "icon": "pickup", "color": "rgba(255,211,107,0.95)", "hidden": true },
         "debugHurt": { "anchor": "left", "offset": [-0.6, -2.1], "radius": 0.055, "icon": "hurt", "color": "rgba(255,110,200,0.9)", "debugOnly": true },
         "debugHeal": { "anchor": "left", "offset": [0.6, -2.1], "radius": 0.055, "icon": "heal", "color": "rgba(120,255,160,0.9)", "debugOnly": true }

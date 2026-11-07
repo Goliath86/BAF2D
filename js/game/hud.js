@@ -98,7 +98,7 @@ export class Hud {
         pc.fontSize ?? 6, pc.color || '#ffd36b', 'center');
     }
     if (mode?.vehicle) this._drawVehicle(ui, u, display.cssWidth, mode.vehicle);
-    else this._drawWeapon(ui, u, display.cssWidth, player);
+    else this._drawWeapon(ui, u, display.cssWidth, player, mode?.holster);
     if (mode?.ctf) {
       const W = Math.floor(display.cssWidth / u);
       let y = this._drawTickets(ui, u, W, mode.ctf, mode.team, mode.zone);
@@ -425,7 +425,7 @@ export class Hud {
     }
   }
 
-  _drawWeapon(ui, u, cssWidth, player) {
+  _drawWeapon(ui, u, cssWidth, player, holster = null) {
     const wc = this.wc;
     const w = player.weapon;
     const m = this.cfg.margin ?? 5;
@@ -442,7 +442,8 @@ export class Hud {
     const empty = player.ammo === 0 && !player.reloading;
     const ammoSize = wc.ammoFontSize ?? 10;
     const ammoColor = empty ? wc.emptyColor || '#f43' : wc.ammoColor || '#ffd36b';
-    const magText = `/${w.magazine}`;
+    // munizioni contate (lanciarazzi): "+N" di scorta invece della capienza del caricatore
+    const magText = w.reserve !== undefined ? ` +${player.reserve[w.id] ?? 0}` : `/${w.magazine}`;
     const magW = this._text(ui, u, magText, right, y + ammoSize - size, size, this.cfg.text || '#fff', 'right');
     const ammoW = this._text(ui, u, String(player.ammo), right - magW - 1, y, ammoSize, ammoColor, 'right');
     const icon = w.pickupSprite && this.assets.sprites.get(w.pickupSprite);
@@ -493,5 +494,7 @@ export class Hud {
       color = wc.emptyColor || '#f43';
     }
     if (status) this._text(ui, u, status, right, y, size, color, 'right');
+    // seconda arma nella fondina
+    if (holster) this._text(ui, u, holster, right, y + size + 2, this.cfg.weapon?.holsterFontSize ?? 6, this.cfg.weapon?.holsterColor || '#c8c8d0', 'right');
   }
 }

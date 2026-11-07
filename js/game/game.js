@@ -252,7 +252,7 @@ export class Game {
   _spawnBots() {
     this.bots.length = 0;
     const teams = this.botCounts || {};
-    const weapons = (this.botsCfg.weapons || [this.config.player.weapon]).filter((id) => this.weapons.get(id));
+    const weapons = (this.botsCfg.weapons || [this.config.player.weapon]).filter((id) => String(id).split('+').every((w) => this.weapons.get(w)));
     for (const [team, count] of Object.entries(teams)) {
       if (!this.squads[team]) {
         console.warn(`bots.teams: unknown team "${team}"`);
@@ -269,13 +269,16 @@ export class Game {
 
   /** (Ri)crea il soldato del bot "slot": su una bandiera della squadra se ce n'è una, altrimenti alla base. */
   _spawnBot(slot, near) {
-    const cfg = { ...this.config.player, ...(this.botsCfg.player || {}), weapon: slot.weapon };
+    // bots.weapons: "rifle" oppure "rifle+launcher" (arma principale + arma speciale nella fondina)
+    const [primary, special] = String(slot.weapon).split('+');
+    const cfg = { ...this.config.player, ...(this.botsCfg.player || {}), weapon: primary };
     const hw = (cfg.hitbox?.[0] ?? 10) / 2;
     const hh = (cfg.hitbox?.[1] ?? 10) / 2;
     const pos = this.ctf.spawnPoint(slot.team, near, hw, hh, { preferFlags: true, spread: this.botsCfg.baseSpread || [6, 22] });
     const unit = new Player(cfg, pos.x, pos.y, this.assets, this.weapons, this.grenadeTypes, slot.team);
     unit.isBot = true;
     unit.combatant = slot.record;
+    if (special && this.weapons.ids.includes(special)) unit.giveSpecial(special);
     // guarda verso il centro della mappa
     unit.angle = Math.atan2(this.map.pixelHeight / 2 - pos.y, this.map.pixelWidth / 2 - pos.x);
     unit.legsAngle = unit.angle;
@@ -328,6 +331,7 @@ export class Game {
       firing: input.isFiring(),
       reload: input.wasPressed('reload'),
       grenade: input.wasPressed('grenade'),
+      switchWeapon: input.wasPressed('switchWeapon'),
       repeat: input.mode === 'touch' && input.touchHoldToRepeat,
       faceMove: input.mode === 'touch',
     };
@@ -857,7 +861,12 @@ export class Game {
     };
     if (g.dropWeapon !== false) {
       const s = spot(first);
-      this.pickups.dropWeapon(p.weapon.id, p.ammo, s.x, s.y, a + s.side * (0.8 + Math.random()));
+      this.pickups.dropWeapon(p.weapon.id, p.ammo, s.x, s.y, a + s.side * (0.8 + Math.random()), p.reserve[p.weapon.id] ?? null);
+      // seconda arma (fondina): cade poco più in là
+      if (p.holster) {
+        const h = p.holster;
+        this.pickups.dropWeapon(h.id, h.ammo, s.x + Math.cos(a) * 6, s.y + Math.sin(a) * 6, a + Math.PI / 3, p.reserve[h.id] ?? null);
+      }
     }
     if (g.dropGrenades !== false && p.grenades > 0) {
       const s = spot(-first);
@@ -948,8 +957,16 @@ export class Game {
   /** L'unità prende l'arma "item" (con i colpi rimasti) e lascia a terra quella che impugnava. */
   _swapWeapon(u, item) {
     this.pickups.take(item);
-    const prev = u.equip(item.weapon, item.ammo ?? undefined);
-    if (prev) this.pickups.dropWeapon(prev.id, prev.ammo, u.x, u.y, u.angle + Math.PI / 2);
+    const special = this.weapons.get(item.weapon).special && u.specialId === item.weapon;
+    if (special) {
+      // stessa arma speciale: si prendono solo i colpi (scorta, fino al massimo)
+      const w = this.weapons.get(item.weapon);
+      const got = (item.ammo ?? w.magazine) + (item.reserve ?? w.reserve ?? 0);
+      u.reserve[item.weapon] = Math.min(w.reserve ?? 0, (u.reserve[item.weapon] ?? 0) + got);
+    } else {
+      const dropped = u.pickUp(item.weapon, item.ammo ?? undefined, item.reserve ?? undefined);
+      for (const d of dropped) this.pickups.dropWeapon(d.id, d.ammo, u.x, u.y, u.angle + Math.PI / 2, d.reserve ?? null);
+    }
     if (this.pickupsCfg.weaponSound) this.audio.play(this.pickupsCfg.weaponSound, u);
     if (u === this.player && !this.attract) {
       this.hud.popup(this.i18n.t(u.weapon.name || u.weapon.id), this.pickupsCfg.popupColor);
@@ -1340,6 +1357,7 @@ export class Game {
             ? { icon: 'rocket', badge: String(g1.ammo), progress: v.reloadProgress(1), disabled: !!g1.reload }
             : { icon: 'rocket', disabled: true },
           pickup: { hidden: false, icon: 'exit' },
+          switchWeapon: { hidden: true },
         });
       } else {
         input.sticks.draw(ui, {
@@ -1347,6 +1365,7 @@ export class Game {
           grenade: { badge: String(p.grenades), disabled: p.grenades <= 0 },
           // compare solo sopra un'arma raccoglibile o vicino a un mezzo libero
           pickup: { hidden: !this.pickupOffer && !this.vehicleOffer, icon: this.vehicleOffer ? 'enter' : 'pickup' },
+          switchWeapon: { hidden: !p.holster }, // solo con due armi
         });
       }
     }
@@ -1367,9 +1386,20 @@ export class Game {
         screen: { x: this.player.x - cx, y: this.player.y - cy }, // posizione del giocatore sullo schermo (px di gioco)
         pickup: playing ? this._pickupPrompt() : null,
         vehicle: this.player.vehicle ? this._vehicleHud(this.player.vehicle) : null,
+        holster: this._holsterHud(),
       });
     }
     if (this.debug) this._drawDebug(ui);
+  }
+
+  /** Arma nella fondina per l'HUD: "[Q] Lanciarazzi" (su touch senza tasto), o null. */
+  _holsterHud() {
+    const p = this.player;
+    if (!p.holster || p.vehicle || p.dead) return null;
+    const w = this.weapons.get(p.holster.id);
+    const name = this.i18n.t(w.name || w.id);
+    if (this.input.mode === 'touch') return name;
+    return this.i18n.t('hud.holster', { key: keyName(this.input.bindings.switchWeapon?.[0], this.i18n), weapon: name });
   }
 
   /** Dati del mezzo guidato per l'HUD: nome, corazza, armi (nome, colpi, ricarica). */
