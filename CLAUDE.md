@@ -194,6 +194,24 @@ tools/gen_desert.mjs  genera config/levels/level03.json (deserto 97x65, simmetri
   -> `_swapWeapon` (equip + vecchia arma a terra). `keyName(code, i18n)` in input.js (usato da menu e HUD).
   Bot: `BotBrain._weaponTick` sceglie `weaponGoal` (valore `weaponValues` + `weaponBias` personale), ci va e
   imposta `pickupNow`; `Game._updatePickups` fa lo scambio per bot e `playerBrain` (dopo `_updateBots`).
+- Mezzi (`vehicles.js`, `config/vehicles.json`, caricato da main.js -> `VehicleTypes`; `game.vehicles`,
+  `game.vehicleSpawns` dalla legend `{ "tile", "vehicle", "team", "angleDeg" }` -> `TileMap.vehicles`). Un soldato a
+  bordo ha `unit.vehicle` (posizione sincronizzata da `Game._syncDriver`, non disegnato, escluso da colpi/esplosioni/
+  percezione IA/raccolta granate); il mezzo prende la squadra del pilota. Comandi del mezzo
+  `{ move, aim(v), firing, secondary, reload }`: umano `_humanVehicleControl`, bot `unit.vehicleBrain`
+  (`VehicleBrain`, cfg `bots.ai.vehicle`). Salita/discesa: azione `pickup` (precedenza sui mezzi) ->
+  `_enterVehicle` / `_exitVehicle`; i bot impostano `brain.enterNow` (`BotBrain._boardTick`, cfg `bots.ai.vehicles`).
+  Armi del mezzo = voci di weapons.json con `vehicleOnly` (stato in `vehicle.guns`), sparano con
+  `Game.fireVehicle` -> `Game.fire(shooter)`: `shooter` = Player o oggetto `{ weapon, angle, muzzle, x, y, team,
+  aimDistance, owner, fromVehicle }`. Corazza (`armor`): i proiettili fanno solo l'impatto `metal`; danni da
+  `Game.explode` (× `vehicleFactor` del def: granate 0.4, razzi 1.2-1.5) e `directDamage` dei razzi; `v.lastHitBy`
+  riceve il merito (`scoring.points.vehicle`). `_destroyVehicle`: esplosione `blast`, pilota ucciso, carcassa
+  (`wreckTime`), rientro dopo `respawn` s; mezzo vuoto lontano dalla base per `abandonTime` s = rimosso e ricreato.
+  `_vehicleContacts`: soldati spinti fuori (o investiti, `runover`), mezzi separati. Percorsi dei mezzi:
+  `nav.findPath(..., minClear = nav.clearanceFor(hw))` (`Nav.clear` = distanza dai solidi).
+- Razzi (`rockets.js`): arma con `projectile: "rocket"` + `rocket` (tipo in weapons.json -> `rockets`); gittata come i
+  proiettili (`Game._shotRange`), scia `effects.json -> trails`; IA: armi `antiVehicle` mirano ai mezzi, mai sotto
+  `minSafeRange`; senza anticarro la fanteria si ripara (`BotBrain._vehicleDanger`).
 - Audio posizionale: `audio.play(nome, { x, y })` attenua con la distanza da `audio.listener` (centro visuale,
   `audio.hearing.near/far`).
 - Sprite con `extends`: ereditano tutto tranne `src`, `placeholder` fuso campo per campo.

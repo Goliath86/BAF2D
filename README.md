@@ -267,7 +267,7 @@ tipi di `casings` lanciati in tutte le direzioni, che volano, rimbalzano e resta
 |---|---|
 | `name` | chiave di traduzione del nome (es. `weapons.rifle`) |
 | `bodySprite` | busto del soldato che impugna quest'arma (default: `player.sprite`) |
-| `pickupSprite` | sprite dell'arma a terra (per la futura raccolta) |
+| `pickupSprite` | sprite dell'arma a terra (raccolta) |
 | `bulletSprite`, `sound` | sprite del proiettile e suono dello sparo |
 | `damage` | danno di ogni proiettile (per il fucile a pompa, di ogni pallino) |
 | `magazine` | colpi nel caricatore |
