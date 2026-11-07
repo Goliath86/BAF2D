@@ -165,7 +165,9 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
   o cadono vicino al bersaglio. Proiettili con `team`/`owner`: `_unitHit` (hitbox + `combat.hitPadding`, niente
   fuoco amico), a fine corsa `_hitJustBeyond` (`endHitReach`). Granate dei bot: `BotBrain._considerGrenade` ->
   `throwPlan` (mira al punto, poi `ctrl.grenade`), gittata in `unit.throwDistance` (letta da `Game.throwGrenade` per
-  `isBot`); `_grenadeDanger` -> `evade` (fuga, ha la precedenza su combattimento/obiettivo, niente fuoco). `player.damage(n, { unit, x, y })` -> `hurtBy` letto
+  `isBot`); `_grenadeDanger` -> `evade` (fuga, ha la precedenza su combattimento/obiettivo, niente fuoco):
+  punto d'arresto stimato con `_grenadeRest` (volo + rotolamento), distanza `_grenadeSafeRadius`, la fuga
+  continua fino al punto scelto (ricalcolato ogni 0,25 s). `player.damage(n, { unit, x, y })` -> `hurtBy` letto
   dall'IA. Esplosioni feriscono tutte le unità. F3 disegna percorsi/coperture dei bot.
 - Punteggi (`scores.js`, `game.json -> scoring`): `game.scores` ha un record per combattente (`unit.combatant`,
   persistente tra i rientri: `game.playerRecord`, `slot.record` dei bot, nomi da `i18n.list('scoreboard.botNames')`).

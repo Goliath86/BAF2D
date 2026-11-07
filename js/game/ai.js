@@ -743,61 +743,113 @@ export class BotBrain {
 
   // ---------- Granate ----------
 
+  /** Distanza di sicurezza da una granata: blastRadius × grenadeSafeFactor + grenadeAvoidMargin. */
+  _grenadeSafeRadius(g) {
+    const c = this.cfg;
+    return (g.def.blastRadius ?? 40) * (c.grenadeSafeFactor ?? 1.6) + (c.grenadeAvoidMargin ?? 10);
+  }
+
   /**
-   * Granata vicina (entro blastRadius + grenadeAvoidMargin, in vista, notata dopo grenadeReaction s):
-   * prepara this.evade = { g, point } con il punto raggiungibile più vicino fuori dal raggio o al riparo.
-   * Restituisce true finché c'è pericolo.
+   * Stima del punto in cui la granata si fermerà: resto del volo + rotolamento (la velocità a terra decade
+   * con groundDrag, al primo contatto si riduce di "friction"); se c'è un muro in mezzo si ferma prima.
+   */
+  _grenadeRest(g, nav) {
+    const d = g.def;
+    const airborne = g.z > 0 || g.vz > 0;
+    let t = 0;
+    if (airborne) {
+      const grav = d.gravity ?? 300;
+      t = (g.vz + Math.sqrt(g.vz * g.vz + 2 * grav * Math.max(0, g.z))) / grav;
+    }
+    const k = t + (airborne ? d.friction ?? 0.5 : 1) / (d.groundDrag ?? 5);
+    let x = g.x + g.vx * k;
+    let y = g.y + g.vy * k;
+    if (!nav.los(g.x, g.y, x, y)) {
+      // muro: indietro a passi di 3 px fino a un punto libero in vista
+      const n = Math.ceil(Math.hypot(x - g.x, y - g.y) / 3);
+      for (let i = n - 1; i >= 0; i--) {
+        const px = g.x + ((x - g.x) * i) / n;
+        const py = g.y + ((y - g.y) * i) / n;
+        if (nav.los(g.x, g.y, px, py)) {
+          x = px;
+          y = py;
+          break;
+        }
+      }
+    }
+    return { x, y };
+  }
+
+  /**
+   * Granata vista (entro viewRange e in linea di vista, notata dopo grenadeReaction s) che si fermerà a meno
+   * della distanza di sicurezza: prepara this.evade = { g, rest, point } verso un punto sicuro e continua a
+   * scappare finché non lo raggiunge o la granata scoppia. Restituisce true finché c'è pericolo.
    */
   _grenadeDanger(dt, game) {
     const u = this.unit;
     const c = this.cfg;
     const nav = game.nav;
+    const view = c.viewRange ?? 220;
     let threat = null;
-    let radius = 0;
+    let rest = null;
     let best = Infinity;
     for (const g of game.grenades.list) {
-      if (g.time < this.grenadeReaction) continue;
-      const r = (g.def.blastRadius ?? 40) + (c.grenadeAvoidMargin ?? 10);
-      const d = dist(g, u);
-      if (d >= r || d >= best || !nav.los(g.x, g.y, u.x, u.y)) continue;
+      if (g.time < this.grenadeReaction || dist(g, u) > view) continue;
+      const seen = nav.los(g.x, g.y, u.x, u.y);
+      if (!seen && this.evade?.g !== g) continue; // già in fuga da questa: continua anche senza vederla
+      const r = this.evade?.g === g ? this.evade.rest : this._grenadeRest(g, nav);
+      const d = dist(r, u);
+      if (d >= this._grenadeSafeRadius(g) || !nav.los(r.x, r.y, u.x, u.y) || d >= best) continue;
       best = d;
       threat = g;
-      radius = r;
+      rest = r;
+    }
+    const e = this.evade;
+    // nessun pericolo: finisce la fuga solo una volta arrivato (o se la granata è scoppiata)
+    if (!threat && e && game.grenades.list.includes(e.g) && dist(e.point, u) > (c.arriveDistance ?? 4)) {
+      threat = e.g;
+      rest = e.rest;
     }
     if (!threat) {
-      if (this.evade) {
+      if (e) {
         this.evade = null;
         this._stop();
         this.repath = 0;
       }
       return false;
     }
-    const e = this.evade;
-    // la granata rotola: ricalcola il punto ogni tanto
+    // la granata si muove ancora: ogni tanto ristima dove si ferma e ricalcola il punto sicuro
     if (!e || e.g !== threat || (e.retarget -= dt) <= 0) {
-      this.evade = { g: threat, point: this._evadePoint(game, threat, radius), retarget: 0.3 };
+      const r = this._grenadeRest(threat, nav);
+      this.evade = { g: threat, rest: r, point: this._evadePoint(game, r, this._grenadeSafeRadius(threat)), retarget: 0.25 };
       this.throwPlan = null;
       this.repath = 0;
     }
     return true;
   }
 
+  /** Punto raggiungibile più vicino lontano almeno "radius" da g o al riparo (con un piccolo bonus al riparo). */
   _evadePoint(game, g, radius) {
     const u = this.unit;
     const nav = game.nav;
-    const reach = nav.reach(u.x, u.y, Math.ceil(radius / nav.size) + 3);
+    const coverBonus = this.cfg.grenadeCoverBonus ?? 1.5; // tile di percorso che vale la pena fare in più per un riparo
+    const reach = nav.reach(u.x, u.y, Math.ceil(radius / nav.size) + 4);
     let best = null;
-    let bestD = Infinity;
+    let bestS = Infinity;
     for (const i of reach.list) {
       const d = reach.dist(i);
-      if (d >= bestD) continue;
+      if (d - coverBonus >= bestS) continue;
       const p = nav.center(i);
-      if (dist(p, g) < radius && nav.los(g.x, g.y, p.x, p.y)) continue;
-      bestD = d;
-      best = p;
+      const hidden = this._hidden(nav, g, p);
+      if (!hidden && dist(p, g) < radius) continue;
+      const s = d - (hidden ? coverBonus : 0);
+      if (s < bestS) {
+        bestS = s;
+        best = p;
+      }
     }
     if (best) return best;
-    // nessun punto sicuro vicino: lontano dalla granata in linea retta
+    // nessun punto sicuro raggiungibile: lontano dalla granata in linea retta
     const a = Math.atan2(u.y - g.y, u.x - g.x);
     return { x: u.x + Math.cos(a) * radius, y: u.y + Math.sin(a) * radius };
   }

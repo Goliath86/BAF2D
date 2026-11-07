@@ -320,6 +320,8 @@
       "grenadeAimTime": 0.8,
       "grenadeReaction": [0.25, 0.6],
       "grenadeAvoidMargin": 10,
+      "grenadeSafeFactor": 1.6,
+      "grenadeCoverBonus": 1.5,
       "pickWeapons": true,
       "weaponValues": { "pistol": 1, "shotgun": 2.6, "rifle": 3 },
       "weaponBias": 0.6,

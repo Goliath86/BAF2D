@@ -111,7 +111,9 @@ Compagni e avversari sono controllati dal computer (`bots` in `game.json`; il nu
 - **lancia granate** (scorta `bots.player.grenades` per vita): ogni tanto valuta un lancio sul bersaglio, più
   volentieri se è al riparo (la lancia anche dietro un angolo, su un punto visibile sia da lui sia dal bersaglio) o se
   ci sono più nemici vicini; mai se un compagno o lui stesso sarebbero nel raggio dell'esplosione;
-- **scappa dalle granate** vicine (di chiunque) verso il punto più vicino fuori dal raggio o al riparo;
+- **scappa dalle granate** che vede (di chiunque): stima dove si fermerà e, se è troppo vicina
+  (`blastRadius` × `grenadeSafeFactor` + `grenadeAvoidMargin`), corre verso il punto più vicino a distanza di
+  sicurezza o al riparo dietro un muro (preferito), senza fermarsi finché non ci arriva;
 - **cambia arma**: se vede a terra un'arma che valuta meglio della sua (`weaponValues` + preferenza personale
   casuale) va a prenderla e lascia la propria; in combattimento solo se è a pochi passi, mai uscendo dall'area di
   una bandiera che sta catturando. Le granate le raccoglie passandoci sopra.
@@ -416,7 +418,7 @@ lo stick sinistro due pulsanti a forma di cuore: "−" toglie vita (come F5), "+
   `grenadeFirstDelay`/`grenadeInterval` tra due valutazioni, `grenadeChanceVisible`/`Hidden`/`Group`, `grenadeMemory`,
   `grenadeSelfSafety` = distanza minima in raggi d'esplosione, `grenadeFriendlyMargin`, `grenadeRangeFactor` = la
   granata rotola ~23% oltre il primo rimbalzo, `grenadeConeDeg`, `grenadeAimTime`; fuga: `grenadeReaction`,
-  `grenadeAvoidMargin`), armi a terra (`pickWeapons` = on/off, `weaponValues` per id, `weaponBias` = ± preferenza
+  `grenadeAvoidMargin`, `grenadeSafeFactor`, `grenadeCoverBonus` = tile di percorso in più accettati per un riparo), armi a terra (`pickWeapons` = on/off, `weaponValues` per id, `weaponBias` = ± preferenza
   personale, `weaponMinGain`, `weaponSearch` px, `weaponCombatReach` px in combattimento, `weaponScanInterval`,
   `weaponGoalTime` = rinuncia dopo questi secondi).
 - `audio.hearing`: `near`/`far` px dal centro della visuale (i suoni lontani si attenuano fino a sparire).
