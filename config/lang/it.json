@@ -134,6 +134,11 @@
     "enterTouch": "Sali: {vehicle}",
     "exit": "[{key}] Scendi",
     "exitTouch": "Tocca il pulsante porta per scendere",
+    "land": "[{key}] Atterra e scendi",
+    "landTouch": "Pulsante porta: atterra e scendi",
+    "landing": "Atterraggio... [{key}] annulla",
+    "landingTouch": "Atterraggio...",
+    "cantLand": "Qui non si può atterrare: spostati su terreno libero",
     "flag": {
       "capturing": "CONQUISTA {flag}",
       "securing": "RIPRISTINO {flag}",
@@ -212,7 +217,8 @@
   },
   "vehicles": {
     "jeep": "Jeep",
-    "tank": "Carro lanciarazzi"
+    "tank": "Carro lanciarazzi",
+    "helicopter": "Elicottero"
   },
   "weapons": {
     "pistol": "Pistola",

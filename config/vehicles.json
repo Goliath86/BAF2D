@@ -69,6 +69,34 @@
       "shadow": [4, 5],
       "muzzles": { "vehicle_mg": 21 },
       "weapons": ["vehicle_mg", "vehicle_rockets"]
+    },
+    "helicopter": {
+      "name": "vehicles.helicopter",
+      "sprite": "helicopter",
+      "rotorSprite": "heli_rotor",
+      "rotorPivot": [1, 0],
+      "rotorRate": 32,
+      "spinUp": 0.9,
+      "flying": true,
+      "airborneAlt": 0.35,
+      "climbRate": 0.7,
+      "descendRate": 0.6,
+      "fallRate": 1.6,
+      "hitbox": [24, 24],
+      "maxSpeed": 135,
+      "accel": 120,
+      "brake": 200,
+      "turnRate": 3,
+      "armor": true,
+      "bulletFactor": 0.3,
+      "engineSound": "engine_heli",
+      "health": 420,
+      "respawn": 50,
+      "wreckFrame": 1,
+      "shadow": [3, 4],
+      "shadowLift": 5,
+      "muzzles": { "vehicle_mg": 19, "vehicle_rockets": 6 },
+      "weapons": ["vehicle_mg", "vehicle_rockets"]
     }
   }
 }

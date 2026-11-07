@@ -202,6 +202,7 @@ set(30, 58, 'S', ['.', 'r', 'd', 'o', 'b']); // fucile a pompa tra le rovine a s
 set(13, 53, 'J', ['=']);
 set(21, 53, 'T', ['=']);
 set(31, 17, 'N', ['=']);
+set(30, 53, 'U', ['=']); // elicottero blu (i rossi: ruotato)
 // lanciarazzi: fattoria e casa del villaggio
 set(30, 44, 'L', ['.', 'r', 'd', 'o', 'b']);
 set(42, 40, 'L', ['f', 'F', 'r']);
@@ -217,7 +218,7 @@ set(42, 40, 'L', ['f', 'F', 'r']);
 }
 
 // ---------- simmetria forzata (metà destra = metà sinistra ruotata) ----------
-const swapTeam = { 1: '2', 2: '1', A: 'E', E: 'A', B: 'D', D: 'B', J: 'K', K: 'J', T: 'Y', Y: 'T' };
+const swapTeam = { 1: '2', 2: '1', A: 'E', E: 'A', B: 'D', D: 'B', J: 'K', K: 'J', T: 'Y', Y: 'T', U: 'Z', Z: 'U' };
 for (let y = 0; y < H; y++) {
   for (let x = 0; x < W; x++) {
     const left = x < (W - 1) / 2 || (x === (W - 1) / 2 && y < (H - 1) / 2);
@@ -287,6 +288,8 @@ const level = {
     T: { tile: ['road', 'road2', 'road3'], vehicle: 'tank', team: 'blue', angleDeg: 0 },
     Y: { tile: ['road', 'road2', 'road3'], vehicle: 'tank', team: 'red', angleDeg: 180 },
     N: { tile: ['road', 'road2', 'road3'], vehicle: 'jeep', angleDeg: 0 },
+    U: { tile: ['road', 'road2', 'road3'], vehicle: 'helicopter', team: 'blue', angleDeg: 0 },
+    Z: { tile: ['road', 'road2', 'road3'], vehicle: 'helicopter', team: 'red', angleDeg: 180 },
     1: { ...sand, spawn: 'blue' },
     2: { ...sand, spawn: 'red' },
     A: { ...sand, flag: 'A' },

@@ -148,6 +148,26 @@
         "burnt": "#2a2622", "burntLight": "#3e3832", "burntDark": "#161412"
       }
     },
+    "helicopter": {
+      "src": null,
+      "teamColored": true,
+      "frameWidth": 46,
+      "frameHeight": 26,
+      "origin": [25, 13],
+      "placeholder": {
+        "shape": "helicopter", "frames": 2, "autoOutline": "#0d0f08",
+        "body": "#5a6640", "bodyLight": "#788656", "bodyDark": "#3a4228", "glass": "#2c3a48", "glassLight": "#6a8aa0",
+        "skid": "#2a2a26", "pod": "#3a3a34", "podLight": "#5a5a52", "gun": "#262626", "tailRotor": "#2a2a26",
+        "burnt": "#2a2622", "burntLight": "#3e3832", "burntDark": "#161412"
+      }
+    },
+    "heli_rotor": {
+      "src": null,
+      "frameWidth": 50,
+      "frameHeight": 50,
+      "origin": [25, 25],
+      "placeholder": { "shape": "heli_rotor", "frames": 2, "blade": "#1e1e1c", "bladeLight": "#4a4a44", "tip": "#c8a838", "hub": "#3a3a34", "blur": "#1a1a18" }
+    },
     "tank_turret": {
       "src": null,
       "frameWidth": 32,
@@ -707,6 +727,23 @@
         "q": 1.5,
         "throb": { "rate": [8, 19], "depth": 0.6 },
         "idle": 0.5
+      }
+    },
+    "engine_heli": {
+      "src": null,
+      "volume": 0.16,
+      "loop": {
+        "layers": [
+          { "wave": "noise", "volume": 1 },
+          { "wave": "sawtooth", "freq": 30, "volume": 0.6 },
+          { "wave": "triangle", "freq": 180, "volume": 0.12 }
+        ],
+        "rpm": [1, 1.5],
+        "lowpass": 360,
+        "lowpassOpen": 2.2,
+        "q": 1.2,
+        "throb": { "rate": [4, 13], "depth": 0.85 },
+        "idle": 0.3
       }
     },
     "vehicle_exit": {

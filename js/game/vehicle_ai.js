@@ -4,6 +4,8 @@
 //   Nav.clearanceFor) e resta nell'area finché non è presa; ogni mezzo della squadra punta a una bandiera
 //   diversa se può (soprattutto in difesa) e a un punto lontano dagli altri mezzi; nell'area con un compagno
 //   addosso si ferma, e se resta bloccato più volte lascia la bandiera ad altri per un po';
+// - elicottero: vola dritto (niente percorsi), gira sopra la bandiera e pattuglia da una all'altra
+//   (heliPatrolTime), vede e spara sopra i muri; la mitragliatrice si usa anche contro gli elicotteri;
 // - combattimento: bersaglio = soldato nemico a piedi o mezzo nemico in vista; mitragliatrice contro la
 //   fanteria (a raffiche), razzi contro i mezzi (e a volte contro gruppi di soldati); rallenta mentre spara;
 // - bloccato (contro un muro o un altro mezzo): retromarcia per un attimo, poi ricalcola il percorso.
@@ -84,9 +86,12 @@ export class VehicleBrain {
       const d = dist(t, v);
       const rocketGun = v.guns.find((g) => g.w.projectile);
       const mg = v.guns.find((g) => !g.w.projectile);
+      // la mitragliatrice serve contro la fanteria e contro gli elicotteri (corazza leggera), non contro i corazzati
+      const mgUseful = !t.isVehicle || (t.def.bulletFactor ?? 0) > 0;
       const useRocket = rocketGun && d >= (rocketGun.w.minSafeRange ?? 60) && d <= (rocketGun.w.maxRange ?? 380) * 0.95
         && (t.isVehicle || this._group(game, t) >= 2);
-      const gun = t.isVehicle ? rocketGun : useRocket && Math.random() < 0.02 ? rocketGun : mg;
+      // arma con cui mirare: razzi contro i mezzi (se ci sono), altrimenti la mitragliatrice se serve
+      const gun = t.isVehicle ? rocketGun || (mgUseful ? mg : null) : useRocket && Math.random() < 0.02 ? rocketGun : mg;
       if (gun) {
         const speed = gun.w.bulletSpeed || 300;
         const lead = (d / speed) * (c.leadFactor ?? 0.6);
@@ -96,9 +101,7 @@ export class VehicleBrain {
         this.aimAngle = Math.atan2(ay - p.y, ax - p.x) + this.aimErr;
         v.aimDistance = Math.hypot(ax - p.x, ay - p.y);
         const onTarget = Math.abs(angleDiff(this.aimAngle, v.turret)) <= (c.fireConeDeg ?? 6) * DEG;
-        if (gun === mg && !t.isVehicle && d <= (mg.w.maxRange ?? 600) * 0.8) {
-          firing = onTarget && this._burst(dt);
-        }
+        if (mg && mgUseful && d <= (mg.w.maxRange ?? 600) * 0.8) firing = onTarget && this._burst(dt);
         if (useRocket && onTarget && this.rocketTimer <= 0) {
           secondary = true;
           this.rocketTimer = rand(c.rocketInterval, 1);
@@ -131,9 +134,11 @@ export class VehicleBrain {
     const rockets = this.hasRockets;
     let best = null;
     let bestS = Infinity;
+    // dall'elicottero in volo si vede (e si spara) sopra i muri
+    const air = v.airborne;
     const consider = (e, k) => {
       const d = dist(e, v);
-      if (d > view || !nav.los(v.x, v.y, e.x, e.y)) return;
+      if (d > view || (!air && !nav.los(v.x, v.y, e.x, e.y))) return;
       const s = d * k * (e === this.target ? c.targetStickiness ?? 0.7 : 1);
       if (s < bestS) {
         bestS = s;
@@ -141,8 +146,11 @@ export class VehicleBrain {
       }
     };
     for (const e of game.units) if (!e.dead && !e.vehicle && e.team !== v.team) consider(e, 1);
-    // mezzi nemici: bersagli solo con i razzi (la mitragliatrice non li scalfisce)
-    if (rockets) for (const o of game.vehicles) if (o !== v && !o.destroyed && o.occupied && o.team !== v.team) consider(o, 0.5);
+    // mezzi nemici: bersagli con i razzi, o con la mitragliatrice se a corazza leggera (elicottero)
+    for (const o of game.vehicles) {
+      if (o === v || o.destroyed || !o.occupied || o.team === v.team) continue;
+      if (rockets || (o.def.bulletFactor ?? 0) > 0) consider(o, 0.5);
+    }
     if (best) {
       if (best !== this.target) {
         this.reactAt = this.time + rand(c.reactionTime, 0.4);
@@ -219,6 +227,11 @@ export class VehicleBrain {
   _zonePoint(f, game) {
     const v = this.v;
     const nav = game.nav;
+    if (v.def.flying) {
+      const a = Math.random() * Math.PI * 2;
+      const r = f.radius * 0.4 * Math.random();
+      return { x: f.x + Math.cos(a) * r, y: f.y + Math.sin(a) * r };
+    }
     const spacing = this.cfg.vehicleSpacing ?? 56;
     const minClear = nav.clearanceFor(Math.max(v.hw, v.hh));
     const others = [];
@@ -262,6 +275,7 @@ export class VehicleBrain {
     const v = this.v;
     const o = this.objective;
     if (!o) return { x: 0, y: 0 };
+    if (v.def.flying) return this._flyTo(o);
     const arrive = o.flag ? o.flag.radius * 0.5 : 12;
     // arrivato: vicino al punto, oppure già nell'area con un compagno addosso (non spingersi a vicenda)
     const inZone = o.flag && game.ctf.inZone(o.flag, v.x, v.y);
@@ -295,12 +309,40 @@ export class VehicleBrain {
   }
 
   /**
+   * Elicottero: dritto verso il punto (niente percorsi: vola sopra tutto); arrivato gira lentamente attorno
+   * (bersaglio mobile) e dopo heliPatrolTime s passa a un'altra bandiera (pattuglia), evitando questa per
+   * heliAvoidTime s.
+   */
+  _flyTo(o) {
+    const v = this.v;
+    const c = this.cfg;
+    const d = dist(o.point, v);
+    const arrive = (o.flag?.radius ?? 30) * 0.6;
+    if (d > arrive) {
+      this.arrivedAt = null;
+      return { x: (o.point.x - v.x) / d, y: (o.point.y - v.y) / d };
+    }
+    if (this.arrivedAt === null || this.arrivedAt === undefined) this.arrivedAt = this.time;
+    if (o.flag && this.time - this.arrivedAt > (c.heliPatrolTime ?? 10)) {
+      this.avoid.set(o.flag, this.time + (c.heliAvoidTime ?? 15));
+      this.objective = null;
+      this.objTimer = 0;
+      this.arrivedAt = null;
+      return { x: 0, y: 0 };
+    }
+    const a = Math.atan2(v.y - o.point.y, v.x - o.point.x) + Math.PI / 2;
+    const k = c.heliOrbit ?? 0.35;
+    return { x: Math.cos(a) * k + ((o.point.x - v.x) / arrive) * 0.3, y: Math.sin(a) * k + ((o.point.y - v.y) / arrive) * 0.3 };
+  }
+
+  /**
    * Bloccato mentre vuole muoversi: retromarcia per un attimo e nuovo percorso. Se a bloccarlo è un compagno
    * sceglie un altro punto nell'area; dopo stuckLimit blocchi di fila lascia la bandiera ad altri per un po'.
    */
   _unstick(dt, move, game) {
     const v = this.v;
     const c = this.cfg;
+    if (v.def.flying) return move; // in volo non si blocca
     if (this.reverse > 0) {
       this.reverse -= dt;
       return { x: -Math.cos(v.angle), y: -Math.sin(v.angle) };

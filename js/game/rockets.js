@@ -49,6 +49,7 @@ export class Rockets {
       team,
       owner,
       vehicle,
+      fromAir: !!vehicle?.airborne, // sparato dall'elicottero in volo: passa sopra i muri
       time: 0,
       trailTimer: 0,
     });
@@ -69,7 +70,7 @@ export class Rockets {
         r.y += r.dy * step;
         r.range -= step;
         travel -= step;
-        if (game.map.blocksShotAt(r.x, r.y)) {
+        if (!r.fromAir && game.map.blocksShotAt(r.x, r.y)) {
           hit = { x: px, y: py, vehicle: null }; // esplode davanti al muro
         } else {
           const v = game.vehicleAt(r.x, r.y, r.def.hitPadding ?? 1, r.vehicle);

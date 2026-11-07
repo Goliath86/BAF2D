@@ -134,6 +134,11 @@
     "enterTouch": "Get in: {vehicle}",
     "exit": "[{key}] Get out",
     "exitTouch": "Tap the door button to get out",
+    "land": "[{key}] Land and get out",
+    "landTouch": "Door button: land and get out",
+    "landing": "Landing... [{key}] cancel",
+    "landingTouch": "Landing...",
+    "cantLand": "Can't land here: fly over open ground",
     "flag": {
       "capturing": "CAPTURING {flag}",
       "securing": "SECURING {flag}",
@@ -212,7 +217,8 @@
   },
   "vehicles": {
     "jeep": "Jeep",
-    "tank": "Rocket tank"
+    "tank": "Rocket tank",
+    "helicopter": "Helicopter"
   },
   "weapons": {
     "pistol": "Pistol",

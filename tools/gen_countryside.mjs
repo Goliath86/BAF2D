@@ -205,6 +205,7 @@ g.fill(47, 31, 49, 33, '.');
 G[32][48] = 'C';
 G[58][13] = 'J'; // jeep blu sulla strada della base
 G[58][20] = 'V'; // carro blu
+G[58][28] = 'U'; // elicottero blu
 G[24][27] = 'N'; // jeep neutrale sulla strada del frutteto
 G[26][41] = 'S'; // fucile a pompa nel casale
 G[38][42] = 'L'; // lanciarazzi nel casale
@@ -213,7 +214,7 @@ G[49][21] = 'G'; // granate al posto di comando
 G[9][24] = 'S'; // fucile a pompa nel frutteto
 G[29][33] = 'G'; // granate al cratere
 
-g.symmetrize({ 1: '2', 2: '1', A: 'E', E: 'A', B: 'D', D: 'B', J: 'K', K: 'J', V: 'Y', Y: 'V' });
+g.symmetrize({ 1: '2', 2: '1', A: 'E', E: 'A', B: 'D', D: 'B', J: 'K', K: 'J', V: 'Y', Y: 'V', U: 'Z', Z: 'U' });
 
 // ---------- celle percorribili isolate (rumore del bordo, angoli) -> bosco ----------
 {
@@ -234,7 +235,7 @@ g.symmetrize({ 1: '2', 2: '1', A: 'E', E: 'A', B: 'D', D: 'B', J: 'K', K: 'J', V
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
       if (SOLID.has(G[y][x]) || seen.has(`${x},${y}`)) continue;
-      if (/[12A-ESGLJKVYN]/.test(G[y][x])) throw new Error(`unreachable ${G[y][x]} at ${x},${y}`);
+      if (/[12A-ESGLJKVYNUZ]/.test(G[y][x])) throw new Error(`unreachable ${G[y][x]} at ${x},${y}`);
       G[y][x] = '#';
     }
   }
@@ -281,6 +282,8 @@ writeLevel('config/levels/level04.json', {
     V: { tile: dirt, vehicle: 'tank', team: 'blue', angleDeg: 0 },
     Y: { tile: dirt, vehicle: 'tank', team: 'red', angleDeg: 180 },
     N: { tile: dirt, vehicle: 'jeep', angleDeg: 30 },
+    U: { tile: dirt, vehicle: 'helicopter', team: 'blue', angleDeg: 0 },
+    Z: { tile: dirt, vehicle: 'helicopter', team: 'red', angleDeg: 180 },
     1: { ...grass, spawn: 'blue' },
     2: { ...grass, spawn: 'red' },
     A: { ...grass, flag: 'A' },

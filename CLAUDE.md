@@ -240,7 +240,15 @@ tools/check_level.mjs controllo livelli: celle irraggiungibili e vicoli ciechi (
   `_vehicleContacts`: soldati spinti fuori (o investiti, `runover`), mezzi separati. `VehicleBrain`: una bandiera
   per mezzo se possibile (`crowdPenalty`, in difesa `defendCrowdPenalty`), punto nell'area lontano dagli altri mezzi
   (`_zonePoint`, `v.brainPoint`, `vehicleSpacing`), nell'area con un compagno addosso si ferma (`_mateTouching`),
-  dopo `stuckLimit` blocchi evita la bandiera per `stuckAvoidTime` s. Percorsi dei mezzi:
+  dopo `stuckLimit` blocchi evita la bandiera per `stuckAvoidTime` s.
+  Elicottero (`flying: true` in vehicles.json, `Vehicle._fly`): quota `alt` 0..1 (decolla con un pilota, atterra
+  senza pilota o con `landing` se sotto è libero), `airborne` = in volo (niente collisioni con la mappa, non urta né
+  investe, esplosioni solo a contatto, colpi `fromAir` che passano sopra i muri, il pilota non conta per le
+  bandiere), `high` = disegnato dopo le chiome (`drawShadow` sotto i soldati), `grounded` = si sale/scende.
+  Movimento in spazio schermo con inerzia (anche da tastiera: niente `drive`), muso verso la mira (armi fisse).
+  Azione `pickup` in volo = atterra e scendi (`exitOnLand`). Corazza leggera: `bulletFactor` (i proiettili fanno
+  quella frazione del danno; `BotBrain.canHurt`: i bot ci sparano col fucile invece di ripararsi). IA:
+  `VehicleBrain._flyTo` (dritto, giro sopra la bandiera, pattuglia `heliPatrolTime`). Percorsi dei mezzi:
   `nav.findPath(..., minClear = nav.clearanceFor(hw))` (`Nav.clear` = distanza dai solidi).
 - Due armi: `player.holster = { id, ammo }` (l'arma non in mano), `player.reserve[id]` = scorta delle armi con
   `reserve` (munizioni contate; `startReload` la consuma). Le armi `special` (lanciarazzi) si aggiungono:

@@ -417,6 +417,8 @@ export class Game {
   _updateVehicles(dt) {
     for (const v of this.vehicles) if (!v.driver || v.destroyed) v.update(dt, this, null);
     for (const v of this.vehicles) if (!v.destroyed && v.health <= 0) this._destroyVehicle(v);
+    // elicottero atterrato su richiesta del pilota: scende
+    for (const v of this.vehicles) if (v.exitOnLand && v.driver && v.grounded) this._exitVehicle(v.driver);
     this._vehicleContacts();
     // punti di comparsa: nuovo mezzo "respawn" secondi dopo la distruzione (o l'abbandono lontano dalla base)
     for (const s of this.vehicleSpawns) {
@@ -446,7 +448,7 @@ export class Game {
 
   /** Il soldato u sale sul mezzo v (se libero e vicino). */
   _enterVehicle(u, v) {
-    if (!v || v.driver || v.destroyed || u.dead || u.vehicle) return false;
+    if (!v || v.driver || v.destroyed || u.dead || u.vehicle || !v.grounded) return false;
     if (Math.hypot(u.x - v.x, u.y - v.y) > v.enterReach + 4) return false;
     u.reload?.sound?.stop();
     u.reload = null;
@@ -461,10 +463,20 @@ export class Game {
     return true;
   }
 
-  /** Il soldato scende accanto al mezzo (un lato libero dai muri e dagli altri mezzi). */
+  /**
+   * Il soldato scende accanto al mezzo (un lato libero dai muri e dagli altri mezzi). Elicottero in volo:
+   * prima atterra (v.landing; ripremendo si annulla), il pilota scende da solo appena tocca terra.
+   */
   _exitVehicle(u) {
     const v = u.vehicle;
     if (!v) return;
+    if (!v.grounded) {
+      v.landing = !v.landing;
+      v.exitOnLand = v.landing;
+      return;
+    }
+    v.landing = false;
+    v.exitOnLand = false;
     const c = Math.cos(v.angle);
     const s = Math.sin(v.angle);
     const out = Math.max(v.hw, v.hh) + u.hw + 3;
@@ -506,8 +518,10 @@ export class Game {
    * due mezzi che si toccano si separano e rallentano.
    */
   _vehicleContacts() {
+    // un elicottero in volo non urta niente (solo gli altri elicotteri in volo)
     const live = this.vehicles.filter((v) => !v.destroyed);
     for (const v of live) {
+      if (v.high) continue;
       const run = v.def.runover || {};
       for (const u of this.units) {
         if (u.dead || u.vehicle) continue;
@@ -532,15 +546,21 @@ export class Game {
       for (let j = i + 1; j < live.length; j++) {
         const a = live[i];
         const b = live[j];
+        if (a.high !== b.high) continue;
         const ox = a.hw + b.hw - Math.abs(a.x - b.x);
         const oy = a.hh + b.hh - Math.abs(a.y - b.y);
         if (ox <= 0 || oy <= 0) continue;
         const sx = ox < oy ? (ox / 2) * Math.sign(a.x - b.x || 1) : 0;
         const sy = ox < oy ? 0 : (oy / 2) * Math.sign(a.y - b.y || 1);
         for (const [v, k] of [[a, 1], [b, -1]]) {
-          const p = this.map.moveAndCollide(v.x, v.y, v.hw, v.hh, sx * k, sy * k);
-          v.x = p.x;
-          v.y = p.y;
+          if (v.airborne) {
+            v.x += sx * k;
+            v.y += sy * k;
+          } else {
+            const p = this.map.moveAndCollide(v.x, v.y, v.hw, v.hh, sx * k, sy * k);
+            v.x = p.x;
+            v.y = p.y;
+          }
           v.speed *= 0.6;
           if (v.driver) this._syncDriver(v);
         }
@@ -674,7 +694,8 @@ export class Game {
       if (this.player.dead && !this.respawn) this._onPlayerDeath();
       this._updatePickups(dt);
       if (this.respawn) this._updateRespawn(dt);
-      this.ctf.update(dt, this.units);
+      // chi pilota un elicottero in volo non conta per le bandiere
+      this.ctf.update(dt, this.units.filter((u) => !u.vehicle?.airborne));
       for (const e of this.ctf.takeEvents()) this._onFlagEvent(e);
       if (this.ctf.result) this._endMatch();
     } else {
@@ -803,6 +824,8 @@ export class Game {
     for (const v of this.vehicles) {
       if (v.destroyed || v === exclude) continue;
       const d = Math.max(0, Math.hypot(v.x - x, v.y - y) - Math.max(v.hw, v.hh));
+      // elicottero in volo: solo un'esplosione a contatto (razzo che lo colpisce), non quelle a terra
+      if (v.airborne && d > 4) continue;
       if (d >= radius || (d > 4 && !this._lineOfSight(x, y, v.x, v.y))) continue;
       v.damage(Math.round((def.damage ?? 80) * falloff(d) * vf), owner);
     }
@@ -915,7 +938,7 @@ export class Game {
         let best = null;
         let bestD = Infinity;
         for (const v of this.vehicles) {
-          if (v.destroyed || v.driver) continue;
+          if (v.destroyed || v.driver || !v.grounded) continue;
           const d = Math.hypot(v.x - p.x, v.y - p.y);
           if (d <= v.enterReach && d < bestD) {
             bestD = d;
@@ -949,10 +972,6 @@ export class Game {
     }
   }
 
-  /**
-   * Testo dell'HUD sotto il soldato: "[E] Raccogli Fucile a pompa", "[E] Sali: Jeep", e "[E] Scendi" per qualche
-   * secondo dopo essere saliti (su touch senza il tasto: c'è il pulsante).
-   */
   /** Scritta lampeggiante "RICARICA!" a caricatore vuoto (a piedi, se si può ricaricare), o null. */
   _reloadPrompt() {
     const p = this.player;
@@ -961,10 +980,22 @@ export class Game {
     return this.i18n.t('hud.reloadPrompt', { key: keyName(this.input.bindings.reload?.[0], this.i18n) });
   }
 
+  /**
+   * Testo dell'HUD sotto il soldato: "[E] Raccogli Fucile a pompa", "[E] Sali: Jeep", e "[E] Scendi" per qualche
+   * secondo dopo essere saliti (su touch senza il tasto: c'è il pulsante). In elicottero: "[E] Atterra e scendi",
+   * "Atterraggio..." o "Qui non si può atterrare".
+   */
   _pickupPrompt() {
     const touch = this.input.mode === 'touch';
     const key = keyName(this.input.bindings.pickup?.[0], this.i18n);
     const p = this.player;
+    const v = p.vehicle;
+    if (v?.def.flying && !v.grounded) {
+      if (v.landBlocked) return this.i18n.t('hud.cantLand');
+      if (v.landing) return this.i18n.t(touch ? 'hud.landingTouch' : 'hud.landing', { key });
+      if (this.time - this.enteredAt > (this.config.hud?.pickup?.exitHintTime ?? 4)) return null;
+      return this.i18n.t(touch ? 'hud.landTouch' : 'hud.land', { key });
+    }
     if (p.vehicle) {
       if (this.time - this.enteredAt > (this.config.hud?.pickup?.exitHintTime ?? 4)) return null;
       return this.i18n.t(touch ? 'hud.exitTouch' : 'hud.exit', { key });
@@ -1100,7 +1131,8 @@ export class Game {
     if (w.sound) this.audio.play(w.sound, shooter);
     // vampata e fumo alla volata (non se la canna è dentro un muro)
     const m = shooter.muzzle;
-    if (w.muzzleFlash && !this.map.blocksShotAt(m.x, m.y)) this.effects.muzzle(w.muzzleFlash, m.x, m.y, shooter.angle);
+    const air = !!shooter.fromVehicle?.airborne; // dall'elicottero in volo: sopra i muri
+    if (w.muzzleFlash && (air || !this.map.blocksShotAt(m.x, m.y))) this.effects.muzzle(w.muzzleFlash, m.x, m.y, shooter.angle);
     if (w.projectile === 'rocket') {
       this._spawnRocket(shooter, w);
       return;
@@ -1139,8 +1171,9 @@ export class Game {
     const m = shooter.muzzle;
     const range = this._shotRange(shooter, w, m, dx, dy);
 
-    // Canna dentro un muro (giocatore attaccato alla parete): impatto immediato
-    if (this.map.blocksShotAt(m.x, m.y)) {
+    // Canna dentro un muro (giocatore attaccato alla parete): impatto immediato (non dall'elicottero in volo)
+    const fromAir = !!shooter.fromVehicle?.airborne;
+    if (!fromAir && this.map.blocksShotAt(m.x, m.y)) {
       const n = Math.abs(dx) > Math.abs(dy) ? { x: -Math.sign(dx), y: 0 } : { x: 0, y: -Math.sign(dy) };
       this._wallImpact(m.x, m.y, shooter.x, shooter.y, n.x, n.y);
       return;
@@ -1152,6 +1185,7 @@ export class Game {
     this.bullets.push({
       x: m.x, y: m.y, dx, dy, angle: a, speed: w.bulletSpeed || 300, range, sprite,
       damage: w.damage ?? 0, team: shooter.team, owner: shooter.owner ?? shooter, fromVehicle: shooter.fromVehicle ?? null,
+      fromAir,
     });
   }
 
@@ -1161,7 +1195,7 @@ export class Game {
     const owner = shooter.owner ?? shooter;
     const a = shooter.angle + (Math.random() - 0.5) * ((w.spreadDeg || 0) * Math.PI) / 180;
     const m = shooter.muzzle;
-    if (this.map.blocksShotAt(m.x, m.y)) {
+    if (!shooter.fromVehicle?.airborne && this.map.blocksShotAt(m.x, m.y)) {
       this.explode(def, m.x, m.y, owner);
       return;
     }
@@ -1174,12 +1208,17 @@ export class Game {
     return this.soldierAt(b.x, b.y, b.team, b.owner);
   }
 
-  /** Proiettile su un mezzo: scintille, nessun danno se corazzato (armi leggere). */
+  /**
+   * Proiettile su un mezzo: scintille; danno pieno se senza corazza, ridotto di bulletFactor se a corazza
+   * leggera (elicottero), nessuno se corazzato. Niente danno dalla propria squadra (senza fuoco amico).
+   */
   _hitVehicle(b, v) {
     const nx = Math.abs(b.x - v.x) / (v.hw || 1) > Math.abs(b.y - v.y) / (v.hh || 1) ? Math.sign(b.x - v.x) : 0;
     const ny = nx === 0 ? Math.sign(b.y - v.y) : 0;
     this.effects.impact(v.def.impact || 'metal', b.x, b.y, b.x, b.y, nx, ny);
-    if (v.def.armor === false) v.damage(b.damage, b.owner);
+    if (!this.combat.friendlyFire && v.occupied && v.team === b.team) return;
+    const k = v.def.armor === false ? 1 : v.def.bulletFactor ?? 0;
+    if (k > 0) v.damage(b.damage * k, b.owner);
   }
 
   _hitUnit(b, u) {
@@ -1225,14 +1264,16 @@ export class Game {
         travel -= step;
 
         const hit = this._unitHit(b);
-        const veh = hit ? null : this.vehicleAt(b.x, b.y, 0, b.fromVehicle);
+        let veh = hit ? null : this.vehicleAt(b.x, b.y, 0, b.fromVehicle);
+        // un elicottero amico in volo: il colpo gli passa sotto
+        if (veh?.high && veh.team === b.team && !this.combat.friendlyFire) veh = null;
         if (hit) {
           this._hitUnit(b, hit);
           done = true;
         } else if (veh) {
           this._hitVehicle(b, veh);
           done = true;
-        } else if (map.blocksShotAt(b.x, b.y)) {
+        } else if (!b.fromAir && map.blocksShotAt(b.x, b.y)) {
           const n = this._surfaceNormal(px, py, b.x, b.y, b.dx, b.dy);
           this._wallImpact(b.x, b.y, px, py, n.x, n.y);
           done = true;
@@ -1330,6 +1371,7 @@ export class Game {
     const view = { x: cx, y: cy, w: W, h: H };
     const wind = this.weather.active ? this.weather.wind : null;
     this.props.drawGround(ctx, view, wind); // ombre, cespugli, sassi
+    for (const v of this.vehicles) if (v.high) v.drawShadow(ctx); // ombre degli elicotteri in volo
     this.weather.drawGround(ctx); // sabbia che scorre rasoterra
     this.ctf.drawZones(ctx);
     this.effects.drawCasings(ctx, false); // bossoli a terra
@@ -1340,8 +1382,8 @@ export class Game {
     // pennoni e soldati ordinati per y: chi sta più in alto sullo schermo è "dietro"
     // (a parità di y prima il pennone; sort stabile)
     // carcasse dei mezzi a terra, sotto tutto il resto
-    for (const v of this.vehicles) if (v.destroyed) v.draw(ctx);
-    const liveVehicles = this.vehicles.filter((v) => !v.destroyed);
+    for (const v of this.vehicles) if (v.destroyed && !v.high) v.draw(ctx);
+    const liveVehicles = this.vehicles.filter((v) => !v.destroyed && !v.high);
     const sorted = [...this.ctf.flags, ...liveVehicles, ...this.units.filter((u) => !u.dead && !u.vehicle)].sort((a, b) => a.y - b.y);
     for (const o of sorted) {
       if (o.draw) o.draw(ctx);
@@ -1356,6 +1398,7 @@ export class Game {
     this.effects.drawParticles(ctx);
     this.effects.drawBlasts(ctx); // sopra il fumo, altrimenti ne coprirebbe il nucleo
     this.props.drawOverhead(ctx, view, wind); // chiome delle palme sopra i soldati
+    for (const v of this.vehicles) if (v.high) v.draw(ctx); // elicotteri in volo sopra a tutto
     this.weather.drawAir(ctx); // granelli e polvere nell'aria
 
     ctx.restore();

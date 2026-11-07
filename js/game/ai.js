@@ -342,6 +342,11 @@ export class BotBrain {
     return !!this.unit.hasAntiVehicle;
   }
 
+  /** Può ferire il mezzo v: con un'arma anticarro, o con le armi leggere se v è a corazza leggera (elicottero). */
+  canHurt(v) {
+    return this.antiVehicle || (v?.def?.bulletFactor ?? 0) > 0;
+  }
+
   /**
    * Arma giusta per il bersaglio: quella anticarro contro i mezzi, la principale contro i soldati (e senza
    * bersaglio). true = cambiare arma in questo tick.
@@ -403,8 +408,9 @@ export class BotBrain {
     const onTarget = Math.abs(angleDiff(desired, this.angle)) <= (c.fireConeDeg ?? 6) * DEG;
     // lanciarazzi: mai contro un bersaglio troppo vicino (l'esplosione colpirebbe anche lui)
     if (wantFire && u.weapon.projectile && aimPt && dist(aimPt, u) < (u.weapon.minSafeRange ?? 50)) wantFire = false;
-    // un mezzo con un'arma che non lo scalfisce: niente colpi sprecati (sta cambiando arma)
-    if (this.target?.isVehicle && !u.weapon.antiVehicle) wantFire = false;
+    // un mezzo con un'arma che non lo scalfisce: niente colpi sprecati (sta cambiando arma);
+    // l'elicottero (corazza leggera) si può colpire anche col fucile
+    if (this.target?.isVehicle && !u.weapon.antiVehicle && !((this.target.def?.bulletFactor ?? 0) > 0)) wantFire = false;
     const switchWeapon = this._wantSwitch();
     const firing = wantFire && onTarget && !u.reloading && u.ammo > 0;
     u.aimDistance = aimPt ? dist(aimPt, u) : null;
@@ -454,26 +460,24 @@ export class BotBrain {
         best = e;
       }
     }
-    // mezzi nemici: bersagli solo con un'arma anticarro (le altre non li scalfiscono), con priorità
-    if (this.antiVehicle) {
-      for (const v of game.vehicles) {
-        if (v.destroyed || !v.occupied || v.team === u.team) continue;
-        const d = dist(v, u);
-        if (d > view || !nav.los(u.x, u.y, v.x, v.y)) continue;
-        const s = d * (c.vehicles?.targetPriority ?? 0.6) * (v === this.target ? c.targetStickiness ?? 0.6 : 1);
-        if (s < bestScore) {
-          bestScore = s;
-          best = v;
-        }
-      }
-    } else if (this.target?.isVehicle) {
+    // mezzi nemici: bersagli solo se li può scalfire (arma anticarro, o elicottero a corazza leggera), con
+    // priorità; gli altri li segnala alla squadra (chi ha un lanciarazzi andrà a cercarli)
+    if (this.target?.isVehicle && !this.canHurt(this.target)) {
       this._dropTarget(); // ha cambiato arma: il mezzo non è più un bersaglio utile
       return;
-    } else {
-      // senza anticarro non lo attacca, ma lo segnala alla squadra (chi ha un lanciarazzi andrà a cercarlo)
-      for (const v of game.vehicles) {
-        if (v.destroyed || !v.occupied || v.team === u.team) continue;
-        if (dist(v, u) <= view && nav.los(u.x, u.y, v.x, v.y)) this.squad.report(v, this.time);
+    }
+    for (const v of game.vehicles) {
+      if (v.destroyed || !v.occupied || v.team === u.team) continue;
+      const d = dist(v, u);
+      if (d > view || !nav.los(u.x, u.y, v.x, v.y)) continue;
+      if (!this.canHurt(v)) {
+        this.squad.report(v, this.time);
+        continue;
+      }
+      const s = d * (c.vehicles?.targetPriority ?? 0.6) * (v === this.target ? c.targetStickiness ?? 0.6 : 1);
+      if (s < bestScore) {
+        bestScore = s;
+        best = v;
       }
     }
 
@@ -524,7 +528,7 @@ export class BotBrain {
     const c = this.cfg;
     let a = h.unit;
     // colpito da un mezzo: il bersaglio è il mezzo (solo con un'arma anticarro; altrimenti ci pensa il riparo)
-    if (a?.vehicle) a = this.antiVehicle ? a.vehicle : null;
+    if (a?.vehicle) a = this.canHurt(a.vehicle) ? a.vehicle : null;
     if (a && !a.dead && a.team !== u.team && !this.visible) {
       if (this.target !== a) this._engage(a, game);
       this.lastSeen = { x: h.x, y: h.y, time: this.time };
@@ -624,7 +628,7 @@ export class BotBrain {
 
   /** Bersaglio comunicato da un compagno: lo aggira partendo dalla posizione nota. */
   receive(enemy, from) {
-    if (enemy.isVehicle && !this.antiVehicle) return; // senza anticarro un mezzo non si attacca
+    if (enemy.isVehicle && !this.canHurt(enemy)) return; // senza anticarro un mezzo corazzato non si attacca
     const k = this.squad.contact(enemy);
     this.target = enemy;
     this.mode = 'combat';
@@ -1012,7 +1016,8 @@ export class BotBrain {
     let threat = null;
     let best = Infinity;
     for (const v of game.vehicles) {
-      if (v.destroyed || !v.occupied || v.team === u.team) continue;
+      // un elicottero (corazza leggera) si combatte col fucile invece di scappare
+      if (v.destroyed || !v.occupied || v.team === u.team || this.canHurt(v)) continue;
       const d = dist(v, u);
       if (d < range && d < best && game.nav.los(v.x, v.y, u.x, u.y)) {
         best = d;
@@ -1056,7 +1061,7 @@ export class BotBrain {
       if (this._capturing(game)) return false;
       let bestD = vc.search ?? 320;
       for (const v of game.vehicles) {
-        if (v.destroyed || v.driver) continue;
+        if (v.destroyed || v.driver || !v.grounded) continue;
         const other = v.claimedBy;
         if (other && other !== this && !other.unit.dead && !other.unit.vehicle && other.vehicleGoal === v) continue;
         if (v.team && v.team !== u.team && vc.stealEmpty === false) continue;

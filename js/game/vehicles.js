@@ -7,6 +7,11 @@
 // - Distrutto: carcassa (frame "wreckFrame") che fuma per wreckTime secondi, poi sparisce; il punto di
 //   comparsa della mappa ne crea uno nuovo dopo "respawn" secondi.
 // Collisione con la mappa: quadrato hitbox[0] x hitbox[1] (lo scafo ruota, il quadrato no).
+// - Elicotteri ("flying"): quota alt 0..1 (0 = a terra). Con un pilota decolla (climbRate), senza pilota o con
+//   "landing" atterra (descendRate) se sotto c'è spazio libero. In volo (airborne) passa sopra muri e acqua
+//   (resta solo dentro la mappa), si muove in qualunque direzione con inerzia (move = velocità in spazio
+//   schermo) e il muso (con le armi fisse) ruota verso la mira; i suoi colpi passano sopra i muri.
+//   Rotore che gira (rotorSprite), ombra a terra spostata con la quota. Da fermo a terra si sale e si scende.
 
 import { LocalizedError } from '../engine/errors.js';
 import { drawSprite } from '../engine/assets.js';
@@ -88,6 +93,12 @@ export class Vehicle {
     this.trackPhase = 0;
     this.smokeTimer = 0;
     this.time = 0;
+    // elicotteri: quota 0..1, rotore (angolo e velocità 0..1), richiesta di atterraggio
+    this.alt = 0;
+    this.rotor = 0;
+    this.rotorSpeed = 0;
+    this.landing = false;
+    this.landBlocked = false;
     this.guns = (def.weapons || []).map((id) => {
       const w = weapons.get(id);
       return { w, ammo: w.magazine, cooldown: 0, reload: null, side: 1 };
@@ -105,6 +116,21 @@ export class Vehicle {
 
   get occupied() {
     return !!this.driver;
+  }
+
+  /** Elicottero in volo: niente collisioni con la mappa, non investe, non lo toccano le esplosioni a terra. */
+  get airborne() {
+    return !!this.def.flying && this.alt > (this.def.airborneAlt ?? 0.35);
+  }
+
+  /** Disegnato sopra tutto (chiome comprese), con l'ombra a terra separata. */
+  get high() {
+    return !!this.def.flying && this.alt > 0.15;
+  }
+
+  /** Elicottero fermo a terra: si può salire e scendere. */
+  get grounded() {
+    return !this.def.flying || this.alt <= 0.001;
   }
 
   /** Distanza entro cui un soldato può salire. */
@@ -159,6 +185,7 @@ export class Vehicle {
   /** Regime del motore 0..1: velocità rispetto alla massima, un po' di più con l'acceleratore premuto. */
   get rpm() {
     const v = Math.abs(this.speed) / (this.def.maxSpeed || 100);
+    if (this.def.flying) return Math.min(1, this.rotorSpeed * 0.55 + this.alt * 0.2 + v * 0.25);
     return Math.min(1, Math.max(v, (this.throttle || 0) * (this.def.throttleRev ?? 0.35)));
   }
 
@@ -175,6 +202,10 @@ export class Vehicle {
   update(dt, game, ctrl) {
     this.time += dt;
     const d = this.def;
+    if (d.flying) {
+      this._fly(dt, game, ctrl);
+      return;
+    }
     if (this.destroyed) {
       this.wreckAge += dt;
       this.speed *= Math.exp(-6 * dt);
@@ -202,6 +233,99 @@ export class Vehicle {
     // danneggiato: fumo dal motore
     if (this.health < this.maxHealth * (d.smokeBelow ?? 0.4)) this._smoke(dt, game, 'damaged');
     if (d.tracks) this.trackPhase += Math.abs(this.speed) * dt;
+  }
+
+  /**
+   * Elicottero: quota (decollo con pilota, atterraggio senza o su richiesta se c'è spazio), rotore, volo libero
+   * con inerzia, muso verso la mira (armi fisse: turret = angle), armi solo in volo. Distrutto: precipita.
+   */
+  _fly(dt, game, ctrl) {
+    const d = this.def;
+    const map = game.map;
+    if (this.destroyed) {
+      this.alt = Math.max(0, this.alt - (d.fallRate ?? 2) * dt);
+      this.rotorSpeed = Math.max(0, this.rotorSpeed - dt * 0.8);
+      this.rotor += this.rotorSpeed * (d.rotorRate ?? 30) * dt;
+      const k = Math.exp(-3 * dt);
+      this.vx *= k;
+      this.vy *= k;
+      this._freeMove(dt, map);
+      this.wreckAge += dt;
+      this._smoke(dt, game, d.wreckSmoke || 'wreck');
+      if (this.wreckAge >= (d.wreckTime ?? 20)) this.removed = true;
+      return;
+    }
+    // atterraggio possibile solo su terreno libero (niente solidi né altri mezzi sotto)
+    const clear = !map.rectHitsSolid(this.x - this.hw, this.y - this.hh, this.hw * 2, this.hh * 2)
+      && !game.vehicles.some((o) => o !== this && !o.destroyed && !o.high
+        && Math.abs(o.x - this.x) < o.hw + this.hw && Math.abs(o.y - this.y) < o.hh + this.hh);
+    const wantDown = !ctrl || this.landing;
+    this.landBlocked = wantDown && !clear && this.alt > 0;
+    let target = wantDown && clear ? 0 : 1;
+    if (wantDown && !clear && !ctrl) target = Math.max(this.alt, 0.5); // senza pilota sopra un muro: resta in hovering
+    const rate = target > this.alt ? d.climbRate ?? 0.8 : d.descendRate ?? 0.7;
+    // il rotore deve girare prima del decollo
+    const spin = ctrl || this.alt > 0 ? 1 : 0;
+    this.rotorSpeed += Math.max(-dt * 0.5, Math.min(dt * (d.spinUp ?? 0.9), spin - this.rotorSpeed));
+    if (target > this.alt && this.rotorSpeed < 0.8) target = this.alt;
+    this.alt += Math.max(-rate * dt, Math.min(rate * dt, target - this.alt));
+    this.rotor += this.rotorSpeed * (d.rotorRate ?? 30) * dt;
+
+    // movimento: solo in volo (a terra si ferma)
+    const maxSpeed = d.maxSpeed ?? 120;
+    let tx = 0;
+    let ty = 0;
+    if (ctrl && this.airborne) {
+      const m = ctrl.move || { x: 0, y: 0 };
+      const len = Math.min(1, Math.hypot(m.x, m.y));
+      if (len > 0.05) {
+        tx = (m.x / Math.hypot(m.x, m.y)) * len * maxSpeed;
+        ty = (m.y / Math.hypot(m.x, m.y)) * len * maxSpeed;
+      }
+      this.throttle = len;
+    } else {
+      this.throttle = 0;
+    }
+    const accel = (this.airborne ? d.accel ?? 140 : d.brake ?? 260) * dt;
+    const ddx = tx - this.vx;
+    const ddy = ty - this.vy;
+    const dl = Math.hypot(ddx, ddy);
+    if (dl > accel) {
+      this.vx += (ddx / dl) * accel;
+      this.vy += (ddy / dl) * accel;
+    } else {
+      this.vx = tx;
+      this.vy = ty;
+    }
+    if (this.airborne) this._freeMove(dt, map);
+    else {
+      // vicino a terra: collisioni normali (non si atterra dentro un muro)
+      const p = map.moveAndCollide(this.x, this.y, this.hw, this.hh, this.vx * dt, this.vy * dt);
+      this.x = p.x;
+      this.y = p.y;
+    }
+    this.speed = Math.hypot(this.vx, this.vy);
+
+    if (ctrl) {
+      this.idle = 0;
+      const aim = ctrl.aim(this);
+      if (aim !== null && aim !== undefined && this.alt > 0.2) {
+        const maxTurn = (d.turnRate ?? 2.5) * dt;
+        this.angle += Math.max(-maxTurn, Math.min(maxTurn, angleDiff(aim, this.angle)));
+      }
+      this.turret = this.angle;
+      if (this.airborne) this._weapons(dt, game, ctrl);
+    } else {
+      this.idle += dt;
+      this.turret = this.angle;
+    }
+    if (this.health < this.maxHealth * (d.smokeBelow ?? 0.4)) this._smoke(dt, game, 'damaged');
+  }
+
+  /** Spostamento in volo: nessuna collisione, solo i bordi della mappa. */
+  _freeMove(dt, map) {
+    this.x = Math.max(this.hw, Math.min(map.pixelWidth - this.hw, this.x + this.vx * dt));
+    this.y = Math.max(this.hh, Math.min(map.pixelHeight - this.hh, this.y + this.vy * dt));
   }
 
   _drive(dt, ctrl) {
@@ -318,18 +442,49 @@ export class Vehicle {
     for (const em of t.emitters || []) game.effects.emit(em, this.x + (Math.random() - 0.5) * this.hw, this.y + (Math.random() - 0.5) * this.hh, 0, 0);
   }
 
-  /** Disegno: ombra, scafo (cingoli animati / carcassa), torretta. */
+  /** Ombra a terra (per gli elicotteri si allontana con la quota, rotore compreso). */
+  drawShadow(ctx) {
+    const d = this.def;
+    const body = this.assets.sprite(d.sprite, this.destroyed ? null : this.team);
+    const frame = this._frame();
+    const [sx, sy] = d.shadow || [3, 4];
+    const k = 1 + this.alt * (d.shadowLift ?? 5);
+    ctx.save();
+    ctx.globalAlpha = this.destroyed ? 0.2 : 0.3 - this.alt * 0.08;
+    drawSprite(ctx, silhouette(body, frame), 0, this.x + sx * k, this.y + sy * k, this.angle);
+    if (d.rotorSprite && !this.destroyed) {
+      const r = this.assets.sprite(d.rotorSprite);
+      const hub = this._rotorHub();
+      ctx.globalAlpha = 0.18 - this.alt * 0.06;
+      drawSprite(ctx, silhouette(r, this.rotorSpeed > 0.6 ? 1 : 0), 0, hub.x + sx * k, hub.y + sy * k, this.rotor);
+    }
+    ctx.restore();
+  }
+
+  _frame() {
+    const d = this.def;
+    if (this.destroyed) return d.wreckFrame ?? 1;
+    if (d.tracks) return Math.floor(this.trackPhase / 3) % 2;
+    return 0;
+  }
+
+  /** Mozzo del rotore principale in coordinate mondo (def.rotorPivot rispetto al centro). */
+  _rotorHub() {
+    const [px, py] = this.def.rotorPivot || [0, 0];
+    const c = Math.cos(this.angle);
+    const s = Math.sin(this.angle);
+    return { x: this.x + c * px - s * py, y: this.y + s * px + c * py };
+  }
+
+  /**
+   * Disegno: ombra (se il mezzo è a terra: in volo la disegna Game sotto i soldati), scafo (cingoli animati /
+   * carcassa), torretta, rotore (pale; disco sfocato quando gira veloce).
+   */
   draw(ctx) {
     const d = this.def;
     const body = this.assets.sprite(d.sprite, this.destroyed ? null : this.team);
-    let frame = 0;
-    if (this.destroyed) frame = d.wreckFrame ?? 1;
-    else if (d.tracks) frame = Math.floor(this.trackPhase / 3) % 2;
-    const [sx, sy] = d.shadow || [3, 4];
-    ctx.save();
-    ctx.globalAlpha = this.destroyed ? 0.2 : 0.3;
-    drawSprite(ctx, silhouette(body, frame), 0, this.x + sx, this.y + sy, this.angle);
-    ctx.restore();
+    const frame = this._frame();
+    if (!this.high) this.drawShadow(ctx);
     // la carcassa svanisce nell'ultimo secondo
     const fade = this.destroyed ? Math.max(0, Math.min(1, (d.wreckTime ?? 20) - this.wreckAge)) : 1;
     ctx.save();
@@ -339,6 +494,20 @@ export class Vehicle {
       const t = this.assets.sprite(d.turretSprite);
       const p = this.pivot;
       drawSprite(ctx, t, this.destroyed ? Math.min(t.frameCount - 1, 1) : 0, p.x, p.y, this.turret);
+    }
+    if (d.rotorSprite && (!this.destroyed || this.rotorSpeed > 0)) {
+      const r = this.assets.sprite(d.rotorSprite);
+      const hub = this._rotorHub();
+      if (this.rotorSpeed > 0.6) {
+        // pale veloci: disco sfocato + due posizioni delle pale semitrasparenti
+        ctx.globalAlpha = fade * 0.55;
+        drawSprite(ctx, r, 1, hub.x, hub.y, 0);
+        ctx.globalAlpha = fade * 0.45;
+        drawSprite(ctx, r, 0, hub.x, hub.y, this.rotor);
+        drawSprite(ctx, r, 0, hub.x, hub.y, this.rotor + Math.PI / 2);
+      } else {
+        drawSprite(ctx, r, 0, hub.x, hub.y, this.rotor);
+      }
     }
     ctx.restore();
   }
