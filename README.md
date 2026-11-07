@@ -24,6 +24,8 @@ Apri `http://localhost:8080/`. Per provarlo su un telefono collegato alla stessa
 | Click sinistro / Spazio: spara | Stick destro spinto oltre il cerchio tratteggiato: spara |
 | R: ricarica | Pulsante tondo sopra lo stick destro: ricarica |
 | G: lancia una granata (verso il mirino) | Pulsante con la granata, a sinistra dello stick destro |
+| E / F: raccogli arma, sali/scendi da un mezzo | Pulsante che compare vicino a un'arma o a un mezzo (porta = scendi) |
+| Alla guida: muovi = direzione, mira = torretta, fuoco = mitragliatrice, G = razzi, R = ricarica | Stesso schema; il pulsante granata diventa "razzi" |
 | Esc / P: pausa | Pulsante pausa in alto a sinistra (sotto la vita) |
 | F3: overlay di debug · F4: arma successiva · F5/F6: togli/ridai vita · F7: +1 granata · F8: cambia squadra · F9: +500 punti (debug) | |
 
@@ -66,6 +68,19 @@ Sulla mappa ci sono delle bandiere: un pennone con un drappo che parte da terra.
 - **Fine partita**: la squadra che arriva a 0 ticket perde; schermata di vittoria/sconfitta (pareggio se finiscono
   insieme) con la **classifica** di tutti i soldati (punti, uccisioni, morti, assist, bandiere; i bot hanno nomi e
   gradi fittizi) e il grado del giocatore. Pulsanti *Rivincita* (anche Invio) e *Menu principale*.
+
+### Mezzi e lanciarazzi
+
+- `config/vehicles.json`: **jeep** (veloce, mitragliatrice) e **carro lanciarazzi** (lento, mitragliatrice + 4 razzi).
+  Punti di comparsa nella legend del livello (`{ "tile", "vehicle": "jeep", "team": "blue", "angleDeg": 0 }`):
+  Villaggio nel deserto (jeep e carro per base + 2 jeep neutrali) e Crocevia (una jeep per base).
+- **Corazza**: i proiettili non fanno danni (scintille); granate ridotte (`vehicleFactor`), razzi pieni
+  (`directDamage` + esplosione). Distrutto: esplode, muore chi è a bordo, carcassa fumante, ricompare dopo `respawn` s.
+  Un mezzo in corsa investe i nemici (`runover`).
+- **Lanciarazzi** (`weapons.json` → `launcher`, razzi in `rockets`): un colpo per ricarica, sulle mappe come oggetto
+  raccoglibile e assegnato a un bot su quattro.
+- **IA**: i bot "guidatori" (`bots.ai.vehicles`) salgono sui mezzi liberi e li portano alle bandiere (`bots.ai.vehicle`,
+  `js/game/vehicle_ai.js`); chi ha il lanciarazzi attacca i mezzi, gli altri si riparano.
 
 ### Armi e granate a terra
 

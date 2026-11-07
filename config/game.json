@@ -4,6 +4,7 @@
   "assets": "config/assets.json",
   "effects": "config/effects.json",
   "weapons": "config/weapons.json",
+  "vehicles": "config/vehicles.json",
 
   "levels": [
     { "id": "arena", "file": "config/levels/level01.json" },
@@ -129,7 +130,8 @@
       "shotgun": { "weapon": "shotgun", "respawn": 25 },
       "rifle": { "weapon": "rifle", "respawn": 25 },
       "pistol": { "weapon": "pistol", "respawn": 25 },
-      "grenades": { "grenades": 2, "respawn": 20 }
+      "grenades": { "grenades": 2, "respawn": 20 },
+      "launcher": { "weapon": "launcher", "respawn": 35, "angle": -0.2 }
     }
   },
 
@@ -207,7 +209,18 @@
     "pickup": {
       "fontSize": 6,
       "offset": 10,
-      "color": "#ffd36b"
+      "color": "#ffd36b",
+      "exitHintTime": 4
+    },
+    "vehicle": {
+      "barWidth": 60,
+      "barHeight": 4,
+      "color": "#8ac4e8",
+      "light": "#c8e6ff",
+      "lowColor": "#ff6a3a",
+      "lowThreshold": 0.3,
+      "back": "#14202a",
+      "reloadWidth": 40
     },
     "score": {
       "fontSize": 6,
@@ -243,13 +256,14 @@
       "victory": 500,
       "draw": 250,
       "defeat": 150,
+      "vehicle": 200,
       "debug": 500
     },
     "assistDamage": 35,
     "botRankSpread": 2,
     "killSound": "score_kill",
     "promotionSound": "promotion",
-    "popupColors": { "victory": "#ffd36b", "defeat": "#c8c8d0", "draw": "#c8c8d0" }
+    "popupColors": { "victory": "#ffd36b", "defeat": "#c8c8d0", "draw": "#c8c8d0", "vehicle": "#ff9a2a" }
   },
 
   "ranks": {
@@ -313,7 +327,7 @@
 
   "bots": {
     "teams": { "red": 4, "blue": 0 },
-    "weapons": ["rifle", "rifle", "shotgun", "pistol"],
+    "weapons": ["rifle", "rifle", "shotgun", "launcher"],
     "respawnDelay": 5,
     "baseSpread": [6, 22],
     "player": { "speed": 78, "faceMoveWhenIdle": false, "grenades": 2 },
@@ -335,13 +349,42 @@
       "grenadeSafeFactor": 1.6,
       "grenadeCoverBonus": 1.5,
       "pickWeapons": true,
-      "weaponValues": { "pistol": 1, "shotgun": 2.6, "rifle": 3 },
+      "weaponValues": { "pistol": 1, "shotgun": 2.6, "rifle": 3, "launcher": 2.2 },
       "weaponBias": 0.6,
       "weaponMinGain": 0.3,
       "weaponSearch": 110,
       "weaponCombatReach": 28,
       "weaponScanInterval": [1, 2],
       "weaponGoalTime": 6,
+      "vehicles": {
+        "driverChance": 0.5,
+        "search": 520,
+        "scanInterval": [1.5, 3],
+        "goalTime": 12,
+        "stealEmpty": true,
+        "fearRange": 130,
+        "targetPriority": 0.6,
+        "antiVehicleBonus": 1.5
+      },
+      "vehicle": {
+        "viewRange": 260,
+        "reactionTime": [0.3, 0.6],
+        "memoryTime": 4,
+        "targetStickiness": 0.7,
+        "fireConeDeg": 6,
+        "aimErrorDeg": 3,
+        "leadFactor": 0.6,
+        "burst": [0.5, 1.2],
+        "burstPause": [0.3, 0.7],
+        "rocketInterval": [0.5, 1.1],
+        "fightMoveFactor": 0.5,
+        "objectiveInterval": [1.5, 2.5],
+        "crowdPenalty": 300,
+        "repathInterval": 1,
+        "waypointReach": 10,
+        "stuckTime": 1.2,
+        "reverseTime": 0.7
+      },
       "viewRange": 210,
       "reactionTime": [0.3, 0.6],
       "turnSpeedDeg": 540,

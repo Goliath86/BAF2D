@@ -109,7 +109,7 @@ export class Pickups {
       }
       if (it.kind !== 'grenades') continue;
       for (const u of units) {
-        if (u.dead || u.grenades >= u.maxGrenades || Math.hypot(u.x - it.x, u.y - it.y) > r) continue;
+        if (u.dead || u.vehicle || u.grenades >= u.maxGrenades || Math.hypot(u.x - it.x, u.y - it.y) > r) continue;
         const n = u.addGrenades(it.count);
         it.count -= n;
         onGrenades?.(u, n);

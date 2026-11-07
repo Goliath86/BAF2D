@@ -132,6 +132,22 @@ export class BotBrain {
     this.weaponTimer = rand(cfg.weaponScanInterval, 1.5);
     this.weaponBias = {};
     this.pickupNow = null; // oggetto da raccogliere in questo tick (letto da Game)
+
+    // mezzi: guidatore per indole (vehicles.driverChance), mezzo da raggiungere, salita (letta da Game),
+    // riparo da un mezzo nemico (senza armi anticarro)
+    const vc = cfg.vehicles || {};
+    this.wantsToDrive = Math.random() < (vc.driverChance ?? 0.5);
+    this.vehicleGoal = null;
+    this.vehicleGoalUntil = 0;
+    this.vehicleTimer = rand(vc.scanInterval, 2);
+    this.enterNow = null;
+    this.hide = null; // { v, point, retarget }
+    this.enemyArmor = false; // ci sono mezzi nemici in campo (le armi anticarro valgono di più)
+  }
+
+  /** L'arma impugnata ferisce i mezzi (lanciarazzi). */
+  get antiVehicle() {
+    return !!this.unit.weapon?.antiVehicle;
   }
 
   // ---------- Tick ----------
@@ -145,10 +161,15 @@ export class BotBrain {
     this._perceive(dt, game);
     this._onHurt(game);
 
-    // una granata vicina ha la precedenza su tutto: via dall'esplosione
+    this.enemyArmor = game.vehicles.some((v) => !v.destroyed && v.occupied && v.team !== u.team);
+    this._weapons = game.weapons;
+    // una granata vicina ha la precedenza su tutto: via dall'esplosione; poi un mezzo nemico (senza anticarro)
     if (this._grenadeDanger(dt, game)) this._goTo(this.evade.point, game);
+    else if (this._vehicleDanger(dt, game)) this._goTo(this.hide.point, game);
     else if (this._weaponTick(dt, game)) {
       // sta andando a prendere un'arma (mira e fuoco continuano sotto)
+    } else if (!this.target && this._boardTick(dt, game)) {
+      // sta andando verso un mezzo libero
     } else if (this.target) this._combat(dt, game);
     else this._objectiveTick(dt, game);
     this._considerGrenade(dt, game);
@@ -176,6 +197,8 @@ export class BotBrain {
     const diff = angleDiff(desired, this.angle);
     this.angle += Math.max(-maxTurn, Math.min(maxTurn, diff));
     const onTarget = Math.abs(angleDiff(desired, this.angle)) <= (c.fireConeDeg ?? 6) * DEG;
+    // lanciarazzi: mai contro un bersaglio troppo vicino (l'esplosione colpirebbe anche lui)
+    if (wantFire && u.weapon.projectile && aimPt && dist(aimPt, u) < (u.weapon.minSafeRange ?? 50)) wantFire = false;
     const firing = wantFire && onTarget && !u.reloading && u.ammo > 0;
     u.aimDistance = aimPt ? dist(aimPt, u) : null;
 
@@ -213,7 +236,8 @@ export class BotBrain {
     let best = null;
     let bestScore = Infinity;
     for (const e of game.units) {
-      if (e.dead || e.team === u.team) continue;
+      // chi è a bordo di un mezzo non si vede: conta il mezzo (sotto)
+      if (e.dead || e.vehicle || e.team === u.team) continue;
       const d = dist(e, u);
       if (d > view || !nav.los(u.x, u.y, e.x, e.y)) continue;
       const s = d * (e === this.target ? c.targetStickiness ?? 0.6 : 1);
@@ -221,6 +245,22 @@ export class BotBrain {
         bestScore = s;
         best = e;
       }
+    }
+    // mezzi nemici: bersagli solo con un'arma anticarro (le altre non li scalfiscono), con priorità
+    if (this.antiVehicle) {
+      for (const v of game.vehicles) {
+        if (v.destroyed || !v.occupied || v.team === u.team) continue;
+        const d = dist(v, u);
+        if (d > view || !nav.los(u.x, u.y, v.x, v.y)) continue;
+        const s = d * (c.vehicles?.targetPriority ?? 0.6) * (v === this.target ? c.targetStickiness ?? 0.6 : 1);
+        if (s < bestScore) {
+          bestScore = s;
+          best = v;
+        }
+      }
+    } else if (this.target?.isVehicle) {
+      this._dropTarget(); // ha cambiato arma: il mezzo non è più un bersaglio utile
+      return;
     }
 
     if (best) {
@@ -268,7 +308,9 @@ export class BotBrain {
     if (!h) return;
     u.hurtBy = null;
     const c = this.cfg;
-    const a = h.unit;
+    let a = h.unit;
+    // colpito da un mezzo: il bersaglio è il mezzo (solo con un'arma anticarro; altrimenti ci pensa il riparo)
+    if (a?.vehicle) a = this.antiVehicle ? a.vehicle : null;
     if (a && !a.dead && a.team !== u.team && !this.visible) {
       if (this.target !== a) this._engage(a, game);
       this.lastSeen = { x: h.x, y: h.y, time: this.time };
@@ -344,6 +386,7 @@ export class BotBrain {
 
   /** Bersaglio comunicato da un compagno: lo aggira partendo dalla posizione nota. */
   receive(enemy, from) {
+    if (enemy.isVehicle && !this.antiVehicle) return; // senza anticarro un mezzo non si attacca
     const k = this.squad.contact(enemy);
     this.target = enemy;
     this.mode = 'combat';
@@ -687,7 +730,96 @@ export class BotBrain {
   _weaponValue(id) {
     const c = this.cfg;
     if (this.weaponBias[id] === undefined) this.weaponBias[id] = (Math.random() * 2 - 1) * (c.weaponBias ?? 0.5);
-    return (c.weaponValues?.[id] ?? 1) + this.weaponBias[id];
+    // con mezzi nemici in campo le armi anticarro valgono di più
+    const anti = this.enemyArmor && this._weapons?.get(id)?.antiVehicle ? c.vehicles?.antiVehicleBonus ?? 1.5 : 0;
+    return (c.weaponValues?.[id] ?? 1) + this.weaponBias[id] + anti;
+  }
+
+  // ---------- Mezzi ----------
+
+  /**
+   * Senza arma anticarro, un mezzo nemico in vista entro vehicles.fearRange: corre al riparo (punto nascosto al
+   * mezzo o fuori portata, come per le granate). true finché si sta riparando.
+   */
+  _vehicleDanger(dt, game) {
+    const u = this.unit;
+    const vc = this.cfg.vehicles || {};
+    if (this.antiVehicle) {
+      this.hide = null;
+      return false;
+    }
+    const range = vc.fearRange ?? 130;
+    let threat = null;
+    let best = Infinity;
+    for (const v of game.vehicles) {
+      if (v.destroyed || !v.occupied || v.team === u.team) continue;
+      const d = dist(v, u);
+      if (d < range && d < best && game.nav.los(v.x, v.y, u.x, u.y)) {
+        best = d;
+        threat = v;
+      }
+    }
+    const h = this.hide;
+    if (!threat) {
+      // riparo raggiunto o mezzo sparito: fine
+      if (h && (h.v.destroyed || dist(h.point, u) <= (this.cfg.arriveDistance ?? 4) || this.time > h.until)) {
+        this.hide = null;
+        this._stop();
+        this.repath = 0;
+      }
+      return !!this.hide;
+    }
+    if (!h || h.v !== threat || (h.retarget -= dt) <= 0) {
+      this.hide = { v: threat, point: this._evadePoint(game, threat, range), retarget: 0.6, until: this.time + 4 };
+      this.repath = 0;
+    }
+    return true;
+  }
+
+  /**
+   * Indole da guidatore e niente bersaglio: va verso il mezzo libero più vicino (entro vehicles.search px, anche
+   * nemico se vuoto) e ci sale (enterNow, letto da Game). true = il movimento di questo tick è per il mezzo.
+   */
+  _boardTick(dt, game) {
+    const vc = this.cfg.vehicles || {};
+    const u = this.unit;
+    if (!this.wantsToDrive || !game.vehicles.length) return false;
+    let goal = this.vehicleGoal;
+    if (goal && (goal.destroyed || goal.removed || goal.driver || this.time > this.vehicleGoalUntil || this.unreachable)) {
+      if (goal.claimedBy === this) goal.claimedBy = null;
+      goal = this.vehicleGoal = null;
+      this.vehicleTimer = rand(vc.scanInterval, 2);
+    }
+    if (!goal) {
+      if ((this.vehicleTimer -= dt) > 0) return false;
+      this.vehicleTimer = rand(vc.scanInterval, 2);
+      if (this._capturing(game)) return false;
+      let bestD = vc.search ?? 320;
+      for (const v of game.vehicles) {
+        if (v.destroyed || v.driver) continue;
+        const other = v.claimedBy;
+        if (other && other !== this && !other.unit.dead && !other.unit.vehicle && other.vehicleGoal === v) continue;
+        if (v.team && v.team !== u.team && vc.stealEmpty === false) continue;
+        const d = dist(v, u);
+        if (d < bestD) {
+          bestD = d;
+          goal = v;
+        }
+      }
+      if (!goal) return false;
+      this.vehicleGoal = goal;
+      goal.claimedBy = this;
+      this.vehicleGoalUntil = this.time + (vc.goalTime ?? 12);
+      this.unreachable = false;
+    }
+    if (dist(goal, u) <= goal.enterReach) {
+      this.enterNow = goal;
+      this.vehicleGoal = null;
+      this._stop();
+      return true;
+    }
+    this._goTo(goal, game);
+    return true;
   }
 
   /** Ricerca / raggiungimento di un'arma migliore a terra. true = il movimento di questo tick è per l'arma. */
@@ -945,7 +1077,8 @@ export class BotBrain {
       this.burstTimer = rand(this.burstOn ? c.burst : c.burstPause, 0.5);
       if (this.burstOn) {
         const t = this.target;
-        const speed = t && !aimPt.suppress ? Math.hypot(t.vx, t.vy) / (t.speed || 90) : 0;
+        const tSpeed = Math.abs((t?.isVehicle ? t.def.maxSpeed : t?.speed) || 90);
+        const speed = t && !aimPt.suppress ? Math.min(1.5, Math.hypot(t.vx, t.vy) / tSpeed) : 0;
         const err = (c.aimErrorDeg ?? 3) + speed * (c.aimErrorMovingDeg ?? 4) + (aimPt.suppress ? c.suppressErrorDeg ?? 5 : 0);
         this.aimErr = (Math.random() + Math.random() - 1) * err * DEG;
       }

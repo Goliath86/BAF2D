@@ -9,6 +9,8 @@ import { Game } from './game/game.js';
 import { Weapons } from './game/weapons.js';
 import { GrenadeTypes } from './game/grenades.js';
 import { Ranks, Career } from './game/ranks.js';
+import { VehicleTypes } from './game/vehicles.js';
+import { RocketTypes } from './game/rockets.js';
 import { Menu } from './menu.js';
 import { Settings } from './settings.js';
 
@@ -53,15 +55,18 @@ async function boot() {
 
     const levelList = config.levels || [];
     if (!levelList.length) throw new LocalizedError('errors.noLevels', {}, 'No levels defined in game.json ("levels")');
-    const [assetsCfg, effectsCfg, weaponsCfg, ...levelData] = await Promise.all([
+    const [assetsCfg, effectsCfg, weaponsCfg, vehiclesCfg, ...levelData] = await Promise.all([
       loadJSON(config.assets),
       loadJSON(config.effects),
       loadJSON(config.weapons),
+      config.vehicles ? loadJSON(config.vehicles) : {},
       ...levelList.map((l) => loadJSON(l.file)),
     ]);
     const levels = levelList.map((l, i) => ({ ...l, data: levelData[i] }));
     const weapons = new Weapons(weaponsCfg);
     const grenadeTypes = new GrenadeTypes(weaponsCfg);
+    const rocketTypes = new RocketTypes(weaponsCfg);
+    const vehicleTypes = new VehicleTypes(vehiclesCfg);
 
     const display = new Display($('game'), $('ui'), config.display);
     const assets = new Assets();
@@ -77,7 +82,7 @@ async function boot() {
     input.setBindings(settings.get('keys', {})); // tasti personalizzati dalle opzioni
     // gradi (game.json -> ranks) e punti di carriera del giocatore salvati tra una partita e l'altra
     const career = new Career(settings, new Ranks(config.ranks));
-    const game = new Game({ config, assets, audio, display, input, effectsCfg, weapons, grenadeTypes, i18n, career });
+    const game = new Game({ config, assets, audio, display, input, effectsCfg, weapons, grenadeTypes, i18n, career, vehicleTypes, rocketTypes });
 
     const menu = new Menu({
       config,

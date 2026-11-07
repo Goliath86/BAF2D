@@ -197,6 +197,13 @@ set(42, 25, 'S'); // fucile a pompa nella casa bianca
 set(18, 19, 'G', ['.', 'b', 'd', 'o']); // granate all'oasi
 set(32, 33, 'G', ['f', 'F', 'r', '.']); // granate nella casa crollata
 set(30, 58, 'S', ['.', 'r', 'd', 'o', 'b']); // fucile a pompa tra le rovine a sud
+// mezzi: jeep e carro sulla strada della base (i rossi sono ruotati), jeep neutrale vicino all'oasi
+set(13, 53, 'J', ['=']);
+set(21, 53, 'T', ['=']);
+set(31, 17, 'N', ['=']);
+// lanciarazzi: fattoria e casa del villaggio
+set(30, 44, 'L', ['.', 'r', 'd', 'o', 'b']);
+set(42, 40, 'L', ['f', 'F', 'r']);
 
 // rossi: le celle ruotate di "1" e delle bandiere (set() le ha copiate uguali)
 {
@@ -209,7 +216,7 @@ set(30, 58, 'S', ['.', 'r', 'd', 'o', 'b']); // fucile a pompa tra le rovine a s
 }
 
 // ---------- simmetria forzata (metà destra = metà sinistra ruotata) ----------
-const swapTeam = { 1: '2', 2: '1', A: 'E', E: 'A', B: 'D', D: 'B' };
+const swapTeam = { 1: '2', 2: '1', A: 'E', E: 'A', B: 'D', D: 'B', J: 'K', K: 'J', T: 'Y', Y: 'T' };
 for (let y = 0; y < H; y++) {
   for (let x = 0; x < W; x++) {
     const left = x < (W - 1) / 2 || (x === (W - 1) / 2 && y < (H - 1) / 2);
@@ -273,6 +280,12 @@ const level = {
     o: { ...sand, prop: 'pebble' },
     S: { ...sand, pickup: 'shotgun' },
     G: { ...sand, pickup: 'grenades' },
+    L: { ...sand, pickup: 'launcher' },
+    J: { tile: ['road', 'road2', 'road3'], vehicle: 'jeep', team: 'blue', angleDeg: 0 },
+    K: { tile: ['road', 'road2', 'road3'], vehicle: 'jeep', team: 'red', angleDeg: 180 },
+    T: { tile: ['road', 'road2', 'road3'], vehicle: 'tank', team: 'blue', angleDeg: 0 },
+    Y: { tile: ['road', 'road2', 'road3'], vehicle: 'tank', team: 'red', angleDeg: 180 },
+    N: { tile: ['road', 'road2', 'road3'], vehicle: 'jeep', angleDeg: 0 },
     1: { ...sand, spawn: 'blue' },
     2: { ...sand, spawn: 'red' },
     A: { ...sand, flag: 'A' },

@@ -73,6 +73,37 @@ export class Nav {
     for (let ty = 0; ty < this.rows; ty++) {
       for (let tx = 0; tx < this.cols; tx++) this.walk[ty * this.cols + tx] = map.isSolidTile(tx, ty) ? 0 : 1;
     }
+    // spazio libero: distanza (in tile, Chebyshev) dal tile solido più vicino o dal bordo;
+    // 0 = solido, 1 = confina con un solido, 2 = c'è almeno un tile libero tutto attorno (mezzi), ...
+    this.clear = new Uint8Array(n);
+    const queue = [];
+    for (let i = 0; i < n; i++) {
+      const tx = i % this.cols;
+      const ty = Math.floor(i / this.cols);
+      const border = tx === 0 || ty === 0 || tx === this.cols - 1 || ty === this.rows - 1;
+      if (!this.walk[i]) this.clear[i] = 0;
+      else if (border) {
+        this.clear[i] = 1;
+        queue.push(i);
+      } else this.clear[i] = 255;
+    }
+    for (let i = 0; i < n; i++) if (!this.walk[i]) queue.push(i);
+    for (let q = 0; q < queue.length; q++) {
+      const i = queue[q];
+      const tx = i % this.cols;
+      const ty = Math.floor(i / this.cols);
+      for (const [dx, dy] of DIRS) {
+        const nx = tx + dx;
+        const ny = ty + dy;
+        if (nx < 0 || ny < 0 || nx >= this.cols || ny >= this.rows) continue;
+        const j = ny * this.cols + nx;
+        if (this.clear[j] > this.clear[i] + 1) {
+          this.clear[j] = this.clear[i] + 1;
+          queue.push(j);
+        }
+      }
+    }
+    this._minClear = 1; // spazio minimo richiesto durante una ricerca (findPath con minClear)
     // buffer riutilizzati da A* e BFS
     this._g = new Float32Array(n);
     this._from = new Int32Array(n);
@@ -107,17 +138,23 @@ export class Nav {
     return false;
   }
 
-  /** Tile percorribile più vicino a (x, y) entro r tile (o -1). */
-  nearestWalkable(x, y, r = 4) {
+  /** Spazio libero minimo (vedi clear) per un'unità di semi-larghezza hw px: 1 per i soldati, 2+ per i mezzi. */
+  clearanceFor(hw) {
+    const half = this.size / 2;
+    return hw <= half ? 1 : 1 + Math.ceil((hw - half) / this.size);
+  }
+
+  /** Tile percorribile (con almeno minClear di spazio) più vicino a (x, y) entro r tile (o -1). */
+  nearestWalkable(x, y, r = 4, minClear = 1) {
     const i0 = this.tileOf(x, y);
-    if (this.walk[i0]) return i0;
+    if (this.clear[i0] >= minClear) return i0;
     const tx0 = i0 % this.cols;
     const ty0 = Math.floor(i0 / this.cols);
     let best = -1;
     let bestD = Infinity;
     for (let dy = -r; dy <= r; dy++) {
       for (let dx = -r; dx <= r; dx++) {
-        if (!this.walkable(tx0 + dx, ty0 + dy)) continue;
+        if (!this.walkable(tx0 + dx, ty0 + dy) || this.clear[this.index(tx0 + dx, ty0 + dy)] < minClear) continue;
         const c = this.center(this.index(tx0 + dx, ty0 + dy));
         const d = Math.hypot(c.x - x, c.y - y);
         if (d < bestD) {
@@ -135,7 +172,7 @@ export class Nav {
     for (const [dx, dy, cost] of DIRS) {
       const nx = tx + dx;
       const ny = ty + dy;
-      if (!this.walkable(nx, ny)) continue;
+      if (!this.walkable(nx, ny) || this.clear[ny * this.cols + nx] < this._minClear) continue;
       // in diagonale solo se entrambi i tile ortogonali sono liberi (niente tagli d'angolo)
       if (dx && dy && (!this.walkable(tx + dx, ty) || !this.walkable(tx, ty + dy))) continue;
       fn(ny * this.cols + nx, cost);
@@ -180,10 +217,19 @@ export class Nav {
    * Percorso da (x0, y0) a (x1, y1): lista di punti { x, y } (centri dei tile, già "tirati" dove
    * il passaggio è libero per un soldato di semi-dimensioni hw). [] se già arrivati, null se irraggiungibile.
    */
-  findPath(x0, y0, x1, y1, hw = 5, maxNodes = Math.max(4000, this.cols * this.rows)) {
-    const start = this.nearestWalkable(x0, y0, 2);
-    const goal = this.nearestWalkable(x1, y1, 3);
+  findPath(x0, y0, x1, y1, hw = 5, maxNodes = Math.max(4000, this.cols * this.rows), minClear = 1) {
+    const start = this.nearestWalkable(x0, y0, 2, minClear) >= 0 ? this.nearestWalkable(x0, y0, 2, minClear) : this.nearestWalkable(x0, y0, 2);
+    const goal = this.nearestWalkable(x1, y1, 4, minClear);
     if (start < 0 || goal < 0) return null;
+    this._minClear = minClear;
+    try {
+      return this._findPath(start, goal, x0, y0, x1, y1, hw, maxNodes);
+    } finally {
+      this._minClear = 1;
+    }
+  }
+
+  _findPath(start, goal, x0, y0, x1, y1, hw, maxNodes) {
     if (start === goal) return [this._goalPoint(goal, x1, y1)];
     const run = ++this._run;
     const g = this._g;

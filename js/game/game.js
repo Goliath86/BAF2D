@@ -12,6 +12,9 @@ import { Scores } from './scores.js';
 import { Pickups } from './pickups.js';
 import { Props } from './props.js';
 import { Weather } from './weather.js';
+import { Vehicle } from './vehicles.js';
+import { VehicleBrain } from './vehicle_ai.js';
+import { Rockets } from './rockets.js';
 import { keyName } from '../engine/input.js';
 
 const STEP = 1 / 60; // update a timestep fisso
@@ -27,7 +30,7 @@ function rand(v, def = 0) {
 
 export class Game {
   /** La partita vera e propria si prepara con setup() (mappa, squadra, numero di bot). */
-  constructor({ config, assets, audio, display, input, effectsCfg, weapons, grenadeTypes, i18n, career }) {
+  constructor({ config, assets, audio, display, input, effectsCfg, weapons, grenadeTypes, i18n, career, vehicleTypes, rocketTypes }) {
     this.config = config;
     this.i18n = i18n; // per i testi di HUD/menu: this.i18n.t('chiave')
     this.assets = assets;
@@ -95,6 +98,15 @@ export class Game {
     this.pickups = new Pickups(this.pickupsCfg, assets, weapons);
     this.pickupOffer = null;
 
+    // Mezzi (config/vehicles.json) con i loro punti di comparsa nella mappa, razzi (weapons.json -> rockets)
+    this.vehicleTypes = vehicleTypes;
+    this.rocketTypes = rocketTypes;
+    this.vehicles = [];
+    this.vehicleSpawns = []; // { type, def, team, x, y, angle, vehicle, timer }
+    this.vehicleOffer = null; // mezzo su cui il giocatore può salire ora
+    this.enteredAt = -1; // quando il giocatore è salito (per mostrare "[E] Scendi" per qualche secondo)
+    this.rockets = new Rockets(assets, this.effects, effectsCfg);
+
     this._fps = { value: 0, frames: 0, time: 0 };
   }
 
@@ -141,6 +153,8 @@ export class Game {
     this.corpses.length = 0;
     this.pickups.reset(this.map);
     this.pickupOffer = null;
+    this.rockets.clear();
+    this._resetVehicles();
     this.respawn = null; // { time, delay, x, y } mentre il giocatore è morto
     this.ended = null; // { time, shown, outcome } a partita finita
     this._spawnBots();
@@ -276,7 +290,18 @@ export class Game {
   _updateBots(dt) {
     for (const b of this.bots) {
       if (!b.unit.dead) {
-        b.unit.update(dt, this, b.brain.think(dt, this));
+        const u = b.unit;
+        if (u.vehicle) {
+          // alla guida: comanda il mezzo con la sua IA di guida
+          u.vehicle.update(dt, this, u.vehicleBrain.think(dt, this));
+          this._syncDriver(u.vehicle);
+          continue;
+        }
+        u.update(dt, this, b.brain.think(dt, this));
+        if (b.brain.enterNow) {
+          this._enterVehicle(u, b.brain.enterNow);
+          b.brain.enterNow = null;
+        }
         continue;
       }
       if (!b.respawn) {
@@ -304,6 +329,244 @@ export class Game {
       repeat: input.mode === 'touch' && input.touchHoldToRepeat,
       faceMove: input.mode === 'touch',
     };
+  }
+
+  /** Giocatore: a piedi (Player.update) o alla guida di un mezzo; umano o IA (partita dimostrativa). */
+  _updatePlayer(dt) {
+    const p = this.player;
+    if (p.vehicle && !p.dead) {
+      const v = p.vehicle;
+      v.update(dt, this, this.playerBrain ? p.vehicleBrain.think(dt, this) : this._humanVehicleControl());
+      this._syncDriver(v);
+      return;
+    }
+    const ctrl = this.playerBrain && !p.dead ? this.playerBrain.think(dt, this) : this._humanControl();
+    p.update(dt, this, ctrl);
+    if (this.playerBrain?.enterNow) {
+      this._enterVehicle(p, this.playerBrain.enterNow);
+      this.playerBrain.enterNow = null;
+    }
+  }
+
+  /** Comandi del giocatore umano alla guida: muovi = direzione, mira = torretta, fuoco / G = razzi, R. */
+  _humanVehicleControl() {
+    const { input, camera } = this;
+    return {
+      move: input.getMove(),
+      aim: (v) => {
+        const p = v.pivot;
+        return input.getAim(p.x - Math.round(camera.x), p.y - Math.round(camera.y));
+      },
+      firing: input.isFiring(),
+      secondary: input.isDown('grenade') || input.wasPressed('grenade'),
+      reload: input.wasPressed('reload'),
+    };
+  }
+
+  // ---------- Mezzi ----------
+
+  /** Nuova partita: un mezzo su ogni punto di comparsa della mappa. */
+  _resetVehicles() {
+    this.vehicles = [];
+    this.vehicleOffer = null;
+    this.vehicleSpawns = [];
+    for (const s of this.map.vehicles || []) {
+      if (!this.vehicleTypes?.has(s.type)) {
+        console.warn(`Level vehicle: unknown type "${s.type}" (vehicles.json)`);
+        continue;
+      }
+      const spawn = { ...s, def: this.vehicleTypes.get(s.type), vehicle: null, timer: 0 };
+      this.vehicleSpawns.push(spawn);
+      this._spawnVehicle(spawn);
+    }
+  }
+
+  _spawnVehicle(s) {
+    const v = new Vehicle(s.def, s.x, s.y, s.angle, s.team, this.assets, this.weapons, s);
+    this.vehicles.push(v);
+    s.vehicle = v;
+    s.timer = 0;
+  }
+
+  /** Mezzi senza pilota, distruzioni, urti con soldati e altri mezzi, carcasse, rientri. */
+  _updateVehicles(dt) {
+    for (const v of this.vehicles) if (!v.driver || v.destroyed) v.update(dt, this, null);
+    for (const v of this.vehicles) if (!v.destroyed && v.health <= 0) this._destroyVehicle(v);
+    this._vehicleContacts();
+    // punti di comparsa: nuovo mezzo "respawn" secondi dopo la distruzione (o l'abbandono lontano dalla base)
+    for (const s of this.vehicleSpawns) {
+      const v = s.vehicle;
+      if (v && !v.destroyed && !v.removed && !v.driver && v.idle >= (s.def.abandonTime ?? 60) && Math.hypot(v.x - s.x, v.y - s.y) > 48) {
+        v.removed = true;
+      }
+      if (v && !v.destroyed && !v.removed) continue;
+      if ((s.timer += dt) < (s.def.respawn ?? 30)) continue;
+      const busy = this.units.some((u) => !u.dead && Math.hypot(u.x - s.x, u.y - s.y) < 24)
+        || this.vehicles.some((o) => !o.destroyed && !o.removed && Math.hypot(o.x - s.x, o.y - s.y) < 24);
+      if (!busy) this._spawnVehicle(s);
+    }
+    this.vehicles = this.vehicles.filter((v) => !v.removed);
+  }
+
+  /** Il pilota segue il mezzo (posizione, mira = torretta, velocità per l'IA avversaria). */
+  _syncDriver(v) {
+    const u = v.driver;
+    if (!u) return;
+    u.x = v.x;
+    u.y = v.y;
+    u.angle = v.turret;
+    u.vx = v.vx;
+    u.vy = v.vy;
+  }
+
+  /** Il soldato u sale sul mezzo v (se libero e vicino). */
+  _enterVehicle(u, v) {
+    if (!v || v.driver || v.destroyed || u.dead || u.vehicle) return false;
+    if (Math.hypot(u.x - v.x, u.y - v.y) > v.enterReach + 4) return false;
+    u.reload?.sound?.stop();
+    u.reload = null;
+    v.enter(u);
+    if (u.isBot) {
+      const squad = this.squads[u.team];
+      u.vehicleBrain = new VehicleBrain(v, u, squad, this.aiCfg.vehicle || {});
+    }
+    if (u === this.player) this.enteredAt = this.time;
+    if (v.def.enterSound) this.audio.play(v.def.enterSound, v);
+    this._syncDriver(v);
+    return true;
+  }
+
+  /** Il soldato scende accanto al mezzo (un lato libero dai muri e dagli altri mezzi). */
+  _exitVehicle(u) {
+    const v = u.vehicle;
+    if (!v) return;
+    const c = Math.cos(v.angle);
+    const s = Math.sin(v.angle);
+    const out = Math.max(v.hw, v.hh) + u.hw + 3;
+    let spot = { x: v.x, y: v.y };
+    for (const [fx, fy] of [[0, 1], [0, -1], [-1, 0], [1, 0], [-1, 1], [-1, -1]]) {
+      const x = v.x + (c * fx - s * fy) * out;
+      const y = v.y + (s * fx + c * fy) * out;
+      if (this.map.rectHitsSolid(x - u.hw, y - u.hh, u.hw * 2, u.hh * 2)) continue;
+      if (this.vehicleAt(x, y, u.hw)) continue;
+      spot = { x, y };
+      break;
+    }
+    v.exit();
+    u.vehicleBrain = null;
+    u.x = spot.x;
+    u.y = spot.y;
+    if (v.def.exitSound) this.audio.play(v.def.exitSound, v);
+  }
+
+  /** Mezzo distrutto: esplosione, muore chi è a bordo, punti a chi l'ha distrutto, resta la carcassa. */
+  _destroyVehicle(v) {
+    v.destroyed = true;
+    v.wreckAge = 0;
+    const by = v.lastHitBy;
+    const d = v.def;
+    if (v.driver) {
+      const u = v.exit();
+      u.vehicleBrain = null;
+      u.x = v.x;
+      u.y = v.y;
+      u.damage(1e6, by ? { unit: by, x: by.x, y: by.y } : null);
+    }
+    if (by && by.team !== v.team && by.combatant) this.scores.award(by.combatant, 'vehicle');
+    this.explode({ ...(d.blast || {}), explosion: d.explosion, shake: d.shake }, v.x, v.y, by, v);
+  }
+
+  /**
+   * Urti: i soldati a piedi vengono spinti fuori dai mezzi (o investiti, se nemici e il mezzo corre);
+   * due mezzi che si toccano si separano e rallentano.
+   */
+  _vehicleContacts() {
+    const live = this.vehicles.filter((v) => !v.destroyed);
+    for (const v of live) {
+      const run = v.def.runover || {};
+      for (const u of this.units) {
+        if (u.dead || u.vehicle) continue;
+        const ox = v.hw + u.hw - Math.abs(u.x - v.x);
+        const oy = v.hh + u.hh - Math.abs(u.y - v.y);
+        if (ox <= 0 || oy <= 0) continue;
+        if (v.driver && u.team !== v.team && Math.abs(v.speed) >= (run.minSpeed ?? 45)) {
+          u.damage(run.damage ?? 200, { unit: v.driver, x: v.x, y: v.y });
+          if (u.dead) {
+            this.effects.impact(this.combat.hitImpact || 'flesh', u.x, u.y);
+            continue;
+          }
+        }
+        const dx = ox < oy ? ox * Math.sign(u.x - v.x || 1) : 0;
+        const dy = ox < oy ? 0 : oy * Math.sign(u.y - v.y || 1);
+        const p = this.map.moveAndCollide(u.x, u.y, u.hw, u.hh, dx, dy);
+        u.x = p.x;
+        u.y = p.y;
+      }
+    }
+    for (let i = 0; i < live.length; i++) {
+      for (let j = i + 1; j < live.length; j++) {
+        const a = live[i];
+        const b = live[j];
+        const ox = a.hw + b.hw - Math.abs(a.x - b.x);
+        const oy = a.hh + b.hh - Math.abs(a.y - b.y);
+        if (ox <= 0 || oy <= 0) continue;
+        const sx = ox < oy ? (ox / 2) * Math.sign(a.x - b.x || 1) : 0;
+        const sy = ox < oy ? 0 : (oy / 2) * Math.sign(a.y - b.y || 1);
+        for (const [v, k] of [[a, 1], [b, -1]]) {
+          const p = this.map.moveAndCollide(v.x, v.y, v.hw, v.hh, sx * k, sy * k);
+          v.x = p.x;
+          v.y = p.y;
+          v.speed *= 0.6;
+          if (v.driver) this._syncDriver(v);
+        }
+      }
+    }
+  }
+
+  /** Mezzo (non distrutto) che contiene il punto (x, y) con margine pad, escluso "exclude". */
+  vehicleAt(x, y, pad = 0, exclude = null) {
+    for (const v of this.vehicles) {
+      if (v.destroyed || v === exclude) continue;
+      if (Math.abs(x - v.x) <= v.hw + pad && Math.abs(y - v.y) <= v.hh + pad) return v;
+    }
+    return null;
+  }
+
+  /** Soldato a piedi colpibile da un colpo della squadra "team" nel punto (x, y). */
+  soldierAt(x, y, team, owner) {
+    const pad = this.combat.hitPadding ?? 1;
+    const ff = !!this.combat.friendlyFire;
+    for (const u of this.units) {
+      if (u.dead || u.vehicle || u === owner || (!ff && u.team === team)) continue;
+      if (Math.abs(x - u.x) <= u.hw + pad && Math.abs(y - u.y) <= u.hh + pad) return u;
+    }
+    return null;
+  }
+
+  /** true se a e b sono la stessa squadra e il fuoco amico è disattivato. */
+  sameTeamNoFF(a, b) {
+    return !this.combat.friendlyFire && a !== null && a === b;
+  }
+
+  /** Il mezzo spara con l'arma "gun" (mitragliatrice: proiettili; lanciarazzi: razzi). */
+  fireVehicle(v, gun) {
+    const w = gun.w;
+    const m = v.muzzleOf(gun);
+    const p = v.pivot;
+    this.fire({
+      weapon: w,
+      angle: v.turret,
+      muzzle: m,
+      x: p.x,
+      y: p.y,
+      team: v.team,
+      aimDistance: v.driver?.isBot ? v.aimDistance : null,
+      owner: v.driver,
+      fromVehicle: v,
+      vx: v.vx,
+      vy: v.vy,
+    });
+    if (w.casing) this.effects.casing(w.casing, p.x, p.y, v.turret, v.vx, v.vy);
   }
 
   /** Nuova partita (dalla schermata di fine partita). */
@@ -378,9 +641,9 @@ export class Game {
 
     this.time += dt;
     if (!this.ended) {
-      const ctrl = this.playerBrain && !this.player.dead ? this.playerBrain.think(dt, this) : this._humanControl();
-      this.player.update(dt, this, ctrl);
+      this._updatePlayer(dt);
       this._updateBots(dt);
+      this._updateVehicles(dt);
       if (this.player.dead && !this.respawn) this._onPlayerDeath();
       this._updatePickups(dt);
       if (this.respawn) this._updateRespawn(dt);
@@ -395,7 +658,19 @@ export class Game {
     for (const c of this.corpses) c.time += dt;
     if (corpseTime > 0) this.corpses = this.corpses.filter((c) => c.time < corpseTime);
     this.hud.update(dt, this.player);
+    if (this.ended) {
+      // a partita finita i mezzi si fermano per inerzia
+      for (const v of this.vehicles) {
+        v.update(dt, this, null);
+        if (v.driver) this._syncDriver(v);
+      }
+    }
     this._updateBullets(dt);
+    this.rockets.update(dt, this, (r, x, y, v) => {
+      // colpo diretto su un mezzo + esplosione
+      if (v) v.damage(r.def.directDamage ?? 0, r.owner);
+      this.explode(r.def, x, y, r.owner);
+    });
     this.grenades.update(dt, this.map, (g) => this.explode(g.def, g.x, g.y, g.owner));
     this.effects.update(dt, this.map);
     this.shake.time = Math.max(0, this.shake.time - dt);
@@ -439,24 +714,36 @@ export class Game {
     this.grenades.spawn(def, x, y, player.angle, dist, player.vx, player.vy, player);
   }
 
-  /** Esplosione della granata "def" in (x, y) lanciata da "owner": effetti, scossa della camera, danni. */
-  explode(def, x, y, owner = null) {
+  /**
+   * Esplosione "def" (granata, razzo, mezzo distrutto) in (x, y) causata da "owner": effetti, scossa della
+   * camera, danni. exclude = mezzo da non danneggiare (quello che sta esplodendo).
+   */
+  explode(def, x, y, owner = null, exclude = null) {
     if (def.explosion) this.effects.explosion(def.explosion, x, y, this.map);
     if (def.shake) {
       this.shake.amount = def.shake.amount ?? 3;
       this.shake.duration = def.shake.time ?? 0.4;
       this.shake.time = this.shake.duration;
     }
-    // danno ai soldati (giocatore e bot, di qualunque squadra): decresce con la distanza
-    // fino a minDamageFactor sul bordo, i muri riparano
+    // danno ai soldati a piedi (giocatore e bot, di qualunque squadra): decresce con la distanza
+    // fino a minDamageFactor sul bordo, i muri riparano; chi è a bordo di un mezzo è protetto
     if (def.hurtsPlayer === false) return;
     const radius = def.blastRadius ?? 40;
+    const falloff = (d) => 1 - (d / radius) * (1 - (def.minDamageFactor ?? 0.2));
     for (const p of this.units) {
       const d = Math.hypot(p.x - x, p.y - y);
-      if (p.dead || d >= radius || !this._lineOfSight(x, y, p.x, p.y)) continue;
-      const k = 1 - (d / radius) * (1 - (def.minDamageFactor ?? 0.2));
+      if (p.dead || p.vehicle || d >= radius || !this._lineOfSight(x, y, p.x, p.y)) continue;
       // unit: null = l'IA non "vede" chi l'ha lanciata; by = a chi vanno uccisione e assist
-      p.damage(Math.round((def.damage ?? 80) * k), { unit: null, x, y, by: owner });
+      p.damage(Math.round((def.damage ?? 80) * falloff(d)), { unit: null, x, y, by: owner });
+    }
+    // mezzi: distanza dal bordo dello scafo, danno × vehicleFactor (granate: ridotto, razzi: pieno)
+    const vf = def.vehicleFactor ?? 1;
+    if (vf <= 0) return;
+    for (const v of this.vehicles) {
+      if (v.destroyed || v === exclude) continue;
+      const d = Math.max(0, Math.hypot(v.x - x, v.y - y) - Math.max(v.hw, v.hh));
+      if (d >= radius || (d > 4 && !this._lineOfSight(x, y, v.x, v.y))) continue;
+      v.damage(Math.round((def.damage ?? 80) * falloff(d) * vf), owner);
     }
   }
 
@@ -551,8 +838,36 @@ export class Game {
       if (u === this.player && !this.attract) this.hud.popup(this.i18n.t('pickup.grenades', { count: n }), this.pickupsCfg.popupColor);
     });
     const p = this.player;
-    this.pickupOffer = !p.dead && !this.attract ? this.pickups.nearestWeapon(p) : null;
-    if (this.pickupOffer && this.input.wasPressed('pickup')) this._swapWeapon(p, this.pickupOffer);
+    // azione "pickup" (E): scendere dal mezzo, salire su un mezzo vicino (precedenza) o raccogliere un'arma
+    const pressed = this.input.wasPressed('pickup');
+    this.vehicleOffer = null;
+    this.pickupOffer = null;
+    if (!p.dead && !this.attract) {
+      if (p.vehicle) {
+        if (pressed) this._exitVehicle(p);
+      } else {
+        let best = null;
+        let bestD = Infinity;
+        for (const v of this.vehicles) {
+          if (v.destroyed || v.driver) continue;
+          const d = Math.hypot(v.x - p.x, v.y - p.y);
+          if (d <= v.enterReach && d < bestD) {
+            bestD = d;
+            best = v;
+          }
+        }
+        this.vehicleOffer = best;
+        if (best) {
+          if (pressed) {
+            this._enterVehicle(p, best);
+            this.vehicleOffer = null;
+          }
+        } else {
+          this.pickupOffer = this.pickups.nearestWeapon(p);
+          if (this.pickupOffer && pressed) this._swapWeapon(p, this.pickupOffer);
+        }
+      }
+    }
 
     // bot (e giocatore della partita dimostrativa) arrivati sull'arma scelta dall'IA
     const r = (this.pickupsCfg.radius ?? 9) + 2;
@@ -568,14 +883,28 @@ export class Game {
     }
   }
 
-  /** Testo dell'HUD sopra un'arma raccoglibile: "[E] Raccogli Fucile a pompa" (su touch senza tasto). */
+  /**
+   * Testo dell'HUD sotto il soldato: "[E] Raccogli Fucile a pompa", "[E] Sali: Jeep", e "[E] Scendi" per qualche
+   * secondo dopo essere saliti (su touch senza il tasto: c'è il pulsante).
+   */
   _pickupPrompt() {
+    const touch = this.input.mode === 'touch';
+    const key = keyName(this.input.bindings.pickup?.[0], this.i18n);
+    const p = this.player;
+    if (p.vehicle) {
+      if (this.time - this.enteredAt > (this.config.hud?.pickup?.exitHintTime ?? 4)) return null;
+      return this.i18n.t(touch ? 'hud.exitTouch' : 'hud.exit', { key });
+    }
+    if (this.vehicleOffer) {
+      const vehicle = this.i18n.t(this.vehicleOffer.def.name || this.vehicleOffer.def.id);
+      return this.i18n.t(touch ? 'hud.enterTouch' : 'hud.enter', { key, vehicle });
+    }
     const it = this.pickupOffer;
     if (!it) return null;
     const w = this.weapons.get(it.weapon);
     const weapon = this.i18n.t(w.name || w.id);
-    if (this.input.mode === 'touch') return this.i18n.t('hud.pickupTouch', { weapon });
-    return this.i18n.t('hud.pickup', { key: keyName(this.input.bindings.pickup?.[0], this.i18n), weapon });
+    if (touch) return this.i18n.t('hud.pickupTouch', { weapon });
+    return this.i18n.t('hud.pickup', { key, weapon });
   }
 
   /** L'unità prende l'arma "item" (con i colpi rimasti) e lascia a terra quella che impugnava. */
@@ -645,6 +974,7 @@ export class Game {
     this.ended = { time: 0, shown: false, outcome };
     this.respawn = null;
     this.pickupOffer = null;
+    this.vehicleOffer = null;
     this.scores.endMatch(w);
   }
 
@@ -678,45 +1008,59 @@ export class Game {
   // - touch (o senza mouse): fino al bordo dello schermo visibile al momento dello sparo.
   // Se prima incontra un tile solido, impatto sul muro.
 
-  /** Un colpo dell'arma impugnata: un suono e "pellets" proiettili (>1 = fucile a pompa). */
-  fire(player) {
-    const w = player.weapon;
-    if (w.sound) this.audio.play(w.sound, player);
+  /**
+   * Un colpo: un suono e "pellets" proiettili (>1 = fucile a pompa) o un razzo (weapon.projectile = "rocket").
+   * shooter = il soldato (Player) oppure, per le armi dei mezzi, { weapon, angle, muzzle, x, y, team,
+   * aimDistance, owner (pilota), fromVehicle, vx, vy } (vedi fireVehicle).
+   */
+  fire(shooter) {
+    const w = shooter.weapon;
+    if (w.sound) this.audio.play(w.sound, shooter);
     // vampata e fumo alla volata (non se la canna è dentro un muro)
-    const m = player.muzzle;
-    if (w.muzzleFlash && !this.map.blocksShotAt(m.x, m.y)) this.effects.muzzle(w.muzzleFlash, m.x, m.y, player.angle);
+    const m = shooter.muzzle;
+    if (w.muzzleFlash && !this.map.blocksShotAt(m.x, m.y)) this.effects.muzzle(w.muzzleFlash, m.x, m.y, shooter.angle);
+    if (w.projectile === 'rocket') {
+      this._spawnRocket(shooter, w);
+      return;
+    }
     const n = Math.max(1, Math.round(w.pellets || 1));
-    for (let i = 0; i < n; i++) this._spawnBullet(player, w);
+    for (let i = 0; i < n; i++) this._spawnBullet(shooter, w);
   }
 
-  _spawnBullet(player, w) {
-    const spread = ((w.spreadDeg || 0) * Math.PI) / 180;
-    const a = player.angle + (Math.random() - 0.5) * spread;
-    const dx = Math.cos(a);
-    const dy = Math.sin(a);
-    const m = player.muzzle;
-    const minRange = w.minRange ?? 4;
-
+  /**
+   * Gittata di un colpo lungo (dx, dy) dalla volata m: bot = fino al punto mirato (+ scarto); desktop con
+   * mouse = distanza dal mirino (± rangeJitter); touch = fino al bordo dello schermo.
+   */
+  _shotRange(s, w, m, dx, dy) {
     let range;
-    if (player.aimDistance !== null) {
+    if (s.aimDistance !== null && s.aimDistance !== undefined) {
       // bot: fino al punto mirato più un piccolo scarto -> o colpisce o cade a terra vicino al bersaglio
-      range = player.aimDistance - (w.muzzleOffset ?? 8) + rand(this.aiCfg.shotOvershoot, 6);
+      range = s.aimDistance - (w.muzzleOffset ?? 8) + rand(this.aiCfg.shotOvershoot, 6);
     } else if (this.input.mode === 'desktop' && this.input.mouse.seen) {
       const mouse = this.input.mouseGame;
       const tx = mouse.x + Math.round(this.camera.x);
       const ty = mouse.y + Math.round(this.camera.y);
-      const dist = Math.hypot(tx - player.x, ty - player.y) - (w.muzzleOffset ?? 8);
+      const dist = Math.hypot(tx - s.x, ty - s.y) - (w.muzzleOffset ?? 8);
       const jitter = 1 + (Math.random() * 2 - 1) * (w.rangeJitter || 0);
       range = dist * jitter;
     } else {
       range = this._rangeToScreenEdge(m.x, m.y, dx, dy, w.screenMargin ?? 3);
     }
-    range = Math.min(w.maxRange ?? 600, Math.max(minRange, range, 0.5));
+    return Math.min(w.maxRange ?? 600, Math.max(w.minRange ?? 4, range, 0.5));
+  }
+
+  _spawnBullet(shooter, w) {
+    const spread = ((w.spreadDeg || 0) * Math.PI) / 180;
+    const a = shooter.angle + (Math.random() - 0.5) * spread;
+    const dx = Math.cos(a);
+    const dy = Math.sin(a);
+    const m = shooter.muzzle;
+    const range = this._shotRange(shooter, w, m, dx, dy);
 
     // Canna dentro un muro (giocatore attaccato alla parete): impatto immediato
     if (this.map.blocksShotAt(m.x, m.y)) {
       const n = Math.abs(dx) > Math.abs(dy) ? { x: -Math.sign(dx), y: 0 } : { x: 0, y: -Math.sign(dy) };
-      this._wallImpact(m.x, m.y, player.x, player.y, n.x, n.y);
+      this._wallImpact(m.x, m.y, shooter.x, shooter.y, n.x, n.y);
       return;
     }
 
@@ -725,19 +1069,35 @@ export class Game {
     // team/owner: i colpi non feriscono la propria squadra; il bersaglio sa da dove arrivano (IA)
     this.bullets.push({
       x: m.x, y: m.y, dx, dy, angle: a, speed: w.bulletSpeed || 300, range, sprite,
-      damage: w.damage ?? 0, team: player.team, owner: player,
+      damage: w.damage ?? 0, team: shooter.team, owner: shooter.owner ?? shooter, fromVehicle: shooter.fromVehicle ?? null,
     });
   }
 
-  /** Soldato colpito dal proiettile b nella posizione attuale (null se nessuno). */
-  _unitHit(b) {
-    const pad = this.combat.hitPadding ?? 1;
-    const ff = !!this.combat.friendlyFire;
-    for (const u of this.units) {
-      if (u.dead || u === b.owner || (!ff && u.team === b.team)) continue;
-      if (Math.abs(b.x - u.x) <= u.hw + pad && Math.abs(b.y - u.y) <= u.hh + pad) return u;
+  /** Razzo (lanciarazzi a spalla o del carro): con la canna dentro un muro esplode subito. */
+  _spawnRocket(shooter, w) {
+    const def = this.rocketTypes.get(w.rocket);
+    const owner = shooter.owner ?? shooter;
+    const a = shooter.angle + (Math.random() - 0.5) * ((w.spreadDeg || 0) * Math.PI) / 180;
+    const m = shooter.muzzle;
+    if (this.map.blocksShotAt(m.x, m.y)) {
+      this.explode(def, m.x, m.y, owner);
+      return;
     }
-    return null;
+    const range = this._shotRange(shooter, w, m, Math.cos(a), Math.sin(a));
+    this.rockets.spawn(def, m.x, m.y, a, range, shooter.team, owner, shooter.fromVehicle ?? null);
+  }
+
+  /** Soldato a piedi colpito dal proiettile b nella posizione attuale (null se nessuno). */
+  _unitHit(b) {
+    return this.soldierAt(b.x, b.y, b.team, b.owner);
+  }
+
+  /** Proiettile su un mezzo: scintille, nessun danno se corazzato (armi leggere). */
+  _hitVehicle(b, v) {
+    const nx = Math.abs(b.x - v.x) / (v.hw || 1) > Math.abs(b.y - v.y) / (v.hh || 1) ? Math.sign(b.x - v.x) : 0;
+    const ny = nx === 0 ? Math.sign(b.y - v.y) : 0;
+    this.effects.impact(v.def.impact || 'metal', b.x, b.y, b.x, b.y, nx, ny);
+    if (v.def.armor === false) v.damage(b.damage, b.owner);
   }
 
   _hitUnit(b, u) {
@@ -748,7 +1108,7 @@ export class Game {
 
   /** Debug: passa all'arma successiva del catalogo. */
   _cycleWeapon() {
-    const ids = this.weapons.ids;
+    const ids = this.weapons.ids.filter((id) => !this.weapons.get(id).vehicleOnly);
     const i = ids.indexOf(this.player.weapon.id);
     this.player.equip(ids[(i + 1) % ids.length]);
   }
@@ -783,8 +1143,12 @@ export class Game {
         travel -= step;
 
         const hit = this._unitHit(b);
+        const veh = hit ? null : this.vehicleAt(b.x, b.y, 0, b.fromVehicle);
         if (hit) {
           this._hitUnit(b, hit);
+          done = true;
+        } else if (veh) {
+          this._hitVehicle(b, veh);
           done = true;
         } else if (map.blocksShotAt(b.x, b.y)) {
           const n = this._surfaceNormal(px, py, b.x, b.y, b.dx, b.dy);
@@ -893,7 +1257,10 @@ export class Game {
     this.pickups.draw(ctx, this.attract ? null : this.pickupOffer);
     // pennoni e soldati ordinati per y: chi sta più in alto sullo schermo è "dietro"
     // (a parità di y prima il pennone; sort stabile)
-    const sorted = [...this.ctf.flags, ...this.units.filter((u) => !u.dead)].sort((a, b) => a.y - b.y);
+    // carcasse dei mezzi a terra, sotto tutto il resto
+    for (const v of this.vehicles) if (v.destroyed) v.draw(ctx);
+    const liveVehicles = this.vehicles.filter((v) => !v.destroyed);
+    const sorted = [...this.ctf.flags, ...liveVehicles, ...this.units.filter((u) => !u.dead && !u.vehicle)].sort((a, b) => a.y - b.y);
     for (const o of sorted) {
       if (o.draw) o.draw(ctx);
       else this.ctf.drawFlag(ctx, o);
@@ -902,6 +1269,7 @@ export class Game {
     this.effects.drawCasings(ctx, true); // bossoli in volo
     this.grenades.draw(ctx, true); // granate in volo
     for (const b of this.bullets) drawSprite(ctx, b.sprite, 0, b.x, b.y, b.angle);
+    this.rockets.draw(ctx);
     this.effects.drawFlashes(ctx);
     this.effects.drawParticles(ctx);
     this.effects.drawBlasts(ctx); // sopra il fumo, altrimenti ne coprirebbe il nucleo
@@ -923,11 +1291,26 @@ export class Game {
     ui.clearRect(0, 0, display.cssWidth, display.cssHeight);
     if (playing && input.mode === 'touch') {
       const p = this.player;
-      input.sticks.draw(ui, {
-        reload: { label: String(p.ammo), progress: p.reloadProgress, alert: p.ammo === 0 && !p.reloading },
-        grenade: { badge: String(p.grenades), disabled: p.grenades <= 0 },
-        pickup: { hidden: !this.pickupOffer }, // compare solo sopra un'arma raccoglibile
-      });
+      const v = p.vehicle;
+      if (v) {
+        // alla guida: ricarica = arma principale, "granata" = razzi, raccogli = scendi
+        const g0 = v.guns[0];
+        const g1 = v.guns[1];
+        input.sticks.draw(ui, {
+          reload: { label: String(g0?.ammo ?? 0), progress: v.reloadProgress(0), alert: g0 && g0.ammo === 0 && !g0.reload },
+          grenade: g1
+            ? { icon: 'rocket', badge: String(g1.ammo), progress: v.reloadProgress(1), disabled: !!g1.reload }
+            : { icon: 'rocket', disabled: true },
+          pickup: { hidden: false, icon: 'exit' },
+        });
+      } else {
+        input.sticks.draw(ui, {
+          reload: { label: String(p.ammo), progress: p.reloadProgress, alert: p.ammo === 0 && !p.reloading },
+          grenade: { badge: String(p.grenades), disabled: p.grenades <= 0 },
+          // compare solo sopra un'arma raccoglibile o vicino a un mezzo libero
+          pickup: { hidden: !this.pickupOffer && !this.vehicleOffer, icon: this.vehicleOffer ? 'enter' : 'pickup' },
+        });
+      }
     }
     if (live) {
       const r = this.respawn;
@@ -945,9 +1328,26 @@ export class Game {
         },
         screen: { x: this.player.x - cx, y: this.player.y - cy }, // posizione del giocatore sullo schermo (px di gioco)
         pickup: playing ? this._pickupPrompt() : null,
+        vehicle: this.player.vehicle ? this._vehicleHud(this.player.vehicle) : null,
       });
     }
     if (this.debug) this._drawDebug(ui);
+  }
+
+  /** Dati del mezzo guidato per l'HUD: nome, corazza, armi (nome, colpi, ricarica). */
+  _vehicleHud(v) {
+    return {
+      name: this.i18n.t(v.def.name || v.def.id),
+      health: v.health,
+      maxHealth: v.maxHealth,
+      guns: v.guns.map((g, i) => ({
+        name: this.i18n.t(g.w.name || g.w.id),
+        ammo: g.ammo,
+        magazine: g.w.magazine,
+        reloading: !!g.reload,
+        progress: v.reloadProgress(i),
+      })),
+    };
   }
 
   /** Debug (F3), in coordinate mondo: percorso dei bot, copertura/aggiramento, ultima posizione nota del bersaglio. */

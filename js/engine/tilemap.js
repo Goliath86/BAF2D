@@ -25,6 +25,7 @@ export class TileMap {
     this.flags = []; // bandiere (CTF): { id, x, y } dai caratteri con { "tile", "flag": "A" }
     this.pickups = []; // oggetti raccoglibili fissi: { type, x, y } da { "tile", "pickup": "shotgun" }
     this.props = []; // oggetti decorativi: { type, x, y, tx, ty } da { "tile", "prop": "palm" }
+    this.vehicles = []; // punti di comparsa dei mezzi: { type, team, angle, x, y } da { "tile", "vehicle": "jeep" }
 
     const rows = level.map || [];
     this.rows = rows.length;
@@ -48,6 +49,16 @@ export class TileMap {
             id = this._pick(entry, null, x, y);
           } else if (typeof entry === 'object') {
             id = this._pick(entry.tile, entry.variantWeights, x, y);
+            if (entry.vehicle) {
+              // punto di comparsa di un mezzo (squadra iniziale "team", direzione "angleDeg")
+              this.vehicles.push({
+                type: String(entry.vehicle),
+                team: entry.team ?? null,
+                angle: ((entry.angleDeg ?? 0) * Math.PI) / 180,
+                x: (x + 0.5) * this.size,
+                y: (y + 0.5) * this.size,
+              });
+            }
             if (entry.prop) {
               this.props.push({ type: String(entry.prop), x: (x + 0.5) * this.size, y: (y + 0.5) * this.size, tx: x, ty: y });
             }

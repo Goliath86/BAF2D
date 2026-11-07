@@ -71,7 +71,7 @@
       "fire": "Fire",
       "reload": "Reload",
       "grenade": "Grenade",
-      "pickup": "Pick up weapon",
+      "pickup": "Pick up / vehicle",
       "pause": "Pause"
     }
   },
@@ -118,6 +118,10 @@
     "promoted": "PROMOTED",
     "pickup": "[{key}] Pick up {weapon}",
     "pickupTouch": "Pick up {weapon}",
+    "enter": "[{key}] Get in: {vehicle}",
+    "enterTouch": "Get in: {vehicle}",
+    "exit": "[{key}] Get out",
+    "exitTouch": "Tap the door button to get out",
     "flag": {
       "capturing": "CAPTURING {flag}",
       "securing": "SECURING {flag}",
@@ -142,6 +146,7 @@
       "victory": "VICTORY",
       "draw": "DRAW",
       "defeat": "MATCH PLAYED",
+      "vehicle": "VEHICLE DESTROYED",
       "debug": "DEBUG"
     }
   },
@@ -193,11 +198,18 @@
     "lieutenantGeneral": { "name": "Lieutenant General", "short": "LTG" },
     "general": { "name": "General", "short": "GEN" }
   },
+  "vehicles": {
+    "jeep": "Jeep",
+    "tank": "Rocket tank"
+  },
   "weapons": {
     "pistol": "Pistol",
     "rifle": "Assault rifle",
     "shotgun": "Shotgun",
-    "grenade": "Frag grenade"
+    "grenade": "Frag grenade",
+    "launcher": "Rocket launcher",
+    "vehicleMg": "MG",
+    "vehicleRockets": "ROCKETS"
   },
   "errors": {
     "fetch": "Unable to load \"{url}\". The game must be run through a local HTTP server (e.g. \"node tools/serve.mjs\"), not by opening index.html directly.",
@@ -209,6 +221,8 @@
     "unknownWeapon": "Weapon not defined in weapons.json: \"{name}\"",
     "unknownGrenade": "Grenade not defined in weapons.json: \"{name}\"",
     "spriteExtendsLoop": "Circular \"extends\" in sprite \"{name}\" (assets.json)",
-    "noLevels": "No levels defined in game.json (\"levels\")"
+    "noLevels": "No levels defined in game.json (\"levels\")",
+    "unknownVehicle": "Vehicle not defined in vehicles.json: \"{name}\"",
+    "unknownRocket": "Rocket not defined in weapons.json: \"{name}\""
   }
 }

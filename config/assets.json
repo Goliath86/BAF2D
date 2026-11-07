@@ -44,6 +44,11 @@
       "src": null,
       "placeholder": { "weapon": "shotgun" }
     },
+    "soldier_launcher": {
+      "extends": "soldier_rifle",
+      "src": null,
+      "placeholder": { "weapon": "launcher", "tube": "#4f5e33", "tubeLight": "#7a8a52", "tubeDark": "#3a4626", "warhead": "#5a6448", "warheadTip": "#2e3424" }
+    },
     "soldier_dead": {
       "extends": "soldier_rifle",
       "src": null,
@@ -89,6 +94,70 @@
       "extends": "pickup_rifle",
       "src": null,
       "placeholder": { "weapon": "shotgun" }
+    },
+    "pickup_launcher": {
+      "extends": "pickup_rifle",
+      "src": null,
+      "frameWidth": 24,
+      "frameHeight": 6,
+      "origin": [12, 3],
+      "placeholder": { "weapon": "launcher", "tube": "#4f5e33", "tubeLight": "#7a8a52", "tubeDark": "#3a4626", "warhead": "#5a6448", "warheadTip": "#2e3424" }
+    },
+    "rocket": {
+      "src": null,
+      "frameWidth": 10,
+      "frameHeight": 4,
+      "origin": [5, 2],
+      "placeholder": {
+        "shape": "rocket", "frames": 2, "autoOutline": "#0d0f08",
+        "body": "#8a8a7a", "light": "#b4b4a4", "fin": "#4a4a42", "warhead": "#4f5e33", "tip": "#2e3424",
+        "flame": "#ff9a2a", "flameLight": "#fff4c2"
+      }
+    },
+    "jeep": {
+      "src": null,
+      "teamColored": true,
+      "frameWidth": 30,
+      "frameHeight": 18,
+      "origin": [15, 9],
+      "placeholder": {
+        "shape": "jeep", "frames": 2, "autoOutline": "#0d0f08",
+        "body": "#5e6b3c", "bodyLight": "#7c8a52", "bodyDark": "#3e4828", "glass": "#2a3440", "interior": "#3a3226",
+        "tire": "#1e1e1e", "tireLight": "#3a3a3a", "burnt": "#2a2622", "burntLight": "#3e3832", "burntDark": "#161412"
+      }
+    },
+    "jeep_turret": {
+      "src": null,
+      "frameWidth": 20,
+      "frameHeight": 8,
+      "origin": [4, 4],
+      "placeholder": {
+        "shape": "jeep_turret", "autoOutline": "#0d0f08",
+        "dark": "#2e3424", "light": "#5e6b3c", "gun": "#262626", "gunLight": "#4d4d4d", "ammo": "#4f5e33"
+      }
+    },
+    "tank": {
+      "src": null,
+      "teamColored": true,
+      "frameWidth": 38,
+      "frameHeight": 26,
+      "origin": [19, 13],
+      "placeholder": {
+        "shape": "tank", "frames": 3, "autoOutline": "#0d0f08",
+        "body": "#6a6e48", "bodyLight": "#868a5e", "bodyDark": "#474a30", "track": "#262622", "trackLight": "#3c3c36",
+        "burnt": "#2a2622", "burntLight": "#3e3832", "burntDark": "#161412"
+      }
+    },
+    "tank_turret": {
+      "src": null,
+      "frameWidth": 32,
+      "frameHeight": 20,
+      "origin": [10, 10],
+      "placeholder": {
+        "shape": "tank_turret", "frames": 2, "autoOutline": "#0d0f08", "pivot": [10, 10],
+        "body": "#6a6e48", "bodyLight": "#868a5e", "bodyDark": "#474a30", "gun": "#262626",
+        "burnt": "#2a2622", "burntLight": "#3e3832", "burntDark": "#161412"
+      }
     },
     "soldier_legs": {
       "src": null,
@@ -477,6 +546,70 @@
       "placeholder": [
         { "wave": "triangle", "freqStart": 900, "freqEnd": 900, "duration": 0.04 },
         { "wave": "triangle", "freqStart": 1300, "freqEnd": 1300, "duration": 0.06, "at": [0.05] }
+      ]
+    },
+    "shoot_rocket": {
+      "src": null,
+      "volume": 0.3,
+      "placeholder": [
+        { "wave": "noise", "duration": 0.35 },
+        { "wave": "sawtooth", "freqStart": 220, "freqEnd": 60, "duration": 0.3, "volume": 0.6 }
+      ]
+    },
+    "shoot_mg": {
+      "src": null,
+      "volume": 0.24,
+      "placeholder": [
+        { "wave": "square", "freqStart": 700, "freqEnd": 120, "duration": 0.07 },
+        { "wave": "noise", "duration": 0.05, "volume": 0.5 }
+      ]
+    },
+    "reload_launcher": {
+      "src": null,
+      "volume": 0.18,
+      "placeholder": [
+        { "wave": "square", "freqStart": 300, "freqEnd": 200, "duration": 0.05, "at": [0.3] },
+        { "wave": "square", "freqStart": 520, "freqEnd": 380, "duration": 0.04, "at": [1.6, 1.75] }
+      ]
+    },
+    "reload_mg": {
+      "src": null,
+      "volume": 0.18,
+      "placeholder": { "wave": "square", "freqStart": 600, "freqEnd": 300, "duration": 0.05, "at": [0.4, 2.4, 2.6] }
+    },
+    "reload_pods": {
+      "src": null,
+      "volume": 0.18,
+      "placeholder": { "wave": "square", "freqStart": 260, "freqEnd": 180, "duration": 0.07, "at": [0.6, 2.2, 3.8, 5.4] }
+    },
+    "hit_metal": {
+      "src": null,
+      "volume": 0.12,
+      "placeholder": [
+        { "wave": "triangle", "freqStart": 2400, "freqEnd": 1500, "duration": 0.09 },
+        { "wave": "noise", "duration": 0.03, "volume": 0.5 }
+      ]
+    },
+    "vehicle_enter": {
+      "src": null,
+      "volume": 0.18,
+      "placeholder": [
+        { "wave": "square", "freqStart": 140, "freqEnd": 90, "duration": 0.08 },
+        { "wave": "sawtooth", "freqStart": 60, "freqEnd": 110, "duration": 0.4, "at": [0.12], "volume": 0.7 }
+      ]
+    },
+    "vehicle_exit": {
+      "src": null,
+      "volume": 0.16,
+      "placeholder": { "wave": "square", "freqStart": 160, "freqEnd": 100, "duration": 0.08 }
+    },
+    "vehicle_explosion": {
+      "src": null,
+      "volume": 0.6,
+      "placeholder": [
+        { "wave": "noise", "duration": 1.3 },
+        { "wave": "sine", "freqStart": 90, "freqEnd": 25, "duration": 1.0, "volume": 1.5 },
+        { "wave": "square", "freqStart": 60, "freqEnd": 20, "duration": 0.5, "volume": 0.4 }
       ]
     },
     "score_kill": {

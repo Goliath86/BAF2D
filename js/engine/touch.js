@@ -206,6 +206,7 @@ export class TouchSticks {
     const { x, y, r } = this.buttonGeometry(b);
     const down = b.id !== null;
     const accent = st.alert ? 'rgba(255,90,70,0.95)' : b.color || 'rgba(255,255,255,0.7)';
+    const icon = st.icon || b.icon; // il gioco può cambiare icona (es. granata -> razzi alla guida di un mezzo)
 
     ctx.save();
     ctx.globalAlpha = this.cfg.opacity * (down ? 1 : 0.8) * (st.disabled ? 0.4 : 1);
@@ -218,7 +219,7 @@ export class TouchSticks {
     ctx.strokeStyle = accent;
     ctx.stroke();
 
-    if (b.icon === 'reload') {
+    if (icon === 'reload') {
       // freccia circolare
       const ir = r * 0.62;
       const a0 = -Math.PI * 0.35;
@@ -241,7 +242,7 @@ export class TouchSticks {
       ctx.fill();
     }
 
-    if (b.icon === 'hurt' || b.icon === 'heal') {
+    if (icon === 'hurt' || icon === 'heal') {
       // cuore con "-" (togli vita) o "+" (ridai vita)
       const s = r * 0.5;
       ctx.beginPath();
@@ -253,10 +254,10 @@ export class TouchSticks {
       ctx.fillStyle = 'rgba(0,0,0,0.85)';
       const t = Math.max(2, r * 0.1);
       ctx.fillRect(x - s * 0.45, y - s * 0.1 - t / 2, s * 0.9, t);
-      if (b.icon === 'heal') ctx.fillRect(x - t / 2, y - s * 0.55, t, s * 0.9);
+      if (icon === 'heal') ctx.fillRect(x - t / 2, y - s * 0.55, t, s * 0.9);
     }
 
-    if (b.icon === 'grenade') {
+    if (icon === 'grenade') {
       // granata: corpo ovale, spoletta in alto e leva sul lato
       const s = r * 0.32;
       ctx.beginPath();
@@ -277,7 +278,7 @@ export class TouchSticks {
       ctx.stroke();
     }
 
-    if (b.icon === 'pickup') {
+    if (icon === 'pickup') {
       // freccia verso il basso su un vassoio a "U" (raccogli)
       const s = r * 0.42;
       const lw = Math.max(2, r * 0.1);
@@ -297,6 +298,43 @@ export class TouchSticks {
       ctx.lineTo(x - s, y + s * 0.85);
       ctx.lineTo(x + s, y + s * 0.85);
       ctx.lineTo(x + s, y + s * 0.2);
+      ctx.stroke();
+    }
+
+    if (icon === 'rocket') {
+      // razzo in diagonale: corpo, testata, alette e fiamma
+      const s = r * 0.45;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(-Math.PI / 4);
+      ctx.fillStyle = accent;
+      ctx.fillRect(-s * 0.7, -s * 0.18, s * 1.3, s * 0.36);
+      ctx.beginPath();
+      ctx.moveTo(s * 0.6, -s * 0.18);
+      ctx.lineTo(s * 0.95, 0);
+      ctx.lineTo(s * 0.6, s * 0.18);
+      ctx.fill();
+      ctx.fillRect(-s * 0.7, -s * 0.4, s * 0.25, s * 0.8);
+      ctx.fillStyle = 'rgba(255,170,60,0.95)';
+      ctx.fillRect(-s * 1.05, -s * 0.12, s * 0.3, s * 0.24);
+      ctx.restore();
+    }
+
+    if (icon === 'enter' || icon === 'exit') {
+      // porta (rettangolo) con freccia che entra o esce
+      const s = r * 0.42;
+      const lw = Math.max(2, r * 0.1);
+      ctx.lineWidth = lw;
+      ctx.strokeStyle = accent;
+      ctx.strokeRect(x - s * 0.1, y - s, s * 1.0, s * 2);
+      const dir = icon === 'enter' ? 1 : -1;
+      const ax = icon === 'enter' ? x + s * 0.35 : x - s * 1.05;
+      ctx.beginPath();
+      ctx.moveTo(ax - dir * s * 0.7, y);
+      ctx.lineTo(ax, y);
+      ctx.moveTo(ax - dir * s * 0.3, y - s * 0.35);
+      ctx.lineTo(ax, y);
+      ctx.lineTo(ax - dir * s * 0.3, y + s * 0.35);
       ctx.stroke();
     }
 

@@ -97,7 +97,8 @@ export class Hud {
       this._text(ui, u, mode.pickup, Math.round(mode.screen.x), Math.round(mode.screen.y + (pc.offset ?? 10)),
         pc.fontSize ?? 6, pc.color || '#ffd36b', 'center');
     }
-    this._drawWeapon(ui, u, display.cssWidth, player);
+    if (mode?.vehicle) this._drawVehicle(ui, u, display.cssWidth, mode.vehicle);
+    else this._drawWeapon(ui, u, display.cssWidth, player);
     if (mode?.ctf) {
       const W = Math.floor(display.cssWidth / u);
       let y = this._drawTickets(ui, u, W, mode.ctf, mode.team, mode.zone);
@@ -377,6 +378,50 @@ export class Hud {
       const size = this.cfg.fontSize ?? 7;
       this._text(ui, u, String(Math.ceil(player.health)), bx + bw + 4, by + (bh - size) / 2, size,
         low ? hc.lowColor || '#f22' : this.cfg.text || '#fff');
+    }
+  }
+
+  /** Alla guida: nome del mezzo, barra della corazza, armi (colpi / ricarica). In alto a destra. */
+  _drawVehicle(ui, u, cssWidth, v) {
+    const vc = this.cfg.vehicle || {};
+    const wc = this.wc;
+    const m = this.cfg.margin ?? 5;
+    const size = this.cfg.fontSize ?? 7;
+    const right = Math.floor(cssWidth / u) - m;
+    const shadow = this.cfg.shadow || '#000';
+    let y = m;
+    this._text(ui, u, v.name, right, y, size, this.cfg.text || '#fff', 'right');
+    y += size + 3;
+    // corazza
+    const bw = vc.barWidth ?? 60;
+    const bh = vc.barHeight ?? 4;
+    const ratio = Math.max(0, v.health / v.maxHealth);
+    const low = ratio <= (vc.lowThreshold ?? 0.3);
+    const blink = low && Math.floor(this.time * 4) % 2 === 0;
+    this._px(ui, u, right - bw - 1, y - 1, bw + 2, bh + 2, shadow);
+    this._px(ui, u, right - bw, y, bw, bh, vc.back || '#14202a');
+    const fill = Math.round(bw * ratio);
+    if (fill > 0) {
+      this._px(ui, u, right - bw, y, fill, bh, blink ? '#ffffff' : low ? vc.lowColor || '#ff6a3a' : vc.color || '#8ac4e8');
+      this._px(ui, u, right - bw, y, fill, 1, vc.light || '#c8e6ff');
+    }
+    y += bh + 4;
+    // armi
+    for (const g of v.guns) {
+      const empty = g.ammo === 0 && !g.reloading;
+      const ammoColor = g.reloading ? wc.reloadColor || '#ffd36b' : empty ? wc.emptyColor || '#f43' : wc.ammoColor || '#ffd36b';
+      const txt = g.reloading ? this.i18n.t('hud.reloading') : `${g.ammo}/${g.magazine}`;
+      const w = this._text(ui, u, txt, right, y, size, ammoColor, 'right');
+      this._text(ui, u, g.name, right - w - 4, y, size, this.cfg.text || '#fff', 'right');
+      y += size + 1;
+      if (g.reloading) {
+        const pw = vc.reloadWidth ?? 40;
+        this._px(ui, u, right - pw - 1, y - 1, pw + 2, 4, shadow);
+        this._px(ui, u, right - pw, y, pw, 2, wc.reloadBack || '#222');
+        this._px(ui, u, right - pw, y, Math.round(pw * g.progress), 2, wc.reloadColor || '#ffd36b');
+        y += 4;
+      }
+      y += 2;
     }
   }
 

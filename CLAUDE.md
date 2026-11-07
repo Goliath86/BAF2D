@@ -73,6 +73,9 @@ js/game/
   nav.js              Nav: griglia dei tile per l'IA (A* 8 direzioni + percorso 'tirato', reach() = Dijkstra limitato, los)
   ai.js               Squad (lavagna di squadra: bot, nemici avvistati) + BotBrain (IA di un bot -> comandi come l'umano)
   scores.js           Scores: record per combattente, punti (kill/assist/defend/capture/...), classifica
+  vehicles.js         VehicleTypes (config/vehicles.json) + Vehicle (guida, torretta, armi, danni, carcassa)
+  vehicle_ai.js       VehicleBrain: IA di guida dei bot (bandiere, mitragliatrice/razzi, sblocco)
+  rockets.js          RocketTypes (weapons.json -> rockets) + Rockets (razzi con scia, esplodono -> Game.explode)
   props.js            Props: decorazioni della mappa (palme overhead, cespugli/sassi a terra, ombre, oscillazione col vento)
   weather.js          Weather: vento con raffiche, granelli, lingue di sabbia, velature, tinta (effects.json -> weather)
   pickups.js          Pickups: armi/granate a terra (lasciate dai caduti o da punti fissi della mappa con respawn)

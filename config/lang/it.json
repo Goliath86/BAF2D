@@ -71,7 +71,7 @@
       "fire": "Spara",
       "reload": "Ricarica",
       "grenade": "Granata",
-      "pickup": "Raccogli arma",
+      "pickup": "Raccogli / mezzo",
       "pause": "Pausa"
     }
   },
@@ -118,6 +118,10 @@
     "promoted": "PROMOZIONE",
     "pickup": "[{key}] Raccogli {weapon}",
     "pickupTouch": "Raccogli {weapon}",
+    "enter": "[{key}] Sali: {vehicle}",
+    "enterTouch": "Sali: {vehicle}",
+    "exit": "[{key}] Scendi",
+    "exitTouch": "Tocca il pulsante porta per scendere",
     "flag": {
       "capturing": "CONQUISTA {flag}",
       "securing": "RIPRISTINO {flag}",
@@ -142,6 +146,7 @@
       "victory": "VITTORIA",
       "draw": "PAREGGIO",
       "defeat": "PARTITA GIOCATA",
+      "vehicle": "MEZZO DISTRUTTO",
       "debug": "DEBUG"
     }
   },
@@ -193,11 +198,18 @@
     "lieutenantGeneral": { "name": "Generale di corpo d'armata", "short": "Gen. C.A." },
     "general": { "name": "Generale", "short": "Gen." }
   },
+  "vehicles": {
+    "jeep": "Jeep",
+    "tank": "Carro lanciarazzi"
+  },
   "weapons": {
     "pistol": "Pistola",
     "rifle": "Fucile d'assalto",
     "shotgun": "Fucile a pompa",
-    "grenade": "Granata a frammentazione"
+    "grenade": "Granata a frammentazione",
+    "launcher": "Lanciarazzi",
+    "vehicleMg": "MITRAGL.",
+    "vehicleRockets": "RAZZI"
   },
   "errors": {
     "fetch": "Impossibile caricare \"{url}\". Il gioco va avviato tramite un server HTTP locale (es. \"node tools/serve.mjs\"), non aprendo index.html direttamente.",
@@ -209,6 +221,8 @@
     "unknownWeapon": "Arma non definita in weapons.json: \"{name}\"",
     "unknownGrenade": "Granata non definita in weapons.json: \"{name}\"",
     "spriteExtendsLoop": "\"extends\" circolare nello sprite \"{name}\" (assets.json)",
-    "noLevels": "Nessun livello definito in game.json (\"levels\")"
+    "noLevels": "Nessun livello definito in game.json (\"levels\")",
+    "unknownVehicle": "Mezzo non definito in vehicles.json: \"{name}\"",
+    "unknownRocket": "Razzo non definito in weapons.json: \"{name}\""
   }
 }

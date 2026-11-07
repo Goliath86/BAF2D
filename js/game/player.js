@@ -39,6 +39,9 @@ export class Player {
     this.aimDistance = null;
     this.throwDistance = null; // gittata della granata scelta dall'IA (px)
     this.isBot = false;
+    // a bordo di un mezzo: posizione = quella del mezzo (Game._syncDriver), niente disegno né colpi ricevuti
+    this.vehicle = null;
+    this.vehicleBrain = null; // IA di guida (bot)
     this.cooldown = 0;
     this.triggerHeld = false; // per le armi semiautomatiche (un colpo per pressione)
     this.shotQueued = false;
@@ -332,7 +335,7 @@ export class Player {
   }
 
   draw(ctx) {
-    if (this.dead) return; // il corpo a terra è un cadavere di Game (resta dopo il rientro)
+    if (this.dead || this.vehicle) return; // il corpo a terra è un cadavere di Game; a bordo si vede il mezzo
     if (this.legs) drawSprite(ctx, this.legs, this.legsAnim.frame, this.x, this.y, this.legsAngle);
     drawSprite(ctx, this.sprite, this.anim.frame, this.x, this.y, this.angle);
   }

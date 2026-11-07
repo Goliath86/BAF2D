@@ -133,6 +133,24 @@ const GUNS = {
       rect(g, x + 4, cy - 1, 1, 2, p.gunDark); // volata
     },
   },
+  // lanciarazzi a spalla: tubo verde oliva, svaso posteriore, mirino; il razzo (testata) sporge davanti
+  launcher: {
+    length: 20,
+    draw(g, x, cy, p, noRocket = false) {
+      const tube = p.tube || '#4f5e33';
+      const light = p.tubeLight || '#7a8a52';
+      const dark = p.tubeDark || '#3a4626';
+      rect(g, x, cy - 2, 2, 4, dark); // svaso posteriore
+      rect(g, x + 2, cy - 1, 14, 2, tube);
+      rect(g, x + 2, cy - 1, 14, 1, light);
+      rect(g, x + 7, cy - 2, 3, 1, p.gunDark); // mirino
+      rect(g, x + 8, cy + 1, 2, 1, p.gunDark); // impugnatura
+      if (!noRocket) {
+        rect(g, x + 16, cy - 2, 3, 4, p.warhead || '#5a6448'); // testata
+        rect(g, x + 19, cy - 1, 1, 2, p.warheadTip || '#2e3424');
+      }
+    },
+  },
 };
 
 /**
@@ -157,6 +175,15 @@ const GRIPS = {
     reloadCycles: 3,
     hidesMag: false,
     carry: 'shell',
+  }),
+  // lanciarazzi in spalla: il tubo sporge dietro la spalla, mano destra sull'impugnatura, sinistra avanti
+  launcher: (cx, cy, bx) => ({
+    gunX: cx - 8,
+    right: { shoulder: [bx, cy + 4], hand: [cx, cy + 1], glove: [cx, cy + 1] },
+    left: { shoulder: [bx, cy - 6], hand: [cx + 4, cy - 2], glove: [cx + 5, cy - 2] },
+    reloadCycles: 1,
+    hidesMag: true,
+    carry: 'rocket',
   }),
   // pistola a due mani, braccia tese in avanti
   pistol: (cx, cy, bx) => ({
@@ -264,6 +291,7 @@ const SPRITE_SHAPES = {
     rect(g, rGlove[0], rGlove[1], 2, 2, p.glove);
     if (pose.returning && pose.reach > 0.2) {
       if (grip.carry === 'shell') rect(g, lGlove[0] + 2, lGlove[1], 1, 2, p.shell || '#a8322a');
+      else if (grip.carry === 'rocket') rect(g, lGlove[0] + 1, lGlove[1], 4, 2, p.warhead || '#5a6448');
       else rect(g, lGlove[0] + 1, lGlove[1] + 1, 2, 2, p.gunDark);
     }
     rect(g, lGlove[0], lGlove[1], 2, 2, p.glove);
@@ -410,6 +438,129 @@ const SPRITE_SHAPES = {
   weapon(g, w, h, p) {
     const gun = GUNS[p.weapon] || GUNS.rifle;
     gun.draw(g, Math.floor((w - gun.length) / 2), Math.floor(h / 2) - 1, p);
+  },
+
+  /** Razzo orientato a destra: fiamma (frame alterni) a sinistra, alette, corpo, testata a destra. */
+  rocket(g, w, h, p, frame) {
+    const cy = Math.floor(h / 2);
+    rect(g, 0, cy - 1, 2, 2, frame % 2 ? p.flame : p.flameLight);
+    if (frame % 2) rect(g, 0, cy, 1, 1, p.flameLight);
+    rect(g, 2, cy - 2, 1, 4, p.fin);
+    rect(g, 3, cy - 1, w - 6, 2, p.body);
+    rect(g, 3, cy - 1, w - 6, 1, p.light);
+    rect(g, w - 3, cy - 1, 2, 2, p.warhead);
+    rect(g, w - 1, cy - 1, 1, 2, p.tip || p.warhead);
+  },
+
+  /**
+   * Jeep vista dall'alto, muso a destra. Frame 0 = normale, frame 1 = carcassa bruciata.
+   * Ruote sporgenti, cofano, parabrezza, sedili, cassone, ruota di scorta; quadrato di squadra sul cofano.
+   */
+  jeep(g, w, h, p, frame) {
+    const burnt = frame === 1;
+    const C = burnt
+      ? { body: p.burnt, light: p.burntLight, dark: p.burntDark, glass: p.burntDark, interior: p.burntDark, tire: '#0e0e0e', tireLight: '#1e1e1e' }
+      : { body: p.body, light: p.bodyLight, dark: p.bodyDark, glass: p.glass, interior: p.interior, tire: p.tire, tireLight: p.tireLight };
+    const top = 3;
+    const bottom = h - 4;
+    // ruote
+    for (const x of [5, w - 10]) {
+      rect(g, x, top - 2, 6, 3, C.tire);
+      rect(g, x, bottom, 6, 3, C.tire);
+      rect(g, x + 1, top - 2, 4, 1, C.tireLight);
+      rect(g, x + 1, bottom + 2, 4, 1, C.tireLight);
+    }
+    // scocca
+    rect(g, 2, top, w - 4, bottom - top + 1, C.dark);
+    rect(g, 3, top + 1, w - 6, bottom - top - 1, C.body);
+    // cofano (davanti) con luce
+    rect(g, w - 11, top + 1, 8, bottom - top - 1, C.light);
+    rect(g, w - 11, top + 1, 8, 1, C.body);
+    rect(g, w - 3, top + 2, 1, 2, burnt ? C.dark : '#f4e8b0'); // fari
+    rect(g, w - 3, bottom - 3, 1, 2, burnt ? C.dark : '#f4e8b0');
+    // parabrezza
+    rect(g, w - 13, top + 1, 2, bottom - top - 1, C.glass);
+    // abitacolo e sedili
+    rect(g, 9, top + 2, w - 23, bottom - top - 3, C.interior);
+    rect(g, 12, top + 2, 3, 3, C.dark);
+    rect(g, 12, bottom - 4, 3, 3, C.dark);
+    // cassone e ruota di scorta
+    rect(g, 3, top + 2, 5, bottom - top - 3, C.dark);
+    rect(g, 0, Math.floor(h / 2) - 2, 2, 4, C.tire);
+    if (p.team && !burnt) {
+      rect(g, w - 8, Math.floor(h / 2) - 2, 4, 4, p.teamDark);
+      rect(g, w - 8, Math.floor(h / 2) - 2, 3, 3, p.team);
+    }
+    if (burnt) for (let i = 0; i < 6; i++) rect(g, 4 + i * 4, top + 2 + (i % 3) * 3, 2, 1, p.burntLight);
+  },
+
+  /** Mitragliatrice su perno della jeep (ruota attorno all'origine): scudo, castello, canna, cassetta. */
+  jeep_turret(g, w, h, p) {
+    const cy = Math.floor(h / 2);
+    disc(g, 4, cy, 2.5, p.dark);
+    rect(g, 5, cy - 3, 2, 6, p.dark); // scudo
+    rect(g, 5, cy - 3, 1, 6, p.light);
+    rect(g, 7, cy - 1, 4, 2, p.gun); // castello
+    rect(g, 7, cy - 1, 4, 1, p.gunLight);
+    rect(g, 11, cy - 1, w - 12, 1, p.gun); // canna
+    rect(g, w - 1, cy - 1, 1, 1, p.dark);
+    rect(g, 8, cy + 1, 2, 2, p.ammo); // cassetta delle munizioni
+  },
+
+  /**
+   * Carro lanciarazzi visto dall'alto, muso a destra. Frame 0/1 = cingoli (animazione), frame 2 = carcassa.
+   */
+  tank(g, w, h, p, frame) {
+    const burnt = frame === 2;
+    const C = burnt
+      ? { body: p.burnt, light: p.burntLight, dark: p.burntDark, track: '#121110', trackLight: '#1e1c1a' }
+      : { body: p.body, light: p.bodyLight, dark: p.bodyDark, track: p.track, trackLight: p.trackLight };
+    const th = 6; // spessore cingoli
+    for (const y of [0, h - th]) {
+      rect(g, 1, y, w - 2, th, C.track);
+      // maglie: segmenti che scorrono (frame 0/1)
+      for (let x = 2 + (frame % 2) * 2; x < w - 2; x += 4) rect(g, x, y + 1, 1, th - 2, C.trackLight);
+      rect(g, 1, y, w - 2, 1, C.trackLight);
+    }
+    // scafo
+    rect(g, 3, th - 1, w - 6, h - th * 2 + 2, C.dark);
+    rect(g, 4, th, w - 8, h - th * 2, C.body);
+    // spiovente anteriore (più chiaro) e griglia del motore dietro
+    rect(g, w - 9, th, 5, h - th * 2, C.light);
+    for (let y = th + 2; y < h - th - 1; y += 2) rect(g, 5, y, 5, 1, C.dark);
+    if (p.team && !burnt) {
+      rect(g, 12, th + 1, 4, 3, p.teamDark);
+      rect(g, 12, th + 1, 3, 2, p.team);
+      rect(g, 12, h - th - 4, 4, 3, p.teamDark);
+      rect(g, 12, h - th - 4, 3, 2, p.team);
+    }
+    if (burnt) for (let i = 0; i < 8; i++) rect(g, 5 + i * 3, th + 1 + (i % 4) * 3, 2, 1, p.burntLight);
+  },
+
+  /** Torretta del carro (origine = perno): cupola, due lanciarazzi ai lati, mitragliatrice al centro. */
+  tank_turret(g, w, h, p, frame) {
+    const burnt = frame === 1;
+    const body = burnt ? p.burnt : p.body;
+    const light = burnt ? p.burntLight : p.bodyLight;
+    const dark = burnt ? p.burntDark : p.bodyDark;
+    const ox = p.pivot?.[0] ?? 10;
+    const cy = Math.floor(h / 2);
+    // lanciarazzi (contenitori con 2 tubi ciascuno)
+    for (const y of [1, h - 6]) {
+      rect(g, ox - 4, y, 13, 5, dark);
+      rect(g, ox - 3, y + 1, 11, 3, body);
+      rect(g, ox - 3, y + 1, 11, 1, light);
+      rect(g, ox + 8, y + 1, 1, 1, '#0e0e0e');
+      rect(g, ox + 8, y + 3, 1, 1, '#0e0e0e');
+    }
+    // mitragliatrice coassiale
+    rect(g, ox + 5, cy - 1, w - ox - 6, 2, p.gun);
+    rect(g, w - 1, cy - 1, 1, 2, dark);
+    // cupola
+    disc(g, ox, cy, 6.5, dark);
+    disc(g, ox, cy, 5.5, body);
+    disc(g, ox - 1.5, cy - 1.5, 2.5, light);
+    disc(g, ox - 2, cy + 1, 1.6, dark); // portello
   },
 
   bullet(g, w, h, p) {
