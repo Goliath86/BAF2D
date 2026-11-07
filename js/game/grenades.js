@@ -122,13 +122,13 @@ export class Grenades {
       const wb = d.wallBounce ?? 0.6;
       let bounced = 0;
       const nx = g.x + g.vx * dt;
-      if (g.vx !== 0 && map.isSolidAt(nx + Math.sign(g.vx) * r, g.y)) {
+      if (g.vx !== 0 && map.blocksShotAt(nx + Math.sign(g.vx) * r, g.y)) {
         bounced = Math.abs(g.vx);
         g.vx = -g.vx * wb;
         g.spin = -g.spin;
       } else g.x = nx;
       const ny = g.y + g.vy * dt;
-      if (g.vy !== 0 && map.isSolidAt(g.x, ny + Math.sign(g.vy) * r)) {
+      if (g.vy !== 0 && map.blocksShotAt(g.x, ny + Math.sign(g.vy) * r)) {
         bounced = Math.max(bounced, Math.abs(g.vy));
         g.vy = -g.vy * wb;
         g.spin = -g.spin;

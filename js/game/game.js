@@ -10,6 +10,8 @@ import { Nav } from './nav.js';
 import { BotBrain, Squad } from './ai.js';
 import { Scores } from './scores.js';
 import { Pickups } from './pickups.js';
+import { Props } from './props.js';
+import { Weather } from './weather.js';
 import { keyName } from '../engine/input.js';
 
 const STEP = 1 / 60; // update a timestep fisso
@@ -53,6 +55,10 @@ export class Game {
     this.grenades = new Grenades(assets, audio);
     this.shake = { time: 0, duration: 0, amount: 0 }; // scossa della camera (esplosioni)
     this.effects = new Effects(effectsCfg, assets, audio);
+    this.effectsCfg = effectsCfg;
+    // decorazioni della mappa (game.json -> props) e meteo del livello (preparati in setup)
+    this.props = new Props(config.props, assets);
+    this.weather = new Weather(null);
     this.crosshair = assets.sprites.get('crosshair') || null;
     this.camera = new Camera(config.camera);
 
@@ -100,6 +106,12 @@ export class Game {
     this.level = level;
     this.map = new TileMap(level, this.assets.tileset(level.tileset));
     this.ctf = new Ctf(this.config.ctf, this.teams, this.map, level);
+    // decorazioni e meteo del livello (level.weather = tipo in effects.json -> weather)
+    this.props.reset(this.map);
+    this.weather = new Weather(level.weather ? this.effectsCfg.weather?.[level.weather] : null);
+    if (level.weather && !this.weather.active) console.warn(`Level weather "${level.weather}" not found in effects.json`);
+    this.effects.wind = this.weather.active ? this.weather.wind : null;
+    this.background = level.background || this.config.display?.background || '#000';
     this.nav = new Nav(this.map);
     this.playerTeam = this.teams[team] ? team : this.ctf.teamIds[0] || null;
     const enemy = this.ctf.teamIds.find((t) => t !== this.playerTeam);
@@ -387,6 +399,8 @@ export class Game {
     this.shake.time = Math.max(0, this.shake.time - dt);
 
     this.camera.follow(this.player.x - this.viewOffsetX, this.player.y, this.player.angle, display.width, display.height, this.map, dt);
+    this.props.update(dt, this.attract ? null : this.player);
+    this.weather.update(dt, { x: this.camera.x, y: this.camera.y, w: display.width, h: display.height });
     // ascoltatore dei suoni posizionali = centro della visuale
     this.audio.listener = { x: this.camera.x + display.width / 2, y: this.camera.y + display.height / 2 };
     input.endFrame();
@@ -449,7 +463,7 @@ export class Game {
     const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 2);
     for (let i = 1; i < n; i++) {
       const t = i / n;
-      if (this.map.isSolidAt(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t)) return false;
+      if (this.map.blocksShotAt(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t)) return false;
     }
     return true;
   }
@@ -668,7 +682,7 @@ export class Game {
     if (w.sound) this.audio.play(w.sound, player);
     // vampata e fumo alla volata (non se la canna è dentro un muro)
     const m = player.muzzle;
-    if (w.muzzleFlash && !this.map.isSolidAt(m.x, m.y)) this.effects.muzzle(w.muzzleFlash, m.x, m.y, player.angle);
+    if (w.muzzleFlash && !this.map.blocksShotAt(m.x, m.y)) this.effects.muzzle(w.muzzleFlash, m.x, m.y, player.angle);
     const n = Math.max(1, Math.round(w.pellets || 1));
     for (let i = 0; i < n; i++) this._spawnBullet(player, w);
   }
@@ -698,7 +712,7 @@ export class Game {
     range = Math.min(w.maxRange ?? 600, Math.max(minRange, range, 0.5));
 
     // Canna dentro un muro (giocatore attaccato alla parete): impatto immediato
-    if (this.map.isSolidAt(m.x, m.y)) {
+    if (this.map.blocksShotAt(m.x, m.y)) {
       const n = Math.abs(dx) > Math.abs(dy) ? { x: -Math.sign(dx), y: 0 } : { x: 0, y: -Math.sign(dy) };
       this._wallImpact(m.x, m.y, player.x, player.y, n.x, n.y);
       return;
@@ -770,7 +784,7 @@ export class Game {
         if (hit) {
           this._hitUnit(b, hit);
           done = true;
-        } else if (map.isSolidAt(b.x, b.y)) {
+        } else if (map.blocksShotAt(b.x, b.y)) {
           const n = this._surfaceNormal(px, py, b.x, b.y, b.dx, b.dy);
           this._wallImpact(b.x, b.y, px, py, n.x, n.y);
           done = true;
@@ -793,7 +807,7 @@ export class Game {
     for (let s = 2; s <= reach && !hit; s += 2) {
       b.x = x0 + b.dx * s;
       b.y = y0 + b.dy * s;
-      if (this.map.isSolidAt(b.x, b.y)) break;
+      if (this.map.blocksShotAt(b.x, b.y)) break;
       hit = this._unitHit(b);
     }
     if (hit) this._hitUnit(b, hit);
@@ -809,7 +823,7 @@ export class Game {
     const pty = Math.floor(py / s);
     const tx = Math.floor(x / s);
     const ty = Math.floor(y / s);
-    if (tx !== ptx && this.map.isSolidTile(tx, pty)) return { x: -Math.sign(dx), y: 0 };
+    if (tx !== ptx && this.map.blocksShotTile(tx, pty)) return { x: -Math.sign(dx), y: 0 };
     if (ty !== pty) return { x: 0, y: -Math.sign(dy) };
     return { x: -Math.sign(dx), y: 0 };
   }
@@ -865,6 +879,10 @@ export class Game {
 
     this.map.draw(ctx, cx, cy, W, H);
     this.effects.drawDecals(ctx);
+    const view = { x: cx, y: cy, w: W, h: H };
+    const wind = this.weather.active ? this.weather.wind : null;
+    this.props.drawGround(ctx, view, wind); // ombre, cespugli, sassi
+    this.weather.drawGround(ctx); // sabbia che scorre rasoterra
     this.ctf.drawZones(ctx);
     this.effects.drawCasings(ctx, false); // bossoli a terra
     this.grenades.draw(ctx, false); // granate a terra
@@ -885,8 +903,11 @@ export class Game {
     this.effects.drawFlashes(ctx);
     this.effects.drawParticles(ctx);
     this.effects.drawBlasts(ctx); // sopra il fumo, altrimenti ne coprirebbe il nucleo
+    this.props.drawOverhead(ctx, view, wind); // chiome delle palme sopra i soldati
+    this.weather.drawAir(ctx); // granelli e polvere nell'aria
 
     ctx.restore();
+    this.weather.drawTint(ctx, W, H);
 
     const live = this.running && !this.attract; // partita del giocatore (non la dimostrativa del menu)
     const playing = live && !this.suspended && !this.ended && !this.player.dead;

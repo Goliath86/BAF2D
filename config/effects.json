@@ -2,6 +2,26 @@
   "maxDecals": 120,
   "maxParticles": 800,
   "maxCasings": 150,
+  "windDrift": 18,
+
+  "weather": {
+    "desert_wind": {
+      "wind": {
+        "angleDeg": 12,
+        "base": 0.35,
+        "wobble": 0.08,
+        "angleWobbleDeg": 8,
+        "gustEvery": [6, 12],
+        "gustTime": [2, 4],
+        "gustStrength": [0.5, 0.95]
+      },
+      "margin": 40,
+      "streaks": { "count": 90, "colors": ["#fff6de", "#f6e4b8", "#ead098"], "speed": [100, 170], "length": [3, 6], "alpha": [0.35, 0.8] },
+      "wisps": { "count": 16, "color": "#fff3d4", "alpha": 0.5, "length": [30, 70], "speed": [30, 60], "wave": [2, 5] },
+      "haze": { "count": 5, "color": "#f2d6a0", "alpha": 0.14, "size": [90, 160], "speed": [10, 22] },
+      "tint": { "color": "#f0b860", "alpha": 0.04, "gustAlpha": 0.06 }
+    }
+  },
 
   "muzzles": {
     "rifle": {
@@ -362,6 +382,119 @@
           "rise": [6, 12],
           "spreadDeg": 100,
           "alpha": 0.6
+        }
+      ]
+    },
+
+    "sand": {
+      "decal": { "sprite": "hole_sand", "life": 2.5, "fade": 1.5 },
+      "sound": "hit_ground",
+      "emitters": [
+        {
+          "count": [4, 6],
+          "colors": ["#e8cc94", "#c9a466", "#d9b77a"],
+          "speed": [25, 60],
+          "life": [0.2, 0.4],
+          "size": [1, 1],
+          "drag": 5
+        },
+        {
+          "count": [3, 5],
+          "colors": ["#e2c690", "#d4b47a", "#ecd6a6"],
+          "speed": [5, 18],
+          "life": [0.5, 1.0],
+          "size": [1, 5],
+          "drag": 3,
+          "rise": [4, 9],
+          "alpha": 0.55
+        }
+      ]
+    },
+
+    "adobe": {
+      "decal": { "sprite": "hole_adobe", "life": 4, "fade": 1.5 },
+      "sound": "hit_wall",
+      "emitters": [
+        {
+          "count": [3, 5],
+          "colors": ["#d4ae84", "#b8916a", "#8a6a4a"],
+          "speed": [30, 80],
+          "life": [0.2, 0.4],
+          "size": [1, 1],
+          "drag": 5,
+          "spreadDeg": 120
+        },
+        {
+          "count": [4, 6],
+          "colors": ["#e0c89c", "#d4b892", "#c8aa80"],
+          "speed": [6, 20],
+          "life": [0.5, 1.0],
+          "size": [1, 5],
+          "drag": 3,
+          "rise": [5, 10],
+          "spreadDeg": 100,
+          "alpha": 0.6
+        }
+      ]
+    },
+
+    "stone": {
+      "decal": { "sprite": "hole_stone", "life": 4, "fade": 1.5 },
+      "sound": "hit_wall",
+      "emitters": [
+        {
+          "count": [4, 7],
+          "colors": ["#fff4c2", "#ffd36b", "#ffb627"],
+          "speed": [60, 140],
+          "life": [0.08, 0.2],
+          "size": [1, 1],
+          "drag": 6,
+          "spreadDeg": 140,
+          "fade": false
+        },
+        {
+          "count": [2, 4],
+          "colors": ["#a8987c", "#968670", "#cfc0a2"],
+          "speed": [30, 80],
+          "life": [0.2, 0.4],
+          "size": [1, 1],
+          "drag": 5,
+          "spreadDeg": 120
+        },
+        {
+          "count": [2, 4],
+          "colors": ["#c8bca4", "#b0a48c"],
+          "speed": [6, 18],
+          "life": [0.4, 0.8],
+          "size": [1, 4],
+          "drag": 3,
+          "rise": [6, 12],
+          "spreadDeg": 100,
+          "alpha": 0.5
+        }
+      ]
+    },
+
+    "water": {
+      "sound": "hit_ground",
+      "emitters": [
+        {
+          "count": [5, 8],
+          "colors": ["#cfeaf6", "#8ac4dc", "#ffffff"],
+          "speed": [15, 45],
+          "life": [0.15, 0.35],
+          "size": [1, 1],
+          "drag": 5,
+          "rise": [20, 40]
+        },
+        {
+          "count": [2, 3],
+          "colors": ["#8ac4dc"],
+          "speed": [2, 6],
+          "life": [0.3, 0.6],
+          "size": [2, 4],
+          "drag": 3,
+          "alpha": 0.5
         }
       ]
     },

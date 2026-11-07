@@ -24,6 +24,8 @@ export class Effects {
     this.assets = assets;
     this.audio = audio;
     this.impacts = cfg.impacts || {};
+    this.wind = null; // { x, y, strength } dal meteo del livello (Game), null = niente vento
+    this.windDrift = cfg.windDrift ?? 18; // px/s di trasporto del fumo a vento pieno
     this.maxDecals = cfg.maxDecals ?? 120;
     this.maxParticles = cfg.maxParticles ?? 600;
     this.casingTypes = cfg.casings || {};
@@ -261,8 +263,15 @@ export class Effects {
       p.vy *= k;
       p.x += p.vx * dt;
       p.y += (p.vy - p.rise) * dt;
+      // il vento (Weather) trasporta il fumo (particelle che salgono, "rise")
+      if (p.rise && this.wind) {
+        const w = this.wind;
+        const f = (this.windDrift ?? 18) * (0.3 + w.strength) * dt;
+        p.x += w.x * f;
+        p.y += w.y * f;
+      }
       p.life -= dt;
-      if (p.life <= 0 || (p.collide && map?.isSolidAt(p.x, p.y))) this.particles.splice(i, 1);
+      if (p.life <= 0 || (p.collide && map?.blocksShotAt(p.x, p.y))) this.particles.splice(i, 1);
     }
   }
 
@@ -306,12 +315,12 @@ export class Effects {
       // spostamento asse per asse con rimbalzo sui tile solidi
       const wb = d.wallBounce ?? 0.4;
       const nx = c.x + c.vx * dt;
-      if (map?.isSolidAt(nx, c.y)) {
+      if (map?.blocksShotAt(nx, c.y)) {
         c.vx = -c.vx * wb;
         c.spin = -c.spin;
       } else c.x = nx;
       const ny = c.y + c.vy * dt;
-      if (map?.isSolidAt(c.x, ny)) {
+      if (map?.blocksShotAt(c.x, ny)) {
         c.vy = -c.vy * wb;
         c.spin = -c.spin;
       } else c.y = ny;

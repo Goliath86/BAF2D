@@ -46,6 +46,10 @@
     "crossroads": {
       "name": "Crossroads",
       "description": "Symmetric map with five flags: two outposts on the sides and a contested centre."
+    },
+    "desert": {
+      "name": "Desert Village",
+      "description": "Large desert map swept by the wind: a ruined village in the centre, an oasis with palms, wide dirt roads and dry-stone walls for cover."
     }
   },
   "options": {

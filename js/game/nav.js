@@ -180,7 +180,7 @@ export class Nav {
    * Percorso da (x0, y0) a (x1, y1): lista di punti { x, y } (centri dei tile, già "tirati" dove
    * il passaggio è libero per un soldato di semi-dimensioni hw). [] se già arrivati, null se irraggiungibile.
    */
-  findPath(x0, y0, x1, y1, hw = 5, maxNodes = 4000) {
+  findPath(x0, y0, x1, y1, hw = 5, maxNodes = Math.max(4000, this.cols * this.rows)) {
     const start = this.nearestWalkable(x0, y0, 2);
     const goal = this.nearestWalkable(x1, y1, 3);
     if (start < 0 || goal < 0) return null;
@@ -273,7 +273,7 @@ export class Nav {
     const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 3);
     for (let i = 1; i < n; i++) {
       const t = i / n;
-      if (this.map.isSolidAt(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t)) return false;
+      if (this.map.blocksShotAt(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t)) return false;
     }
     return true;
   }

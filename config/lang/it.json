@@ -46,6 +46,10 @@
     "crossroads": {
       "name": "Crocevia",
       "description": "Mappa simmetrica con cinque bandiere: due avamposti ai lati e un centro conteso."
+    },
+    "desert": {
+      "name": "Villaggio nel deserto",
+      "description": "Grande mappa desertica spazzata dal vento: villaggio in rovina al centro, oasi con palme, ampie strade sterrate e muretti a secco come riparo."
     }
   },
   "options": {

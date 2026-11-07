@@ -590,6 +590,97 @@ const SPRITE_SHAPES = {
     rect(g, c, c, 1, 1, p.color);
   },
 
+  // ---------- Decorazioni (props) ----------
+  // Frame 0..variants-1 = varianti; frame variants..2*variants-1 = la stessa forma tutta in "shadowColor"
+  // (ombra proiettata, disegnata a terra con trasparenza e spostata dal gioco).
+
+  /** Chioma di palma vista dall'alto: foglie a raggiera con foglioline, corona al centro. */
+  palm(g, w, h, p, i) {
+    const n = p.variants ?? 3;
+    const shadow = i >= n;
+    const r = rng((i % n) * 41 + 3);
+    const S = p.shadowColor || '#000';
+    const cx = w / 2;
+    const cy = h / 2;
+    const fronds = 7 + Math.floor(r() * 3);
+    const a0 = r() * Math.PI * 2;
+    const px = (x, y, c) => rect(g, Math.round(x), Math.round(y), 1, 1, shadow ? S : c);
+    for (let f = 0; f < fronds; f++) {
+      const a = a0 + (f / fronds) * Math.PI * 2 + (r() - 0.5) * 0.5;
+      const len = w * 0.32 + r() * w * 0.14;
+      const bend = (r() - 0.5) * 0.5; // curvatura della foglia
+      for (let t = 2; t < len; t += 0.7) {
+        const k = t / len;
+        const aa = a + bend * k * k;
+        const x = cx + Math.cos(aa) * t;
+        const y = cy + Math.sin(aa) * t;
+        px(x, y, p.dark);
+        // foglioline ai due lati, più corte verso la punta e piegate all'indietro
+        if (Math.round(t * 10) % 14 < 7) continue;
+        const L = (1 - k) * 4.5 + 1;
+        for (const side of [-1, 1]) {
+          const la = aa + side * 1.15;
+          for (let q = 1; q <= L; q++) {
+            px(x + Math.cos(la) * q, y + Math.sin(la) * q, side < 0 ? p.light : p.color);
+          }
+        }
+      }
+    }
+    disc(g, cx, cy, 3.2, shadow ? S : p.trunk);
+    if (!shadow) {
+      disc(g, cx - 0.8, cy - 0.8, 1.6, p.trunkLight);
+      rect(g, Math.round(cx), Math.round(cy) + 1, 1, 1, p.dates || p.trunk);
+      rect(g, Math.round(cx) - 2, Math.round(cy), 1, 1, p.dates || p.trunk);
+    }
+  },
+
+  /** Cespuglio: grappolo di ciuffi tondi (verde) o di rametti (secco: dry = true). */
+  bush(g, w, h, p, i) {
+    const n = p.variants ?? 3;
+    const shadow = i >= n;
+    const r = rng((i % n) * 53 + (p.dry ? 9 : 1));
+    const S = p.shadowColor || '#000';
+    const cx = w / 2;
+    const cy = h / 2;
+    if (p.dry) {
+      const twigs = 9 + Math.floor(r() * 5);
+      for (let k = 0; k < twigs; k++) {
+        const a = r() * Math.PI * 2;
+        const len = w * 0.25 + r() * w * 0.22;
+        const x1 = Math.round(cx + Math.cos(a) * len);
+        const y1 = Math.round(cy + Math.sin(a) * len);
+        line(g, Math.round(cx), Math.round(cy), x1, y1, shadow ? S : r() < 0.5 ? p.color : p.dark);
+        if (!shadow) rect(g, x1, y1, 1, 1, p.light);
+      }
+      return;
+    }
+    const blobs = 5 + Math.floor(r() * 4);
+    const pts = [];
+    for (let k = 0; k < blobs; k++) {
+      const a = r() * Math.PI * 2;
+      const d = r() * w * 0.22;
+      pts.push({ x: cx + Math.cos(a) * d, y: cy + Math.sin(a) * d, rr: 2.2 + r() * 2 });
+    }
+    for (const b of pts) disc(g, b.x + 0.6, b.y + 0.8, b.rr, shadow ? S : p.dark);
+    if (shadow) return;
+    for (const b of pts) disc(g, b.x, b.y, b.rr - 0.4, p.color);
+    for (const b of pts) disc(g, b.x - 0.8, b.y - 0.8, Math.max(0.8, b.rr * 0.45), p.light);
+    if (p.flowers) for (let k = 0; k < 3; k++) rect(g, Math.round(cx + (r() - 0.5) * w * 0.5), Math.round(cy + (r() - 0.5) * h * 0.5), 1, 1, p.flowers);
+  },
+
+  /** Sasso con ombra inclusa (non ondeggia). */
+  pebble(g, w, h, p, i) {
+    const r = rng(i * 61 + 5);
+    const cx = w / 2;
+    const cy = h / 2;
+    const rx = w * 0.28 + r() * w * 0.12;
+    const ry = h * 0.22 + r() * h * 0.1;
+    ellipse(g, cx + 1, cy + 1, rx, ry, p.shadowColor || 'rgba(0,0,0,0.35)');
+    ellipse(g, cx, cy, rx, ry, p.dark);
+    ellipse(g, cx - 0.5, cy - 0.5, rx - 0.8, ry - 0.8, p.color);
+    ellipse(g, cx - rx * 0.3, cy - ry * 0.35, rx * 0.4, ry * 0.3, p.light);
+  },
+
   circle(g, w, h, p) {
     disc(g, w / 2, h / 2, Math.min(w, h) / 2, p.outline || '#000');
     disc(g, w / 2, h / 2, Math.min(w, h) / 2 - 1, p.color || '#f0f');
@@ -670,6 +761,164 @@ const TILE_STYLES = {
   flat(g, s, p) {
     rect(g, 0, 0, s, s, p.color || '#f0f');
   },
+
+  // ---------- Deserto ----------
+
+  /** Sabbia: granelli e brevi increspature ondulate (segni del vento), diverse per ogni variante. */
+  sand(g, s, p, seed) {
+    rect(g, 0, 0, s, s, p.color);
+    const r = rng(seed * 31 + 5);
+    for (let i = 0; i < s * 1.5; i++) {
+      rect(g, Math.floor(r() * s), Math.floor(r() * s), 1, 1, r() < 0.5 ? p.detail : p.light);
+    }
+    const ripples = p.ripples ?? 3;
+    for (let k = 0; k < ripples; k++) {
+      const y0 = Math.floor(r() * s);
+      const x0 = Math.floor(r() * s);
+      const len = 4 + Math.floor(r() * 7);
+      for (let i = 0; i < len; i++) {
+        const x = (x0 + i) % s;
+        const y = (y0 + Math.round(Math.sin(i * 0.9 + k) * 0.8) + s) % s;
+        rect(g, x, y, 1, 1, p.ripple);
+        rect(g, x, (y + 1) % s, 1, 1, p.light);
+      }
+    }
+    if (p.stones) {
+      for (let i = 0; i < p.stones; i++) {
+        const x = 1 + Math.floor(r() * (s - 3));
+        const y = 1 + Math.floor(r() * (s - 3));
+        rect(g, x, y, 2, 1, p.stone);
+        rect(g, x, y + 1, 2, 1, p.ripple);
+      }
+    }
+  },
+
+  /** Strada sterrata: terra battuta con sassolini e solchi delle ruote (verticali o orizzontali). */
+  road(g, s, p, seed) {
+    rect(g, 0, 0, s, s, p.color);
+    const r = rng(seed * 17 + 3);
+    for (let i = 0; i < s * 0.75; i++) rect(g, Math.floor(r() * s), Math.floor(r() * s), 1, 1, r() < 0.6 ? p.detail : p.light);
+    for (let i = 0; i < (p.stones ?? 2); i++) rect(g, Math.floor(r() * (s - 1)), Math.floor(r() * (s - 1)), 2, 1, p.stone);
+    if (p.ruts) {
+      const v = p.ruts === 'v';
+      for (const c of [4, 11]) {
+        for (let i = 0; i < s; i++) {
+          if (r() < 0.25) continue;
+          if (v) rect(g, c, i, 1, 1, p.rut);
+          else rect(g, i, c, 1, 1, p.rut);
+        }
+      }
+    }
+  },
+
+  /** Muro di mattoni di fango visto dall'alto: blocchi irregolari, crepe, bordo chiaro. */
+  adobe(g, s, p, seed) {
+    rect(g, 0, 0, s, s, p.color);
+    const r = rng(seed * 13 + 1);
+    const bh = s / 4;
+    for (let row = 0; row < 4; row++) {
+      const y = row * bh;
+      rect(g, 0, y + bh - 1, s, 1, p.dark);
+      let x = row % 2 === 0 ? 0 : Math.floor(s / 3);
+      while (x < s) {
+        rect(g, x, y, 1, bh - 1, p.dark);
+        x += 5 + Math.floor(r() * 4);
+      }
+    }
+    for (let i = 0; i < s / 2; i++) rect(g, Math.floor(r() * s), Math.floor(r() * s), 1, 1, r() < 0.5 ? p.light : p.dark);
+    // crepa
+    let cx = Math.floor(r() * s);
+    let cy = 0;
+    if (r() < 0.6) {
+      while (cy < s) {
+        rect(g, cx, cy, 1, 1, p.crack);
+        cy++;
+        cx = Math.max(0, Math.min(s - 1, cx + Math.floor(r() * 3) - 1));
+        if (r() < 0.15) break;
+      }
+    }
+    rect(g, 0, 0, s, 1, p.light);
+    rect(g, 0, 0, 1, s, p.light);
+  },
+
+  /** Muretto a secco: pietre tondeggianti con fughe scure. */
+  stones(g, s, p, seed) {
+    rect(g, 0, 0, s, s, p.gap);
+    const r = rng(seed * 7 + 11);
+    const cols = p.colors || [p.color];
+    for (let y = 0; y < s; y += 5) {
+      let x = -Math.floor(r() * 4);
+      while (x < s) {
+        const w = 4 + Math.floor(r() * 4);
+        const c = cols[Math.floor(r() * cols.length)];
+        ellipse(g, x + w / 2, y + 2.5, w / 2, 2.4, c);
+        rect(g, x + 1, y + 1, Math.max(1, w - 3), 1, p.light);
+        x += w + 1;
+      }
+    }
+    rect(g, 0, 0, s, 1, p.light);
+  },
+
+  /** Macerie: pezzi di mattone e pietra sparsi (density 0..1) su un fondo di sabbia o pavimento. */
+  rubble(g, s, p, seed) {
+    rect(g, 0, 0, s, s, p.base);
+    const r = rng(seed * 19 + 7);
+    for (let i = 0; i < s; i++) rect(g, Math.floor(r() * s), Math.floor(r() * s), 1, 1, p.baseDetail);
+    const n = Math.round((p.density ?? 0.5) * 14);
+    const cols = p.colors || ['#a07850'];
+    for (let i = 0; i < n; i++) {
+      const w = 2 + Math.floor(r() * (p.density > 0.6 ? 5 : 3));
+      const h = 1 + Math.floor(r() * 3);
+      const x = Math.floor(r() * (s - w));
+      const y = Math.floor(r() * (s - h));
+      rect(g, x + 1, y + 1, w, h, p.shadow);
+      rect(g, x, y, w, h, cols[Math.floor(r() * cols.length)]);
+      rect(g, x, y, w, 1, p.light);
+    }
+  },
+
+  /** Pavimento di piastrelle (case), sbiadito, con crepe e sabbia entrata dalle porte. */
+  tiles(g, s, p, seed) {
+    const r = rng(seed * 23 + 2);
+    const t = s / 2;
+    for (let y = 0; y < 2; y++) {
+      for (let x = 0; x < 2; x++) {
+        rect(g, x * t, y * t, t, t, r() < 0.3 ? p.alt : p.color);
+        rect(g, x * t, y * t, t, 1, p.light);
+        rect(g, x * t + t - 1, y * t, 1, t, p.dark);
+        rect(g, x * t, y * t + t - 1, t, 1, p.dark);
+      }
+    }
+    for (let i = 0; i < 5; i++) rect(g, Math.floor(r() * s), Math.floor(r() * s), 1, 1, p.dark);
+    if (p.sand) for (let i = 0; i < s; i++) rect(g, Math.floor(r() * s), Math.floor(r() * s), 1, 1, p.sand);
+  },
+
+  /** Roccia (bordo della mappa): massi irregolari con luce in alto a sinistra. */
+  rock(g, s, p, seed) {
+    rect(g, 0, 0, s, s, p.dark);
+    const r = rng(seed * 29 + 13);
+    for (let i = 0; i < 5; i++) {
+      const cx = r() * s;
+      const cy = r() * s;
+      const rx = 3 + r() * 4;
+      const ry = 3 + r() * 3;
+      ellipse(g, cx, cy, rx, ry, p.color);
+      ellipse(g, cx - 1, cy - 1, rx * 0.6, ry * 0.5, p.light);
+    }
+    for (let i = 0; i < 6; i++) rect(g, Math.floor(r() * s), Math.floor(r() * s), 1, 1, p.dark);
+  },
+
+  /** Acqua: blu con riflessi chiari sparsi. */
+  water(g, s, p, seed) {
+    rect(g, 0, 0, s, s, p.color);
+    const r = rng(seed * 37 + 17);
+    for (let i = 0; i < 4; i++) {
+      const x = Math.floor(r() * (s - 4));
+      const y = Math.floor(r() * s);
+      rect(g, x, y, 2 + Math.floor(r() * 3), 1, p.light);
+    }
+    for (let i = 0; i < 6; i++) rect(g, Math.floor(r() * s), Math.floor(r() * s), 1, 1, p.dark);
+  },
 };
 
 /** Genera un tileset in una riga: il tile con indice i sta alla colonna i. */
@@ -684,6 +933,10 @@ export function createTilesetPlaceholder(def) {
     const painter = TILE_STYLES[p.style] || TILE_STYLES.flat;
     g.save();
     g.translate((t.index ?? t.id) * s, 0);
+    // ritaglio: un disegno che sborda (es. massi della roccia) non deve sporcare il tile accanto
+    g.beginPath();
+    g.rect(0, 0, s, s);
+    g.clip();
     painter(g, s, p, t.id);
     g.restore();
   }

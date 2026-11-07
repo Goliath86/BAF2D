@@ -96,6 +96,8 @@ export class Assets {
         id: t.id,
         name: t.name,
         solid: !!t.solid,
+        shootThrough: !!t.shootThrough, // solido per il movimento ma non per colpi e vista (es. acqua)
+        edge: t.edge || null, // bordo verso i tile di un altro gruppo (TileMap._drawEdges)
         index: t.index ?? t.id,
         // tipo di impatto in effects.json (default: "wall" se solido, "ground" altrimenti)
         impact: t.impact || (t.solid ? 'wall' : 'ground'),
@@ -110,6 +112,7 @@ export class Assets {
       cols: Math.max(1, Math.floor(image.width / size)),
       byId,
       byName,
+      shadow: def.shadow || null, // ombra proiettata dai tile che bloccano i colpi (TileMap._drawShadows)
     });
   }
 

@@ -302,7 +302,7 @@ export class Ctf {
     const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 2);
     for (let i = 1; i < n; i++) {
       const t = i / n;
-      if (this.map.isSolidAt(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t)) return false;
+      if (this.map.blocksShotAt(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t)) return false;
     }
     return true;
   }

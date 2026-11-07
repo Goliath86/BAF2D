@@ -7,8 +7,19 @@
 
   "levels": [
     { "id": "arena", "file": "config/levels/level01.json" },
-    { "id": "crossroads", "file": "config/levels/level02.json" }
+    { "id": "crossroads", "file": "config/levels/level02.json" },
+    { "id": "desert", "file": "config/levels/level03.json" }
   ],
+
+  "props": {
+    "shadow": { "alpha": 0.26, "offset": [3, 2] },
+    "types": {
+      "palm": { "sprite": "palm", "variants": 3, "layer": "overhead", "shadow": true, "shadowOffset": [8, 6], "sway": 1.2, "lean": 1, "swaySpeed": 1.4, "fadeUnder": 0.4, "fadeRadius": 20, "fadeSpeed": 8 },
+      "bush": { "sprite": "bush", "variants": 3, "layer": "ground", "shadow": true, "shadowOffset": [2, 2], "sway": 0.7, "swaySpeed": 2.6, "jitter": 3 },
+      "bush_dry": { "sprite": "bush_dry", "variants": 3, "layer": "ground", "shadow": true, "shadowOffset": [2, 2], "sway": 0.8, "swaySpeed": 3, "jitter": 4 },
+      "pebble": { "sprite": "pebble", "variants": 3, "layer": "ground", "rotate": false, "jitter": 4 }
+    }
+  },
 
   "menu": {
     "level": "crossroads",

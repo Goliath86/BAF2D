@@ -73,6 +73,8 @@ js/game/
   nav.js              Nav: griglia dei tile per l'IA (A* 8 direzioni + percorso 'tirato', reach() = Dijkstra limitato, los)
   ai.js               Squad (lavagna di squadra: bot, nemici avvistati) + BotBrain (IA di un bot -> comandi come l'umano)
   scores.js           Scores: record per combattente, punti (kill/assist/defend/capture/...), classifica
+  props.js            Props: decorazioni della mappa (palme overhead, cespugli/sassi a terra, ombre, oscillazione col vento)
+  weather.js          Weather: vento con raffiche, granelli, lingue di sabbia, velature, tinta (effects.json -> weather)
   pickups.js          Pickups: armi/granate a terra (lasciate dai caduti o da punti fissi della mappa con respawn)
   ranks.js            Ranks (gradi da game.json -> ranks, insegne a pixel in canvas) + Career (xp in localStorage)
 config/
@@ -86,6 +88,7 @@ config/
   levels/*.json       livelli
   lang/*.json         testi
 tools/serve.mjs       server statico (solo moduli Node built-in)
+tools/gen_desert.mjs  genera config/levels/level03.json (deserto 97x65, simmetrico, verifica raggiungibilità)
 ```
 
 ## Convenzioni e dettagli importanti
@@ -195,6 +198,14 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
 - `Animator.update(dt)` accetta dt negativo (animazione all'indietro).
 - Spritesheet a griglia, frame numerati da sinistra a destra / dall'alto in basso; `origin` = punto di ancoraggio.
 - Tile: `id`, `name`, `solid`, `index` opzionale (posizione nello sheet). Fuori mappa = solido.
+  `shootThrough` = solido per il movimento ma non per colpi/vista: per proiettili, linee di vista (IA, bandiere,
+  esplosioni), granate, bossoli e particelle usare `map.blocksShotAt/blocksShotTile`, per il movimento
+  `isSolidAt`/`rectHitsSolid`. Prerender del TileMap: tile, poi `edge` (bordi tra gruppi, `_drawEdges`), poi
+  ombre dei tile che bloccano i colpi (`tileset.shadow`, `_drawShadows`). Ogni tile placeholder è ritagliato
+  nel suo riquadro. Legend: liste di varianti (`cellRandom(x, y, salt)` stabile), `prop`, `pickup`.
+- Livello: `weather` (tipo in effects.json -> weather; `game.weather`, `effects.wind` per il fumo) e `background`.
+  Ordine di disegno: mappa, decal, props a terra (+ ombre), lingue di sabbia, ..., soldati, ..., esplosioni,
+  props overhead, granelli/velature, poi tinta a schermo.
 - Livelli: `legend` mappa caratteri a nome/id del tile o a `{ "tile", "spawn" }` / `{ "tile", "flag" }`
   (`TileMap.spawns`, `TileMap.flags`); `fill` completa righe corte.
 - Collisioni: `moveAndCollide` presuppone spostamenti per tick < dimensione tile.
@@ -245,7 +256,9 @@ tools/serve.mjs       server statico (solo moduli Node built-in)
   morti e bandiere, rientro alla bandiera più vicina o alla base, cadaveri che svaniscono dopo qualche secondo, vittoria/sconfitta e nuova partita),
   squadra avversaria IA (cattura bandiere, coperture, fuoco di copertura, aggiramento coordinato, ricarica, granate e fuga dalle granate),
   menu desktop/mobile (nuova partita con mappa/squadra/numero di bot, opzioni lingua/volume/tasti, pausa,
-  rivincita), seconda mappa "Crocevia" (5 bandiere, simmetrica), punteggi con classifica di fine partita
+  rivincita), seconda mappa "Crocevia" (5 bandiere, simmetrica), terza mappa "Villaggio nel deserto" (97x65,
+  tileset deserto procedurale, palme/cespugli, vento con sabbia che si muove, acqua, muretti, case in rovina,
+  strade larghe per i futuri mezzi), punteggi con classifica di fine partita
   (nomi fittizi per i bot), 18 gradi con insegne a pixel, promozioni in partita e carriera salvata in localStorage.
 - Fatto anche: raccolta di armi (scambio con E, anche i bot) e granate da terra, punti fissi con respawn sulle mappe.
 - Non ancora presenti: mappa procedurale, riserva di munizioni (ora infinita),

@@ -135,7 +135,8 @@ config/
   weapons.json         armi (statistiche, sprite, suoni) e granate
   assets.json          sprite, tileset e suoni
   effects.json         impatti dei colpi (buchi, fumo, scintille, schegge), bossoli, vampate, esplosioni
-  levels/              livelli (level01 = Arena di prova, level02 = Crocevia), elencati in game.json -> "levels"
+  levels/              livelli (level01 = Arena di prova, level02 = Crocevia, level03 = Villaggio nel deserto),
+                       elencati in game.json -> "levels"
   lang/                testi localizzati (en.json = default, it.json)
 js/
   main.js              bootstrap
@@ -143,8 +144,10 @@ js/
   settings.js          impostazioni del giocatore in localStorage
   engine/              display, input, touch (joystick), assets, placeholder, tilemap, camera, audio, loader, i18n
   game/                game (loop, proiettili, render), player, weapons (catalogo armi), grenades, hud, effects (decal e particelle),
-                       ctf (bandiere, ticket, rientro), scores (punti della partita), ranks (gradi, insegne, carriera)
+                       ctf (bandiere, ticket, rientro), scores (punti della partita), ranks (gradi, insegne, carriera),
+                       pickups (oggetti a terra), props (decorazioni), weather (vento e sabbia)
 tools/serve.mjs        server statico di sviluppo (solo moduli Node built-in)
+tools/gen_desert.mjs   generatore della mappa del deserto (level03.json)
 ```
 
 ## Rendering pixel-art
@@ -315,6 +318,36 @@ spawn (base di una squadra: lo spawn ha il nome della squadra) o a una bandiera:
 `flags` (opzionale) per ogni bandiera: `owner` iniziale (`null` = neutra) e override dei parametri di
 `game.json` → `ctf.flag`. L'id della bandiera (la lettera) compare nell'HUD.
 `fill` è il tile usato per completare righe più corte. Fuori dalla mappa tutto è considerato solido.
+
+Altre voci della legend:
+
+- **Varianti**: `"tile"` (o il valore diretto) può essere una lista, es. `{ "tile": ["sand", "sand2", "sand3"],
+  "variantWeights": [6, 4, 2] }`: ogni cella sceglie una variante in modo casuale ma stabile, così il terreno non
+  si ripete.
+- **Decorazioni**: `{ "tile": "palm_base", "prop": "palm" }` (tipi in `game.json` → `props`).
+- **Oggetti raccoglibili**: `{ "tile": "sand", "pickup": "shotgun" }` (vedi `pickups`).
+
+Opzioni del livello: `weather` (tipo di meteo in `effects.json` → `weather`, es. `"desert_wind"`) e `background`
+(colore fuori mappa).
+
+**Villaggio nel deserto** (`level03.json`, 97×65): generato da `node tools/gen_desert.mjs` (simmetrico per rotazione,
+controlla che tutto sia raggiungibile). Si può modificare a mano il JSON, ma rigenerandolo le modifiche si perdono.
+Strade larghe 5 tile pensate per i futuri mezzi.
+
+**Tile speciali** (tileset): `"shootThrough": true` = blocca il movimento ma non colpi e vista (acqua, tronchi
+delle palme). `"edge": { group, width, colors, dither, foam, round }` = fascia di bordo verso i tile di un altro
+gruppo (sabbia sparsa ai lati della strada, riva con schiuma e angoli arrotondati per l'acqua). Il tileset può avere
+`"shadow": { color, alpha, dx, dy }`: i tile che fermano i colpi proiettano un'ombra sul terreno.
+
+**Decorazioni** (`game.json` → `props.types`): `sprite` (frame 0..`variants`-1 = varianti, poi le stesse forme come
+ombra), `layer` (`ground` sotto i soldati, `overhead` sopra, es. chiome delle palme), `shadow` + `shadowOffset`,
+`sway`/`lean`/`swaySpeed` (oscillazione col vento, a pixel interi), `fadeUnder`/`fadeRadius` (trasparenza quando
+il giocatore ci passa sotto), `rotate` (rotazione casuale a 90°), `jitter` (spostamento casuale in px).
+
+**Meteo** (`effects.json` → `weather`): `wind` (`angleDeg`, `base`, `wobble`, `angleWobbleDeg`, raffiche
+`gustEvery`/`gustTime`/`gustStrength`), `streaks` (granelli in aria), `wisps` (lingue di sabbia rasoterra), `haze`
+(velature di polvere), `tint` (velo di colore, più denso nelle raffiche). Il vento muove anche palme e cespugli e
+trasporta il fumo (`windDrift`).
 
 ### Localizzazione (`config/lang/*.json`)
 
