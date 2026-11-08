@@ -588,11 +588,34 @@ button {
 
 /* ---------- Nuova partita ---------- */
 
+/* "Nuova partita": scorre solo la griglia (mappe + opzioni), i pulsanti restano in una barra sul fondo
+   che non copre la lista (prima la griglia veniva schiacciata e i pulsanti finivano a metà delle mappe) */
+.menu-screen[data-screen="newGame"] {
+  overflow: hidden;
+}
+
 .newgame-grid {
+  flex: 1 1 auto;
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  align-items: start;
   gap: 28px;
   min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 6px;
+  padding-bottom: 6px; /* spazio per l'ombra della card scelta */
+  scrollbar-width: thin;
+  scrollbar-color: var(--menu-line) transparent;
+}
+
+.menu-screen[data-screen="newGame"] .menu-actions {
+  position: static;
+  flex: none;
+  margin-top: 0;
+  padding-top: 12px;
+  background: none;
+  border-top: 2px solid var(--menu-line);
 }
 
 .newgame-col > .menu-label:first-child {
