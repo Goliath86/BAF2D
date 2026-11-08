@@ -621,6 +621,16 @@ export class Game {
     this.onRestart?.();
   }
 
+  /** Toglie la partita (menu con la scena animata al posto della dimostrativa): niente update né disegno. */
+  unload() {
+    this.running = false;
+    this.suspended = false;
+    this.attract = false;
+    this.ended = null;
+    this.map = null;
+    if (this.engines.size) this._silenceEngines();
+  }
+
   get isMatchOver() {
     return this.ended !== null;
   }

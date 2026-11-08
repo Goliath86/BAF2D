@@ -5,6 +5,7 @@
 
 import { TileMap } from './engine/tilemap.js';
 import { keyName } from './engine/input.js';
+import { MenuScene } from './menu_scene.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -20,10 +21,10 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 export class Menu {
   /**
    * levels = [{ id, file, data }] (data = JSON del livello); testId = id della mappa di prova dall'editor (o null);
-   * settings = Settings;
+   * sceneCfg = config/menu_scene.json (scena animata al posto della partita dimostrativa, o null); settings = Settings;
    * fullscreen() = richiesta di schermo intero + landscape (solo touch, dentro un gesto).
    */
-  constructor({ config, i18n, game, input, audio, assets, display, levels, testId = null, settings, fullscreen }) {
+  constructor({ config, i18n, game, input, audio, assets, display, levels, testId = null, sceneCfg = null, settings, fullscreen }) {
     Object.assign(this, { config, i18n, game, input, audio, assets, display, levels, testId, settings, fullscreen });
     this.cfg = config.menu || {};
     this.root = $('menu');
@@ -34,6 +35,7 @@ export class Menu {
     this.mode = 'menu'; // 'menu' | 'playing' | 'paused' | 'ended'
     this.rebinding = null; // { action, slot } mentre si aspetta un tasto
     this.teamIds = Object.keys(config.teams || {});
+    this.scene = sceneCfg ? new MenuScene($('menu-scene'), sceneCfg) : null;
 
     // ultima configurazione usata (salvata) o valori di default da game.json -> menu
     const last = settings.get('newGame', {});
@@ -72,7 +74,7 @@ export class Menu {
 
   // ---------- Flusso di gioco ----------
 
-  /** Menu principale con la partita dimostrativa dietro. */
+  /** Menu principale con la scena animata (o la partita dimostrativa) dietro. */
   showMain() {
     const a = this.cfg.attract || {};
     // con una mappa di prova dall'editor la partita dimostrativa si gioca su quella
@@ -87,8 +89,14 @@ export class Menu {
     this.stack = [];
     this._open('main');
     this._renderCareer($('menu-career'), game.career.xp);
-    game.setup({ level: lvl.data, team: a.team, allies: a.allies ?? 3, enemies: a.enemies ?? 4, attract: true });
-    game.running = true;
+    if (this.scene) {
+      game.unload(); // la partita non serve più: dietro c'è la scena
+      game.viewOffsetX = 0;
+    } else {
+      game.setup({ level: lvl.data, team: a.team, allies: a.allies ?? 3, enemies: a.enemies ?? 4, attract: true });
+      game.running = true;
+    }
+    this._updateScene();
     this._updatePauseButton();
   }
 
@@ -262,6 +270,7 @@ export class Menu {
     this.root.classList.toggle('paused', this.mode === 'paused');
     if (name === 'options') this._renderKeys();
     this._layout();
+    this._updateScene();
     // tastiera: fuoco sul primo pulsante (con il mouse il fuoco non si vede, :focus-visible)
     const first = this.screens[name].querySelector('.menu-item:not([disabled]), .map-card:not([disabled])');
     first?.focus({ preventScroll: true });
@@ -271,12 +280,24 @@ export class Menu {
   _hide() {
     this._cancelRebind();
     this.root.classList.add('hidden');
+    this._updateScene();
+  }
+
+  /** La scena animata gira solo nel menu principale (non in pausa né in partita). */
+  _updateScene() {
+    if (!this.scene) return;
+    const on = this.mode === 'menu' && !this.root.classList.contains('hidden');
+    this.root.classList.toggle('with-scene', on);
+    if (on) this.scene.show();
+    else this.scene.hide();
   }
 
   /** Sposta la visuale della partita dimostrativa nella parte di schermo non coperta dal pannello. */
   _layout() {
     const { game } = this;
     if (this.mode !== 'menu') return;
+    // scena: si centra nella parte non coperta dal pannello (il pannello largo di Nuova partita non la sposta)
+    if (this.scene && !this.panel.classList.contains('wide')) this.scene.setViewLeft(this.panel.offsetWidth);
     const k = this.cfg.attract?.panelOffset ?? 0.5;
     game.viewOffsetX = (this.panel.offsetWidth * k) / this.display.cssPerPixel;
   }

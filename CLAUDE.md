@@ -47,7 +47,9 @@ Sparatutto top-down in pixel-art per browser. Lingua di lavoro con l'utente: **i
 
 ```
 js/main.js            bootstrap: game.json -> Settings -> i18n -> assets/livelli -> Display/Assets/Audio/Input -> Game -> Menu
-js/menu.js            Menu (DOM): principale/nuova partita/opzioni/pausa/fine partita, partita dimostrativa dietro
+js/menu.js            Menu (DOM): principale/nuova partita/opzioni/pausa/fine partita, scena animata dietro
+js/menu_scene.js      MenuScene: scena del menu principale a pixel (canvas #menu-scene, config/menu_scene.json):
+                      tramonto nel deserto, soldato di fronte, bandiera a brandelli, carro in fiamme, nuvole, elicottero
 js/settings.js        Settings: impostazioni del giocatore in localStorage (lang, volume, keys, newGame)
 js/engine/
   loader.js           loadJSON / loadImage / loadArrayBuffer (errori = LocalizedError)
@@ -184,6 +186,12 @@ tools/check_level.mjs controllo livelli: celle irraggiungibili e vicoli ciechi (
   fa `preventDefault` da disabilitato (i pulsanti HTML ricevono Invio/Spazio). Tasto `pause` (Esc/P) gestito dal Menu
   in capture; su touch `#pause-button` sotto l'HUD.
 - Versione del gioco: `game.json -> version` (in basso a destra nel menu).
+- Sfondo del menu principale: `game.json -> menu.background` = `"scene"` (scena animata, `menu.scene` = file di
+  config) o altro = partita dimostrativa (attract). Con la scena `Menu.showMain` chiama `game.unload()` (niente
+  mappa né update) e `_updateScene()` la accende solo con `mode === 'menu'` e menu visibile (spenta in partita e
+  in pausa); `setViewLeft(larghezza pannello)` la centra nella parte scoperta (non col pannello largo).
+  Tutto procedurale in `menu_scene.js`: primitive a pixel (`poly`, `line`, `disc`...), `camouflage()` (sostituisce
+  il colore base con macchie), `finish()` (tinta, luce dal lato del sole, contorno 1 px); sprite con margine `M`.
 - Editor di mappe: salva livelli nel formato del gioco (`name`/`description` stringhe nel livello; il menu usa
   `levels.<id>.*` del file lingua se c'è, altrimenti quelli: `Menu._levelText`). Prova: main.js legge
   `?test=1` (`readTestLevel`), mette la mappa in testa a `levels` con `test: true` (id `editor.testLevelId`) e

@@ -1,0 +1,171 @@
+{
+  "targetHeight": 190,
+  "focus": 0.5,
+  "minVisible": 200,
+  "groundHeight": 46,
+  "seed": 11,
+  "wind": -1,
+
+  "sky": {
+    "stops": [
+      [0, "#41507e"],
+      [0.3, "#6e5a8c"],
+      [0.55, "#c46e78"],
+      [0.78, "#f0985e"],
+      [1, "#ffd48a"]
+    ]
+  },
+
+  "sun": {
+    "x": -84,
+    "y": -12,
+    "radius": 17,
+    "core": "#fff6d2",
+    "edge": "#ffd27a",
+    "glow": "#ffe2a4",
+    "glowRadius": 70,
+    "glowStrength": 0.55
+  },
+
+  "dunes": {
+    "far": { "height": 22, "base": 6, "waves": [[0.021, 9], [0.047, 4], [0.11, 1.5]], "color": "#9c6878", "light": "#bc8486" },
+    "mid": { "height": 12, "base": -4, "waves": [[0.016, 7], [0.039, 4], [0.09, 2]], "color": "#b07658", "light": "#d0956a", "dark": "#8c5c4a" },
+    "ruins": [
+      { "x": -150, "w": 22, "h": 15 },
+      { "x": -120, "w": 9, "h": 9 },
+      { "x": 130, "w": 26, "h": 18 },
+      { "x": 165, "w": 12, "h": 11 }
+    ],
+    "ruinColor": "#7e5048",
+    "ruinLight": "#a46a58"
+  },
+
+  "ground": {
+    "color": "#c08658",
+    "light": "#d8a068",
+    "dark": "#9c6a48",
+    "stone": "#7a5e4a",
+    "stoneLight": "#b49a7a",
+    "grass": "#6e6234",
+    "stones": 0.012,
+    "tufts": 0.006
+  },
+
+  "clouds": {
+    "initial": 3,
+    "interval": [6, 15],
+    "max": 6,
+    "speed": [2.5, 6],
+    "width": [30, 72],
+    "height": [9, 18],
+    "yRange": [0.05, 0.45],
+    "alpha": 0.94,
+    "lit": "#ffd4a0",
+    "mid": "#e2a09a",
+    "shadow": "#a8788e"
+  },
+
+  "helicopter": {
+    "firstDelay": [2, 5],
+    "interval": [8, 20],
+    "speed": [26, 48],
+    "size": [0.45, 1],
+    "yRange": [0.1, 0.48],
+    "body": "#2a2e34",
+    "light": "#4a4e56",
+    "glass": "#86a4b4",
+    "haze": "#b48496",
+    "rotor": "rgba(26,30,36,0.5)",
+    "rim": "#ffc890"
+  },
+
+  "tank": {
+    "x": 84,
+    "y": 8,
+    "flip": true,
+    "colors": { "hull": "#4a423a", "dark": "#2e2824", "track": "#24201c", "wheel": "#3c3630", "hub": "#6a6058", "char": "#1e1a18", "light": "#6e6254" },
+    "rim": "#ffb070",
+    "glow": { "color": "#ff9440", "radius": 18, "alpha": 0.07, "flicker": 0.4 },
+    "fire": {
+      "emitters": [[27, 4], [9, 15], [48, 15]],
+      "bodies": [[7, 13], [4, 8], [3, 6]],
+      "rate": 40,
+      "life": [0.35, 0.8],
+      "speed": [10, 24],
+      "spread": 3,
+      "colors": ["#fff6c4", "#ffd848", "#ff9a28", "#e04a14", "#7a2a14"],
+      "max": 260
+    },
+    "smoke": {
+      "rate": 7,
+      "life": [6, 10],
+      "speed": [8, 14],
+      "size": [2, 9],
+      "drift": 9,
+      "color": "#342c2a",
+      "light": "#8a7672",
+      "highlight": "#b48a7c",
+      "max": 160
+    },
+    "embers": { "rate": 3, "life": [1, 2.2], "speed": [18, 34], "color": "#ffb048" }
+  },
+
+  "flag": {
+    "x": 17,
+    "poleHeight": 124,
+    "width": 46,
+    "height": 26,
+    "tatter": 10,
+    "holes": 8,
+    "wave": { "speed": 5.2, "length": 0.3, "amplitude": 3.4 },
+    "colors": ["#6e1610", "#9c2218", "#c8301f", "#e8523a"],
+    "burnt": "#38100c",
+    "pole": "#4e4034",
+    "poleLight": "#a69276",
+    "finial": "#d8b060"
+  },
+
+  "soldier": {
+    "x": 0,
+    "y": 30,
+    "breath": 3.4,
+    "glint": [4, 9],
+    "colors": {
+      "camo": "#c6a676",
+      "camoSpots": ["#a6845a", "#8a6a46", "#dcc496"],
+      "vest": "#8c7c54",
+      "vestDark": "#6a5c3c",
+      "vestLight": "#a8986c",
+      "skin": "#c28c6a",
+      "skinShadow": "#8c5c46",
+      "dark": "#3c2c22",
+      "helmet": "#bc9e6a",
+      "helmetDark": "#8c7450",
+      "goggles": "#e2a050",
+      "gogglesLight": "#fff2c4",
+      "strap": "#4a3a2a",
+      "gun": "#2e2e32",
+      "gunLight": "#5c5c64",
+      "wood": "#6a4a30",
+      "boots": "#4a3828",
+      "bootsDark": "#2e2218",
+      "gloves": "#6c5640",
+      "belt": "#5a4630",
+      "buckle": "#b09868",
+      "scarf": "#d8caa8",
+      "scarfDark": "#a8987a",
+      "pads": "#5a4a34",
+      "concrete": "#8c8278",
+      "concreteLight": "#b4aa9a",
+      "concreteDark": "#5c544c",
+      "brick": "#9c5a3a",
+      "rebar": "#6c3a22"
+    },
+    "outline": "#1c120e",
+    "rim": "#ffd08c",
+    "rimAmount": 0.65,
+    "shade": { "color": "#2c1a30", "amount": 0.16 }
+  },
+
+  "sand": { "rate": 9, "speed": [40, 85], "color": "rgba(255,228,176,0.55)", "max": 60 }
+}

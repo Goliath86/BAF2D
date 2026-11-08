@@ -33,8 +33,11 @@ I tasti si possono cambiare da **Opzioni → Comandi** (due tasti per azione; sa
 
 ## Menu
 
-- **Principale** (pannello a sinistra): *Nuova partita*, *Opzioni*; a destra gira una partita dimostrativa tutta di bot
-  (senza HUD né audio), in basso a destra la versione (`version` in `game.json`).
+- **Principale** (pannello a sinistra): *Nuova partita*, *Opzioni*, *Editor di mappe*; a destra una scena animata
+  a pixel (deserto al tramonto, soldato con il fucile e un piede su una maceria, bandiera rossa a brandelli, carro
+  armato in fiamme, nuvole e un elicottero che passa ogni tanto: `config/menu_scene.json`, `js/menu_scene.js`).
+  Con `menu.background` diverso da `"scene"` torna la partita dimostrativa tutta di bot. In basso a destra la
+  versione (`version` in `game.json`).
 - **Nuova partita**: mappa (anteprima, numero di bandiere, dimensioni; la mappa procedurale è annunciata come
   "prossimamente"), squadra blu/rossa, numero di compagni e di avversari (limiti in `menu.allies` / `menu.enemies`),
   ticket per squadra (`menu.tickets`: `min`, `max`, `step`, `default`; vale anche per la rivincita).

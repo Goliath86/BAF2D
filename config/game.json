@@ -34,6 +34,8 @@
     "enemies": { "min": 1, "max": 8, "default": 4 },
     "tickets": { "min": 100, "max": 1000, "step": 50, "default": 400 },
     "procedural": false,
+    "background": "scene",
+    "scene": "config/menu_scene.json",
     "thumbTile": 4,
     "volumeSound": "dry_fire",
     "attract": { "level": "crossroads", "team": "blue", "allies": 3, "enemies": 4, "panelOffset": 0.5 },

@@ -385,6 +385,26 @@ body.match-over #overlay-matchend {
     linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.15) 55%, rgba(5, 5, 10, 0.35) 100%);
 }
 
+/* scena animata del menu principale: canvas a bassa risoluzione ingrandito a pixel nitidi */
+#menu-scene {
+  position: absolute;
+  left: 0;
+  top: 0;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+}
+
+#menu-scene.hidden {
+  display: none;
+}
+
+/* con la scena l'ombreggiatura scurisce solo dietro al pannello, il resto resta colorato */
+#menu.with-scene .menu-shade {
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.1) 0 1px, transparent 1px 3px),
+    linear-gradient(90deg, rgba(5, 5, 10, 0.65) 0%, rgba(5, 5, 10, 0) 45%);
+}
+
 #menu.paused .menu-shade {
   background:
     repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.18) 0 1px, transparent 1px 3px),
