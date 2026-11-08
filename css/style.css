@@ -836,6 +836,177 @@ button {
   letter-spacing: 1px;
 }
 
+/* ---------- Soldato (personalizzazione) ---------- */
+
+/* come "Nuova partita": scorrono solo le opzioni, anteprima e pulsanti restano fermi */
+.menu-screen[data-screen="soldier"] {
+  overflow: hidden;
+}
+
+.menu-screen[data-screen="soldier"] .menu-actions {
+  position: static;
+  flex: none;
+  margin-top: 0;
+  padding-top: 12px;
+  background: none;
+  border-top: 2px solid var(--menu-line);
+}
+
+.soldier-grid {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 24px;
+  min-height: 0;
+}
+
+.soldier-options {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 8px;
+  padding-bottom: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--menu-line) transparent;
+}
+
+.soldier-options > .menu-label:first-child {
+  margin-top: 0;
+}
+
+.soldier-name {
+  width: 100%;
+  height: 40px;
+  padding: 6px 10px;
+  border: 2px solid var(--menu-line);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--menu-gold);
+  font: inherit;
+  font-size: 18px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.soldier-name:focus {
+  outline: none;
+  border-color: var(--menu-accent);
+}
+
+.soldier-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 12px;
+}
+
+.pick-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.pick-row .menu-label {
+  margin: 0;
+}
+
+.pick-row .step {
+  width: 34px;
+  height: 34px;
+  font-size: 18px;
+}
+
+.pick-row .step-value {
+  min-width: 150px;
+  font-size: 14px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* caratteristiche dell'arma scelta: barre a blocchi */
+.soldier-stats {
+  margin: 4px 0 8px;
+  padding: 8px 10px;
+  border-left: 4px solid var(--menu-accent);
+  background: rgba(63, 169, 245, 0.08);
+}
+
+.stat-row {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr) 54px;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  min-height: 18px;
+}
+
+.stat-row b {
+  text-align: right;
+  color: var(--menu-gold);
+}
+
+.stat-bar {
+  height: 8px;
+  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.08) 0 6px, transparent 6px 8px);
+}
+
+.stat-bar span {
+  display: block;
+  height: 100%;
+  background: repeating-linear-gradient(90deg, var(--menu-accent) 0 6px, transparent 6px 8px);
+}
+
+.stat-mode {
+  margin-top: 4px;
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: var(--menu-dim);
+  text-transform: uppercase;
+}
+
+.soldier-preview {
+  position: relative;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--menu-line);
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.16) 0 1px, transparent 1px 4px),
+    radial-gradient(ellipse at 50% 42%, #3d4553 0%, #232832 55%, #12151b 100%);
+  overflow: hidden;
+}
+
+.soldier-canvas {
+  position: static; /* la regola generale "canvas" è per i canvas di gioco */
+  display: block;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+}
+
+/* targhetta col nome, come quella cucita sul tattico */
+.soldier-tape {
+  margin-top: 6px;
+  padding: 3px 12px;
+  min-height: 24px;
+  background: #3a3a2c;
+  border: 2px solid #23231a;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.5);
+  color: #e6dcc0;
+  font-size: 14px;
+  font-weight: bold;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+
+.soldier-tape:empty {
+  visibility: hidden;
+}
+
 /* ---------- Opzioni ---------- */
 
 .volume-row {
@@ -1043,6 +1214,38 @@ body.mode-touch .pause-button:not(.hidden) {
 
   .newgame-col .menu-note {
     display: none;
+  }
+
+  .soldier-grid {
+    gap: 12px;
+  }
+
+  .soldier-name {
+    height: 32px;
+    font-size: 15px;
+  }
+
+  .soldier-rows {
+    margin-top: 6px;
+    gap: 2px;
+  }
+
+  .pick-row .step {
+    width: 28px;
+    height: 28px;
+    font-size: 15px;
+  }
+
+  .pick-row .step-value {
+    min-width: 120px;
+    font-size: 12px;
+  }
+
+  .soldier-tape {
+    margin-top: 2px;
+    font-size: 11px;
+    min-height: 18px;
+    padding: 1px 8px;
   }
 
   .menu-actions {

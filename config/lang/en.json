@@ -10,6 +10,7 @@
   "menu": {
     "tagline": "Top-down capture the flag",
     "newGame": "New game",
+    "soldier": "Soldier",
     "options": "Options",
     "back": "Back",
     "version": "v{version}",
@@ -255,7 +256,56 @@
     "contact": "CONTACT",
     "alt": "ALT {v} M",
     "range": "RNG {v} KM"
-  },  "editor": {
+  },
+  "soldier": {
+    "title": "Soldier",
+    "name": "Call sign",
+    "namePlaceholder": "Your name in the scoreboard",
+    "random": "Random",
+    "previous": "Previous",
+    "next": "Next",
+    "fields": {
+      "weapon": "Weapon",
+      "camo": "Camo",
+      "vest": "Tactical vest",
+      "vestColor": "Vest color",
+      "headgear": "Headgear",
+      "eyewear": "Eyewear",
+      "beard": "Beard",
+      "beardColor": "Beard color",
+      "skin": "Skin",
+      "gloves": "Gloves",
+      "boots": "Boots",
+      "headset": "Headset",
+      "shemagh": "Shemagh",
+      "kneepads": "Knee pads"
+    },
+    "values": {
+      "camo": { "desert": "Desert", "arid": "Arid", "woodland": "Woodland", "digital": "Digital", "urban": "Urban", "tiger": "Tiger stripe", "olive": "Olive drab", "black": "Black" },
+      "vest": { "slick": "Plate carrier", "rig": "Chest rig", "standard": "Standard", "heavy": "Heavy" },
+      "vestColor": { "coyote": "Coyote", "ranger": "Ranger green", "khaki": "Khaki", "black": "Black", "camo": "Like the camo" },
+      "headgear": { "helmet": "Helmet", "helmetNvg": "Helmet + NVG", "boonie": "Boonie hat", "cap": "Cap" },
+      "eyewear": { "none": "None", "sunglasses": "Sunglasses", "ballistic": "Ballistic glasses", "goggles": "Goggles" },
+      "beard": { "none": "Shaved", "stubble": "Stubble", "goatee": "Goatee", "short": "Short beard", "full": "Full beard" },
+      "beardColor": { "black": "Black", "brown": "Brown", "light": "Light brown", "blond": "Blond", "red": "Red", "grey": "Grey" },
+      "skin": { "s1": "Tone 1", "s2": "Tone 2", "s3": "Tone 3", "s4": "Tone 4", "s5": "Tone 5" },
+      "gloves": { "none": "None", "coyote": "Coyote", "black": "Black", "olive": "Olive" },
+      "boots": { "tan": "Tan", "brown": "Brown", "black": "Black", "olive": "Olive" },
+      "headset": { "on": "Yes", "off": "No" },
+      "shemagh": { "on": "Yes", "off": "No" },
+      "kneepads": { "on": "Yes", "off": "No" }
+    },
+    "stats": {
+      "damage": "Damage",
+      "rate": "Rate (rpm)",
+      "magazine": "Magazine",
+      "range": "Range",
+      "reload": "Reload",
+      "auto": "Full auto",
+      "semi": "Semi-automatic"
+    }
+  },
+  "editor": {
     "title": "Map editor",
     "new": "New",
     "open": "Open",

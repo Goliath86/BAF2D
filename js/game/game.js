@@ -85,6 +85,8 @@ export class Game {
     this.time = 0; // secondi di gioco (memoria dell'IA)
     // ricarica automatica a caricatore vuoto per il giocatore umano (opzione; default game.json -> player.autoReload)
     this.autoReload = !!config.player?.autoReload;
+    // soldato personalizzato dal menu (schermata "Soldato"): arma di partenza e nome in classifica
+    this.loadout = { weapon: null, name: '' };
 
     // Punteggi della partita (game.json -> scoring) e carriera del giocatore (gradi, ranks.js)
     this.scoringCfg = config.scoring || {};
@@ -182,7 +184,7 @@ export class Game {
     this._botNames = names;
     this._botNameIndex = 0;
     this.playerRecord = this.scores.add({
-      name: this.attract ? this._nextBotName() : this.i18n.t('scoreboard.you'),
+      name: this.attract ? this._nextBotName() : this.loadout.name || this.i18n.t('scoreboard.you'),
       team: this.playerTeam,
       human: !this.attract,
       rank: this.career.rankIndex,
@@ -229,8 +231,17 @@ export class Game {
     };
   }
 
+  /** Soldato del giocatore dal menu: { weapon (id con "loadout" in weapons.json), name } (vale dalla prossima partita). */
+  setLoadout({ weapon = null, name = '' } = {}) {
+    const ok = weapon && this.weapons.has(weapon) && this.weapons.get(weapon).loadout;
+    this.loadout = { weapon: ok ? weapon : null, name: String(name || '').trim() };
+  }
+
   _spawnPlayer(x, y) {
-    this.player = new Player(this.config.player, x, y, this.assets, this.weapons, this.grenadeTypes, this.playerTeam);
+    // arma di partenza scelta nel menu (non nella partita dimostrativa)
+    const w = !this.attract && this.loadout.weapon;
+    const cfg = w ? { ...this.config.player, weapon: w } : this.config.player;
+    this.player = new Player(cfg, x, y, this.assets, this.weapons, this.grenadeTypes, this.playerTeam);
     this.player.combatant = this.playerRecord;
     this.player.autoReloadEmpty = this.autoReload && !this.attract;
     if (!this.attract) return;

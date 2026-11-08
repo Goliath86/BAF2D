@@ -1,0 +1,62 @@
+{
+  "storageKey": "soldier",
+  "nameMaxLength": 16,
+  "previewHeight": 196,
+
+  "defaults": {
+    "name": "",
+    "weapon": "rifle",
+    "camo": "arid",
+    "vest": "standard",
+    "vestColor": "coyote",
+    "headgear": "helmet",
+    "eyewear": "sunglasses",
+    "beard": "short",
+    "beardColor": "brown",
+    "skin": "s2",
+    "gloves": "coyote",
+    "boots": "tan",
+    "headset": "on",
+    "shemagh": "off",
+    "kneepads": "on"
+  },
+
+  "options": {
+    "camo": {
+      "desert": { "pattern": "desert", "colors": ["#cbb68d", "#a8885f", "#7b6145", "#ddd0ad"] },
+      "arid": { "pattern": "multicam", "colors": ["#a99b78", "#7c7152", "#56473a", "#cdc29f"] },
+      "woodland": { "pattern": "blotch", "colors": ["#5f6c3d", "#3d4829", "#6e5638", "#1f241a"] },
+      "digital": { "pattern": "digital", "colors": ["#b9a57f", "#8e7a57", "#665640", "#d3c49e"] },
+      "urban": { "pattern": "digital", "colors": ["#8e9297", "#5c6066", "#babdc0", "#36383c"] },
+      "tiger": { "pattern": "tiger", "colors": ["#6f7a4a", "#262b1c", "#4d4b33", "#8b8d5d"] },
+      "olive": { "pattern": "solid", "colors": ["#56613b", "#4b5434", "#606c43", "#434b2e"] },
+      "black": { "pattern": "solid", "colors": ["#303338", "#26292d", "#3a3e43", "#1f2124"] }
+    },
+    "vest": ["slick", "rig", "standard", "heavy"],
+    "vestColor": { "coyote": "#8a7254", "ranger": "#4f5a3c", "khaki": "#ad9b74", "black": "#2b2c2e", "camo": "camo" },
+    "headgear": ["helmet", "helmetNvg", "boonie", "cap"],
+    "eyewear": ["none", "sunglasses", "ballistic", "goggles"],
+    "beard": ["none", "stubble", "goatee", "short", "full"],
+    "beardColor": { "black": "#1e1815", "brown": "#4b3020", "light": "#7c5a3a", "blond": "#b8945a", "red": "#8c4826", "grey": "#8c8782" },
+    "skin": { "s1": "#f0c8a6", "s2": "#d9a57f", "s3": "#b77c56", "s4": "#8c5a3b", "s5": "#5d3a27" },
+    "gloves": { "none": null, "coyote": "#9c8460", "black": "#2a2a2c", "olive": "#5a6241" },
+    "boots": { "tan": "#b49b73", "brown": "#6e5038", "black": "#262628", "olive": "#4f553b" },
+    "headset": ["on", "off"],
+    "shemagh": ["off", "on"],
+    "kneepads": ["on", "off"]
+  },
+
+  "materials": {
+    "polymer": "#2d2f31",
+    "metal": "#3c4045",
+    "rubber": "#1d1e20",
+    "wood": "#6c4a2e",
+    "glass": "#253a2c",
+    "lens": "#16191d",
+    "amber": "#c88a2c",
+    "shemagh": ["#d8cfb8", "#3b3a36"],
+    "headset": "#3b4030",
+    "eye": "#d6d0c6",
+    "iris": "#3b2a1e"
+  }
+}

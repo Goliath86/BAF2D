@@ -71,12 +71,13 @@ async function boot() {
     if (!levelList.length) throw new LocalizedError('errors.noLevels', {}, 'No levels defined in game.json ("levels")');
     // sfondo del menu: "scene" = scena animata (menu.scene), altrimenti partita dimostrativa
     const useScene = config.menu?.background === 'scene' && config.menu?.scene;
-    const [assetsCfg, effectsCfg, weaponsCfg, vehiclesCfg, sceneCfg, ...levelData] = await Promise.all([
+    const [assetsCfg, effectsCfg, weaponsCfg, vehiclesCfg, sceneCfg, soldierCfg, ...levelData] = await Promise.all([
       loadJSON(config.assets),
       loadJSON(config.effects),
       loadJSON(config.weapons),
       config.vehicles ? loadJSON(config.vehicles) : {},
       useScene ? loadJSON(config.menu.scene) : null,
+      config.soldier ? loadJSON(config.soldier) : {}, // personalizzazione del soldato (schermata "Soldato")
       ...levelList.map((l) => loadJSON(l.file)),
     ]);
     const levels = levelList.map((l, i) => ({ ...l, data: levelData[i] }));
@@ -126,6 +127,7 @@ async function boot() {
       levels,
       testId,
       sceneCfg,
+      soldierCfg,
       settings,
       fullscreen: () => enterFullscreenLandscape(config.mobile),
     });

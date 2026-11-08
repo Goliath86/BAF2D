@@ -55,6 +55,9 @@ js/menu_scene.js      MenuScene: scena del menu principale (canvas #menu-scene, 
 js/menu_art.js        disegni della scena: primitive a pixel, rumore stabile (hash2/vnoise), City (rete stradale),
                       paintChunk (sabbia, strade, isolati: case, recinti, moschee, rovine, accampamenti, spiazzi),
                       vehicleHeat/heliHeat (sprite termici), drawText (carattere 3x5 dell'HUD)
+js/soldier_art.js     drawSoldier(look, cfg, weapon): ritratto frontale del soldato del giocatore (128x196, pixel art
+                      procedurale: maschere + scale di 6 toni da ramp(colore), ombra cilindrica, contorno e ombra
+                      portata; mimetiche PATTERNS, armi di profilo ruotate WEAPONS, tattici, testa/barba/occhiali)
 js/settings.js        Settings: impostazioni del giocatore in localStorage (lang, volume, keys, newGame)
 js/engine/
   loader.js           loadJSON / loadImage / loadArrayBuffer (errori = LocalizedError)
@@ -202,6 +205,13 @@ tools/check_level.mjs controllo livelli: celle irraggiungibili e vicoli ciechi (
   con disturbo) retinata con Bayer e vignettatura. Mezzi/pattuglie/cani si muovono sulla griglia stradale
   (`_moveMover`, svolte agli incroci, corsia a destra); la camera segue il bersaglio agganciato (`track`).
   Testi dell'HUD in `menuScene.*` delle lingue (carattere 3x5 senza accenti).
+- Soldato del giocatore (schermata "Soldato" del menu, `config/soldier.json`, game.json -> `soldier`): scelte in
+  `options` (liste o mappe id -> colore), `defaults`, salvate in Settings (`storageKey`, default `soldier`) da
+  `Menu._saveLook`. Arma = armi con `"loadout": true` in weapons.json (`portrait` = profilo disegnato nel ritratto:
+  rifle/shotgun/pistol); `game.setLoadout({ weapon, name })` -> arma di partenza in `_spawnPlayer` e nome in
+  classifica (vuoto = `scoreboard.you`); il resto (mimetica, tattico, guanti, anfibi...) per ora è solo estetico.
+  Nuove scelte: aggiungerle a `SOLDIER_FIELDS` (menu.js), a soldier.json e a `soldier.fields/values` delle lingue.
+  Anteprima a scala intera nel riquadro, respiro = parte sopra `breathCut` spostata di 1 px.
 - Editor di mappe: salva livelli nel formato del gioco (`name`/`description` stringhe nel livello; il menu usa
   `levels.<id>.*` del file lingua se c'è, altrimenti quelli: `Menu._levelText`). Prova: main.js legge
   `?test=1` (`readTestLevel`), mette la mappa in testa a `levels` con `test: true` (id `editor.testLevelId`) e

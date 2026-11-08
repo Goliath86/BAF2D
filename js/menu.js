@@ -6,6 +6,10 @@
 import { TileMap } from './engine/tilemap.js';
 import { keyName } from './engine/input.js';
 import { MenuScene } from './menu_scene.js';
+import { drawSoldier, PORTRAIT } from './soldier_art.js';
+
+// scelte del soldato nell'ordine della schermata (il nome è a parte)
+const SOLDIER_FIELDS = ['weapon', 'camo', 'vest', 'vestColor', 'headgear', 'eyewear', 'beard', 'beardColor', 'skin', 'gloves', 'boots', 'headset', 'shemagh', 'kneepads'];
 
 const $ = (id) => document.getElementById(id);
 
@@ -22,10 +26,11 @@ export class Menu {
   /**
    * levels = [{ id, file, data }] (data = JSON del livello); testId = id della mappa di prova dall'editor (o null);
    * sceneCfg = config/menu_scene.json (scena animata al posto della partita dimostrativa, o null); settings = Settings;
-   * fullscreen() = richiesta di schermo intero + landscape (solo touch, dentro un gesto).
+   * fullscreen() = richiesta di schermo intero + landscape (solo touch, dentro un gesto);
+   * soldierCfg = config/soldier.json (personalizzazione del soldato del giocatore).
    */
-  constructor({ config, i18n, game, input, audio, assets, display, levels, testId = null, sceneCfg = null, settings, fullscreen }) {
-    Object.assign(this, { config, i18n, game, input, audio, assets, display, levels, testId, settings, fullscreen });
+  constructor({ config, i18n, game, input, audio, assets, display, levels, testId = null, sceneCfg = null, settings, fullscreen, soldierCfg = {} }) {
+    Object.assign(this, { config, i18n, game, input, audio, assets, display, levels, testId, settings, fullscreen, soldierCfg });
     this.cfg = config.menu || {};
     this.root = $('menu');
     this.panel = this.root.querySelector('.menu-panel');
@@ -64,6 +69,9 @@ export class Menu {
     this._buildTeams();
     this._buildSteppers();
     this._buildOptions();
+    this.look = this._loadLook();
+    this._buildSoldier();
+    this._applyLoadout();
     this._attach();
     this._renderTexts();
   }
@@ -269,6 +277,7 @@ export class Menu {
     this.root.classList.remove('hidden');
     this.root.classList.toggle('paused', this.mode === 'paused');
     if (name === 'options') this._renderKeys();
+    this._soldierAnim(name === 'soldier');
     this._layout();
     this._updateScene();
     // tastiera: fuoco sul primo pulsante (con il mouse il fuoco non si vede, :focus-visible)
@@ -279,6 +288,7 @@ export class Menu {
 
   _hide() {
     this._cancelRebind();
+    this._soldierAnim(false);
     this.root.classList.add('hidden');
     this._updateScene();
   }
@@ -457,6 +467,187 @@ export class Menu {
     $('newgame-summary').textContent = this.i18n.t('newGame.summary', { allies: c.allies, enemies: c.enemies, tickets: c.tickets });
   }
 
+  // ---------- Soldato (personalizzazione) ----------
+
+  /** Armi sceglibili come arma di partenza: weapons.json -> "loadout": true. */
+  get _loadoutWeapons() {
+    const w = this.game.weapons;
+    return w.ids.filter((id) => w.get(id).loadout);
+  }
+
+  /** Valori possibili di una scelta: armi, lista o chiavi di config/soldier.json -> options. */
+  _soldierValues(key) {
+    if (key === 'weapon') return this._loadoutWeapons;
+    const o = this.soldierCfg.options?.[key];
+    return Array.isArray(o) ? o : Object.keys(o || {});
+  }
+
+  /** Scelte salvate (localStorage), con i default di soldier.json per quelle mancanti o non più valide. */
+  _loadLook() {
+    const def = this.soldierCfg.defaults || {};
+    const saved = this.settings.get(this.soldierCfg.storageKey || 'soldier', {}) || {};
+    const look = { name: this._cleanName(saved.name ?? def.name ?? '') };
+    for (const key of SOLDIER_FIELDS) {
+      const values = this._soldierValues(key);
+      look[key] = values.includes(saved[key]) ? saved[key] : values.includes(def[key]) ? def[key] : values[0];
+    }
+    return look;
+  }
+
+  _cleanName(s) {
+    return String(s).replace(/[\u0000-\u001f<>]/g, '').slice(0, this.soldierCfg.nameMaxLength ?? 16);
+  }
+
+  _saveLook() {
+    this.settings.set(this.soldierCfg.storageKey || 'soldier', { ...this.look });
+    this._applyLoadout();
+  }
+
+  /** Arma di partenza e nome in classifica per le prossime partite. */
+  _applyLoadout() {
+    this.game.setLoadout({ weapon: this.look.weapon, name: this.look.name.trim() });
+  }
+
+  _buildSoldier() {
+    const input = $('soldier-name');
+    input.maxLength = this.soldierCfg.nameMaxLength ?? 16;
+    input.value = this.look.name;
+    input.addEventListener('input', () => {
+      const clean = this._cleanName(input.value);
+      if (clean !== input.value) input.value = clean;
+      this.look.name = clean;
+      this._saveLook();
+      this._renderTape();
+    });
+    // Invio conferma il nome (toglie il fuoco), senza avviare altro
+    input.addEventListener('keydown', (e) => {
+      if (e.code === 'Enter' || e.code === 'NumpadEnter') input.blur();
+    });
+    const rows = $('soldier-rows');
+    this.soldierRows = {};
+    for (const key of SOLDIER_FIELDS) {
+      const row = el('div', 'pick-row');
+      const label = el('h3', 'menu-label');
+      const box = el('div', 'stepper');
+      const prev = el('button', 'step', '‹');
+      const value = el('span', 'step-value');
+      const next = el('button', 'step', '›');
+      prev.type = next.type = 'button';
+      const change = (d) => {
+        const values = this._soldierValues(key);
+        const i = values.indexOf(this.look[key]);
+        this.look[key] = values[(i + d + values.length) % values.length];
+        this._saveLook();
+        this._renderSoldier();
+      };
+      prev.addEventListener('click', () => change(-1));
+      next.addEventListener('click', () => change(1));
+      box.append(prev, value, next);
+      row.append(label, box);
+      rows.append(row);
+      // caratteristiche dell'arma subito sotto la sua scelta
+      if (key === 'weapon') rows.append($('soldier-stats'));
+      this.soldierRows[key] = { label, value, prev, next };
+    }
+  }
+
+  /** "Casuale": aspetto a caso (arma e nome restano). */
+  _randomSoldier() {
+    for (const key of SOLDIER_FIELDS) {
+      if (key === 'weapon') continue;
+      const values = this._soldierValues(key);
+      this.look[key] = values[Math.floor(Math.random() * values.length)];
+    }
+    this._saveLook();
+    this._renderSoldier();
+  }
+
+  _soldierValueText(key, id) {
+    if (key === 'weapon') return this.i18n.t(this.game.weapons.get(id).name);
+    return this.i18n.t(`soldier.values.${key}.${id}`);
+  }
+
+  _renderTape() {
+    $('soldier-tape').textContent = this.look.name.trim();
+  }
+
+  _renderSoldier() {
+    const { i18n } = this;
+    for (const [key, r] of Object.entries(this.soldierRows)) {
+      r.label.textContent = i18n.t(`soldier.fields.${key}`);
+      r.value.textContent = this._soldierValueText(key, this.look[key]);
+      r.prev.title = r.prev.ariaLabel = `${i18n.t('soldier.previous')} (${r.label.textContent})`;
+      r.next.title = r.next.ariaLabel = `${i18n.t('soldier.next')} (${r.label.textContent})`;
+    }
+    $('soldier-name').placeholder = i18n.t('soldier.namePlaceholder');
+    this._renderTape();
+    this._renderStats();
+    const w = this.game.weapons.get(this.look.weapon);
+    this.soldierArt = drawSoldier(this.look, this.soldierCfg, w.portrait || 'rifle');
+    this._drawSoldierPreview();
+  }
+
+  /** Caratteristiche dell'arma scelta, con barre rispetto alle altre armi di partenza. */
+  _renderStats() {
+    const { i18n } = this;
+    const all = this._loadoutWeapons.map((id) => this.game.weapons.get(id));
+    const w = this.game.weapons.get(this.look.weapon);
+    const stats = [
+      ['damage', (x) => x.damage * (x.pellets || 1), (x) => (x.pellets > 1 ? `${x.damage}×${x.pellets}` : String(x.damage))],
+      ['rate', (x) => x.fireRate, (x) => String(Math.round(x.fireRate * 60))],
+      ['magazine', (x) => x.magazine, (x) => String(x.magazine)],
+      ['range', (x) => x.maxRange, (x) => String(x.maxRange)],
+      ['reload', (x) => 1 / x.reloadTime, (x) => `${x.reloadTime}s`],
+    ];
+    const box = $('soldier-stats');
+    box.textContent = '';
+    for (const [id, val, text] of stats) {
+      const max = Math.max(...all.map(val));
+      const row = el('div', 'stat-row');
+      const bar = el('div', 'stat-bar');
+      const fill = el('span');
+      fill.style.width = `${Math.round((val(w) / max) * 100)}%`;
+      bar.append(fill);
+      row.append(el('span', '', i18n.t(`soldier.stats.${id}`)), bar, el('b', '', text(w)));
+      box.append(row);
+    }
+    box.append(el('div', 'stat-mode', i18n.t(w.auto ? 'soldier.stats.auto' : 'soldier.stats.semi')));
+  }
+
+  /** Disegna il ritratto nel riquadro con la scala intera più grande che ci sta (frame 1 = respiro). */
+  _drawSoldierPreview(frame = this.soldierFrame || 0) {
+    const art = this.soldierArt;
+    const c = $('soldier-canvas');
+    const box = c.parentElement;
+    if (!art || !box.clientHeight) return;
+    const tape = $('soldier-tape').offsetHeight + 12;
+    const s = Math.max(1, Math.floor(Math.min((box.clientHeight - tape - 8) / PORTRAIT.h, (box.clientWidth - 8) / PORTRAIT.w)));
+    if (c.width !== art.width || c.height !== art.height) {
+      c.width = art.width;
+      c.height = art.height;
+    }
+    c.style.width = `${art.width * s}px`;
+    c.style.height = `${art.height * s}px`;
+    const g = c.getContext('2d');
+    g.clearRect(0, 0, c.width, c.height);
+    g.drawImage(art, 0, 0);
+    // respiro: busto, braccia e testa salgono di un pixel (la parte sotto il cinturone resta ferma)
+    const cut = this.soldierCfg.breathCut ?? 56;
+    if (frame) g.drawImage(art, 0, 0, art.width, cut, 0, -1, art.width, cut);
+  }
+
+  _soldierAnim(on) {
+    clearInterval(this.soldierTimer);
+    this.soldierTimer = 0;
+    if (!on) return;
+    this._renderSoldier();
+    this.soldierFrame = 0;
+    this.soldierTimer = setInterval(() => {
+      this.soldierFrame = 1 - this.soldierFrame;
+      this._drawSoldierPreview();
+    }, (this.soldierCfg.breathPeriod ?? 1.6) * 500);
+  }
+
   // ---------- Opzioni ----------
 
   _buildOptions() {
@@ -614,6 +805,7 @@ export class Menu {
     this._renderLang();
     this._renderCareer($('menu-career'), this.game.career.xp);
     if (this.stack[this.stack.length - 1] === 'options') this._renderKeys();
+    if (this.stack[this.stack.length - 1] === 'soldier') this._renderSoldier();
   }
 
   /**
@@ -641,6 +833,7 @@ export class Menu {
       else if (t.dataset.action === 'resume') this.resume();
       else if (t.dataset.action === 'quit') this.showMain();
       else if (t.dataset.action === 'resetKeys') this._resetKeys();
+      else if (t.dataset.action === 'randomSoldier') this._randomSoldier();
       else if (t.dataset.action === 'editor') location.href = this.config.editor?.page || 'editor.html';
     });
     // un clic fuori dal tasto in ascolto annulla la modifica
@@ -672,6 +865,7 @@ export class Menu {
     window.addEventListener('resize', () => {
       this._layout();
       this._updatePauseButton();
+      if (this.soldierTimer) this._drawSoldierPreview();
     });
   }
 

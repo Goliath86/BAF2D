@@ -33,7 +33,7 @@ I tasti si possono cambiare da **Opzioni → Comandi** (due tasti per azione; sa
 
 ## Menu
 
-- **Principale** (pannello a sinistra): *Nuova partita*, *Opzioni*, *Editor di mappe*; a destra una scena animata
+- **Principale** (pannello a sinistra): *Nuova partita*, *Soldato*, *Opzioni*, *Editor di mappe*; a destra una scena animata
   a pixel: la camera termica di un drone che sorvola di notte una città in guerra, con mezzi e pattuglie sulle
   strade, scontri a fuoco, esplosioni che abbagliano il sensore, incendi, un elicottero che lancia i flare e l'HUD
   con il bersaglio agganciato (`config/menu_scene.json`, `js/menu_scene.js`, disegni in `js/menu_art.js`).
@@ -43,6 +43,12 @@ I tasti si possono cambiare da **Opzioni → Comandi** (due tasti per azione; sa
   "prossimamente"), squadra blu/rossa, numero di compagni e di avversari (limiti in `menu.allies` / `menu.enemies`),
   ticket per squadra (`menu.tickets`: `min`, `max`, `step`, `default`; vale anche per la rivincita).
   L'ultima scelta viene ricordata.
+- **Soldato**: personalizzazione del proprio soldato con ritratto frontale in pixel art che respira: nome in codice
+  (compare in classifica), arma di partenza (armi con `"loadout": true` in `config/weapons.json`, con danno,
+  cadenza, caricatore, gittata e ricarica), mimetica, tattico (portapiastre, pettorina, standard, pesante) e suo
+  colore, copricapo, occhiali, barba e colore, carnagione, guanti, anfibi, cuffie, shemagh, ginocchiere; pulsante
+  *Casuale*. Tutto salvato in localStorage; opzioni e colori in `config/soldier.json`, disegno in
+  `js/soldier_art.js`. Per ora solo arma e nome hanno effetto in partita.
 - **Opzioni**: lingua, volume, comandi da tastiera (su touch: riepilogo dei comandi).
 - **Pausa** (Esc / P / pulsante touch): riprendi, opzioni, torna al menu principale.
 - **Fine partita**: rivincita o menu principale.

@@ -10,6 +10,7 @@
   "menu": {
     "tagline": "Cattura la bandiera, vista dall'alto",
     "newGame": "Nuova partita",
+    "soldier": "Soldato",
     "options": "Opzioni",
     "back": "Indietro",
     "version": "v{version}",
@@ -255,7 +256,56 @@
     "contact": "CONTATTO",
     "alt": "QUOTA {v} M",
     "range": "DIST {v} KM"
-  },  "editor": {
+  },
+  "soldier": {
+    "title": "Soldato",
+    "name": "Nome in codice",
+    "namePlaceholder": "Il tuo nome in classifica",
+    "random": "Casuale",
+    "previous": "Precedente",
+    "next": "Successivo",
+    "fields": {
+      "weapon": "Arma",
+      "camo": "Mimetica",
+      "vest": "Tattico",
+      "vestColor": "Colore tattico",
+      "headgear": "Copricapo",
+      "eyewear": "Occhiali",
+      "beard": "Barba",
+      "beardColor": "Colore barba",
+      "skin": "Carnagione",
+      "gloves": "Guanti",
+      "boots": "Anfibi",
+      "headset": "Cuffie",
+      "shemagh": "Shemagh",
+      "kneepads": "Ginocchiere"
+    },
+    "values": {
+      "camo": { "desert": "Deserto", "arid": "Arida", "woodland": "Bosco", "digital": "Digitale", "urban": "Urbana", "tiger": "Tigrata", "olive": "Verde oliva", "black": "Nera" },
+      "vest": { "slick": "Portapiastre", "rig": "Pettorina", "standard": "Standard", "heavy": "Pesante" },
+      "vestColor": { "coyote": "Coyote", "ranger": "Verde ranger", "khaki": "Cachi", "black": "Nero", "camo": "Come la mimetica" },
+      "headgear": { "helmet": "Elmetto", "helmetNvg": "Elmetto + visore", "boonie": "Cappello boonie", "cap": "Berretto" },
+      "eyewear": { "none": "Nessuno", "sunglasses": "Da sole", "ballistic": "Balistici", "goggles": "Maschera" },
+      "beard": { "none": "Rasato", "stubble": "Incolta", "goatee": "Pizzetto", "short": "Corta", "full": "Folta" },
+      "beardColor": { "black": "Nera", "brown": "Castana", "light": "Castano chiaro", "blond": "Bionda", "red": "Rossa", "grey": "Grigia" },
+      "skin": { "s1": "Tono 1", "s2": "Tono 2", "s3": "Tono 3", "s4": "Tono 4", "s5": "Tono 5" },
+      "gloves": { "none": "Nessuno", "coyote": "Coyote", "black": "Neri", "olive": "Verde oliva" },
+      "boots": { "tan": "Sabbia", "brown": "Marroni", "black": "Neri", "olive": "Verde oliva" },
+      "headset": { "on": "Sì", "off": "No" },
+      "shemagh": { "on": "Sì", "off": "No" },
+      "kneepads": { "on": "Sì", "off": "No" }
+    },
+    "stats": {
+      "damage": "Danno",
+      "rate": "Cadenza (colpi/min)",
+      "magazine": "Caricatore",
+      "range": "Gittata",
+      "reload": "Ricarica",
+      "auto": "Automatica",
+      "semi": "Semiautomatica"
+    }
+  },
+  "editor": {
     "title": "Editor di mappe",
     "new": "Nuova",
     "open": "Apri",
