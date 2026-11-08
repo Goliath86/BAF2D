@@ -1158,10 +1158,45 @@ const TILE_STYLES = {
     rect(g, 0, 0, s, 1, p.light);
   },
 
-  /** Macerie: pezzi di mattone e pietra sparsi (density 0..1) su un fondo di sabbia o pavimento. */
+  /**
+   * Macerie: pezzi di mattone e pietra sparsi (density 0..1) su un fondo di sabbia o pavimento.
+   * pile: true = cumulo non calpestabile: fondo scuro coperto di blocchi grossi con contorno ("outline"),
+   * spigoli in ombra e "beams" travi spezzate (colore "beam"), così si stacca dal terreno.
+   */
   rubble(g, s, p, seed) {
     rect(g, 0, 0, s, s, p.base);
     const r = rng(seed * 19 + 7);
+    if (p.pile) {
+      for (let i = 0; i < s; i++) rect(g, Math.floor(r() * s), Math.floor(r() * s), 1, 1, p.baseDetail);
+      const cols = p.colors || ['#8a8478'];
+      const n = p.chunks ?? 16;
+      for (let i = 0; i < n; i++) {
+        const w = 3 + Math.floor(r() * 5);
+        const h = 2 + Math.floor(r() * 4);
+        const x = Math.floor(r() * (s - w + 2)) - 1;
+        const y = Math.floor(r() * (s - h + 2)) - 1;
+        rect(g, x - 1, y - 1, w + 2, h + 2, p.outline || p.shadow);
+        rect(g, x, y, w, h, cols[Math.floor(r() * cols.length)]);
+        rect(g, x, y + h - 1, w, 1, p.shadow); // lato in ombra in basso
+        rect(g, x + w - 1, y, 1, h, p.shadow); // e a destra
+        rect(g, x, y, w - 1, 1, p.light); // luce in alto
+        if (w > 4 && r() < 0.5) rect(g, x + 1 + Math.floor(r() * (w - 3)), y + 1, 1, Math.max(1, h - 2), p.shadow); // crepa
+      }
+      for (let k = 0; k < (p.beams ?? 1); k++) {
+        // trave spezzata in diagonale (a gradini di 1 px)
+        const len = 7 + Math.floor(r() * 6);
+        const x0 = Math.floor(r() * (s - 4));
+        const y0 = 2 + Math.floor(r() * (s - 6));
+        const dir = r() < 0.5 ? 1 : -1;
+        for (let i = 0; i < len; i++) {
+          const bx = x0 + i * dir;
+          const by = y0 + Math.floor(i / 3);
+          rect(g, bx, by + 1, 1, 2, p.outline || p.shadow);
+          rect(g, bx, by, 1, 2, p.beam || '#4a3626');
+        }
+      }
+      return;
+    }
     for (let i = 0; i < s; i++) rect(g, Math.floor(r() * s), Math.floor(r() * s), 1, 1, p.baseDetail);
     const n = Math.round((p.density ?? 0.5) * 14);
     const cols = p.colors || ['#a07850'];
