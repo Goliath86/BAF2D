@@ -193,10 +193,11 @@ tools/check_level.mjs controllo livelli: celle irraggiungibili e vicoli ciechi (
   mappa né update) e `_updateScene()` la accende solo con `mode === 'menu'` e menu visibile (spenta in partita e
   in pausa); `setViewLeft(larghezza pannello)` la centra nella parte scoperta (non col pannello largo).
   Tutto procedurale in `menu_art.js`: primitive a pixel (`poly`, `line`, `limb`, `disc`...), `camouflage()` /
-  `recolor()` (sostituiscono un colore esatto con un motivo: mimetica, quadretti della kefiah), `part()` (livello
-  con contorno interno), maschere ombra/luce (`applyMasks`, il soldato è ombreggiato per luce da sinistra),
+  `recolor()` (sostituiscono un colore esatto con un motivo: mimetica digitale, trama della kefiah, barba a
+  ciocche, lenti), `part()` (livello con texture, maschere ombra/luce e contorno interno propri: le chiamate S/L
+  dentro la parte valgono solo per lei; luce da sinistra), fucile e mani in coordinate dell'arma (u, v),
   `finish()` (tinta, luce dal lato del sole, contorno 1 px); sprite con margine. Posizioni in `menu_scene.json`
-  come frazione della parte visibile (`at`); il soldato tiene sempre l'elmetto nello schermo (`feetY`).
+  come frazione della parte visibile (`at`); il busto è appoggiato al fondo (`bustY`, mai l'elmetto tagliato).
 - Editor di mappe: salva livelli nel formato del gioco (`name`/`description` stringhe nel livello; il menu usa
   `levels.<id>.*` del file lingua se c'è, altrimenti quelli: `Menu._levelText`). Prova: main.js legge
   `?test=1` (`readTestLevel`), mette la mappa in testa a `levels` con `test: true` (id `editor.testLevelId`) e
