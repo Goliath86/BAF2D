@@ -34,10 +34,9 @@ I tasti si possono cambiare da **Opzioni → Comandi** (due tasti per azione; sa
 ## Menu
 
 - **Principale** (pannello a sinistra): *Nuova partita*, *Opzioni*, *Editor di mappe*; a destra una scena animata
-  a pixel: notte di battaglia su una città in rovina, in controluce, con la camera che scorre lenta (parallasse),
-  incendi e fumo, traccianti, razzi illuminanti, esplosioni, un elicottero col faro, un caccia e una squadra che
-  marcia sul crinale con la bandiera rossa a brandelli (`config/menu_scene.json`, `js/menu_scene.js`,
-  disegni in `js/menu_art.js`).
+  a pixel: la camera termica di un drone che sorvola di notte una città in guerra, con mezzi e pattuglie sulle
+  strade, scontri a fuoco, esplosioni che abbagliano il sensore, incendi, un elicottero che lancia i flare e l'HUD
+  con il bersaglio agganciato (`config/menu_scene.json`, `js/menu_scene.js`, disegni in `js/menu_art.js`).
   Con `menu.background` diverso da `"scene"` torna la partita dimostrativa tutta di bot. In basso a destra la
   versione (`version` in `game.json`).
 - **Nuova partita**: mappa (anteprima, numero di bandiere, dimensioni; la mappa procedurale è annunciata come

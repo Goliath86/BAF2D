@@ -35,7 +35,7 @@ export class Menu {
     this.mode = 'menu'; // 'menu' | 'playing' | 'paused' | 'ended'
     this.rebinding = null; // { action, slot } mentre si aspetta un tasto
     this.teamIds = Object.keys(config.teams || {});
-    this.scene = sceneCfg ? new MenuScene($('menu-scene'), sceneCfg) : null;
+    this.scene = sceneCfg ? new MenuScene($('menu-scene'), sceneCfg, i18n) : null;
 
     // ultima configurazione usata (salvata) o valori di default da game.json -> menu
     const last = settings.get('newGame', {});

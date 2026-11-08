@@ -1,173 +1,127 @@
 {
-  "targetHeight": 200,
-  "horizon": 0.7,
-  "seed": 7,
-  "camera": { "speed": 9 },
+  "targetHeight": 240,
+  "seed": 11,
 
-  "sky": {
-    "stops": [
-      [0, "#08081a"],
-      [0.3, "#161230"],
-      [0.55, "#3a1a44"],
-      [0.75, "#8a2c4a"],
-      [0.9, "#e0583a"],
-      [1, "#ffa452"]
-    ]
+  "camera": { "vehicleWeight": 3, "follow": 0.7, "smooth": 1.2, "maxSpeed": 30, "lead": 1.2, "trackRadius": 170, "trackTime": [9, 15] },
+
+  "palettes": {
+    "white": [[0, "#020303"], [0.3, "#1a1e1c"], [0.55, "#5c6460"], [0.8, "#c8d1cb"], [1, "#ffffff"]],
+    "black": [[0, "#e8ece9"], [0.3, "#b4bcb7"], [0.55, "#5e6662"], [0.8, "#1e2220"], [1, "#020303"]],
+    "ironbow": [[0, "#05031a"], [0.3, "#3a0f6e"], [0.5, "#a8215e"], [0.7, "#ec6b1c"], [0.88, "#ffcf3a"], [1, "#fffbe6"]]
   },
 
-  "stars": { "count": 150, "until": 0.62, "color": "#fff2e0" },
-
-  "moon": {
-    "at": 0.8,
-    "y": 0.22,
-    "radius": 12,
-    "halo": 34,
-    "color": "#f0e2cc",
-    "maria": "#c8b4a2",
-    "shade": "#8a7898",
-    "haloColor": "#c8a0c0",
-    "haloAlpha": 0.16
+  "sensor": {
+    "modes": ["white", "black"],
+    "modeInterval": [24, 36],
+    "glitch": 0.35,
+    "levels": 40,
+    "level": 0.26,
+    "gain": 1.35,
+    "grain": 0.04,
+    "rowNoise": 0.006,
+    "flashAdd": 0.45,
+    "agcDip": 0.35,
+    "agcMax": 0.55,
+    "agcRecover": 1.4,
+    "vignette": 0.5
   },
 
-  "clouds": {
-    "count": 4,
-    "yRange": [0.08, 0.45],
-    "width": [50, 120],
-    "height": [10, 20],
-    "speed": [1.5, 4],
-    "top": "#3a2246",
-    "mid": "#6e2e50",
-    "lit": "#d8604a",
-    "alpha": 0.88
+  "city": {
+    "block": 140,
+    "jitter": 0.25,
+    "road": [8, 12],
+    "mainChance": 0.35,
+    "sidewalk": 2,
+    "potholes": 0.25,
+    "damaged": 0.3,
+    "burning": 0.3,
+    "carWrecks": 0.2,
+    "roofs": { "concrete": 0.7, "metal": 0.12, "warm": 0.18 }
   },
 
-  "mountains": { "parallax": 0.05, "y": -6, "waves": [[0.013, 7], [0.031, 4], [0.08, 1.5]], "color": "#2a1636", "rim": "#5e2a46" },
+  "blocks": { "houses": 0.42, "compound": 0.13, "mosque": 0.07, "ruins": 0.16, "camp": 0.1, "lot": 0.12 },
 
-  "farCity": {
-    "parallax": 0.15,
-    "y": 2,
-    "slot": 11,
-    "width": [6, 18],
-    "height": [8, 38],
-    "gap": 0.05,
-    "ruined": 0.45,
-    "fireChance": 0.35,
-    "color": "#22122c",
-    "rim": "#8a3446",
-    "windows": { "step": 3, "lit": 0.05, "fire": 0.03, "litColor": "#ffb060", "fireColor": "#ff6a30" }
+  "heat": {
+    "ground": 0.21,
+    "road": 0.34,
+    "curb": 0.42,
+    "sidewalk": 0.29,
+    "roof": [0.28, 0.42],
+    "parapet": 0.13,
+    "shadow": 0.62,
+    "wall": 0.44,
+    "tree": 0.12,
+    "water": 0.14,
+    "ac": 0.55,
+    "tent": 0.5,
+    "sandbag": 0.44,
+    "craterRim": 0.4,
+    "craterFloor": 0.14
   },
 
-  "midCity": {
-    "parallax": 0.38,
-    "y": 12,
-    "slot": 18,
-    "width": [10, 30],
-    "height": [14, 64],
-    "gap": 0.15,
-    "ruined": 0.6,
-    "fireChance": 0.45,
-    "color": "#120818",
-    "rim": "#c04a3c",
-    "windows": { "step": 4, "lit": 0.03, "fire": 0.04, "litColor": "#ffb060", "fireColor": "#ff6a30", "dark": "#0a0510" }
+  "population": { "despawn": 460 },
+
+  "vehicles": {
+    "count": 6,
+    "spawnRadius": [170, 280],
+    "straight": 0.55,
+    "exhaust": 9,
+    "trackHeat": 0.09,
+    "trackLife": 12,
+    "heat": 1.12,
+    "types": {
+      "truck": { "speed": 22, "weight": 3 },
+      "pickup": { "speed": 27, "weight": 2 },
+      "apc": { "speed": 16, "weight": 2 },
+      "tank": { "speed": 10, "weight": 2 }
+    }
   },
 
-  "near": { "parallax": 0.7, "y": 12, "waves": [[0.02, 3], [0.07, 1.5]], "slot": 46, "color": "#0a0610", "rim": "#d0603a" },
+  "squads": { "count": 4, "size": [3, 6], "speed": 5, "spacing": 5, "straight": 0.6, "spawnRadius": [120, 240] },
+  "dogs": { "count": 2, "speed": 11, "straight": 0.4, "spawnRadius": [60, 200] },
 
-  "front": { "parallax": 1, "y": 18, "waves": [[0.012, 3], [0.05, 1]], "color": "#0e0814", "rim": "#ff8a4a" },
-
-  "fore": { "parallax": 1.4, "y": -4, "waves": [[0.02, 2], [0.06, 1]], "slot": 70, "color": "#020103", "rim": "#b04a34" },
-
-  "fog": { "y": -8, "height": 28, "color": "#7a3448", "alpha": 0.42, "drift": 4 },
-
-  "fires": {
-    "smokeRate": 1.6,
-    "smoke": { "life": [7, 12], "speed": [4, 8], "size": [1.5, 7], "color": "#140c16", "light": "#3a2230", "alpha": 0.78, "drift": -3, "max": 420 },
-    "glow": { "color": "#ff7a30", "radius": 7, "alpha": 0.16 },
-    "flame": ["#fff0b0", "#ffc040", "#ff7020", "#c03010"]
-  },
-
-  "beacons": { "color": "#ff3a2a", "period": 1.6 },
-
-  "tracers": {
-    "interval": [0.6, 2.2],
-    "shots": [6, 16],
-    "rate": 0.07,
-    "speed": [90, 130],
-    "spreadDeg": 35,
-    "life": 1.8,
-    "colors": ["#a8ff88", "#ff7a5a", "#ffd070"],
-    "max": 240
-  },
-
-  "flares": {
-    "firstDelay": [0.5, 2],
-    "interval": [5, 11],
-    "max": 3,
-    "fall": 4,
-    "life": [12, 18],
-    "color": "#ffffff",
-    "glow": "#ffe0b0",
-    "glowRadius": 22,
-    "glowAlpha": 0.07,
-    "trail": "rgba(200,180,190,0.35)"
+  "firefight": {
+    "firstDelay": [0.5, 1.5],
+    "interval": [3, 7],
+    "max": 2,
+    "duration": [4, 8],
+    "rate": [0.12, 0.5],
+    "enemyRate": [0.2, 0.7],
+    "tracerSpeed": 190,
+    "rpgChance": 0.35,
+    "rocketSpeed": 80
   },
 
   "explosions": {
-    "firstDelay": [1, 3],
-    "interval": [3, 8],
-    "flash": 0.35,
-    "flashDecay": 2.5,
-    "flashColor": "#ff8a4a",
-    "colors": ["#ffffff", "#fff0a0", "#ffb040", "#ff6020", "#a02010"],
-    "sparks": "#ffc060"
+    "firstDelay": [1.5, 3],
+    "interval": [4, 9],
+    "radius": [5, 10],
+    "destroyChance": 0.35,
+    "salvoChance": 0.3,
+    "fireChance": 0.6,
+    "fireLife": [18, 40],
+    "craterLife": 90,
+    "wreckLife": 80,
+    "flash": 0.5
   },
 
-  "helicopter": {
-    "firstDelay": [3, 6],
-    "interval": [10, 22],
-    "parallax": 0.45,
-    "speed": [18, 28],
-    "yRange": [0.35, 0.6],
-    "color": "#0a0810",
-    "rim": "#ff7a4a",
-    "cockpit": "#3a4a5a",
-    "rotor": "rgba(10,8,16,0.6)",
-    "beam": "rgba(255,236,200,0.07)",
-    "beamCore": "rgba(255,240,210,0.1)",
-    "nav": ["#ff3030", "#30ff60"]
+  "fires": {
+    "smokeRate": 3,
+    "wind": [6, 3],
+    "smoke": { "life": [6, 11], "size": [4, 9], "heat": 0.5, "alpha": 0.13, "max": 500 }
   },
 
-  "jet": {
-    "firstDelay": [8, 14],
-    "interval": [16, 32],
-    "speed": [150, 190],
-    "yRange": [0.08, 0.3],
-    "color": "#0a0810",
-    "trail": "rgba(220,200,210,0.4)",
-    "burner": "#ffb060"
-  },
+  "helicopter": { "firstDelay": [5, 9], "interval": [14, 26], "speed": [40, 55], "distance": 280, "flareChance": 0.6, "flares": [8, 12] },
 
-  "squad": {
-    "types": ["radio", "rifle", "launcher", "rifle", "flag"],
-    "at": [0.3, 0.44, 0.57, 0.7, 0.84],
-    "stride": 30,
-    "rimSide": 0.2,
-    "frames": 8,
-    "color": "#050307",
-    "far": "#22141e",
-    "rim": "#ff9a50",
-    "rimAmount": 0.75
-  },
-
-  "flag": {
-    "width": 16,
-    "height": 10,
-    "colors": ["#6e1610", "#9c2218", "#c8301f", "#e8523a"],
-    "burnt": "#2a0c08",
-    "wave": { "speed": 7, "length": 0.5, "amplitude": 1.6 }
-  },
-
-  "embers": { "rate": 6, "life": [3, 7], "speed": [8, 20], "colors": ["#ffd070", "#ff8a30", "#c04020"], "max": 90 },
-  "ash": { "rate": 4, "speed": [3, 7], "color": "rgba(200,180,190,0.5)", "max": 60 },
-  "vignette": { "strength": 0.55 }
+  "hud": {
+    "color": "#e4f2e8",
+    "shadow": "rgba(0,0,0,0.55)",
+    "rec": "#ff3b30",
+    "alpha": 0.9,
+    "zoom": 8,
+    "heading": 40,
+    "orbit": 1.5,
+    "altitude": 3800,
+    "origin": [23.41, 12.75]
+  }
 }

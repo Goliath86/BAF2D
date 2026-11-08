@@ -245,7 +245,17 @@
     "unknownVehicle": "Mezzo non definito in vehicles.json: \"{name}\"",
     "unknownRocket": "Razzo non definito in weapons.json: \"{name}\""
   },
-  "editor": {
+  "menuScene": {
+    "mode": { "white": "BIANCO CALDO", "black": "NERO CALDO", "ironbow": "FERRO" },
+    "zoom": "ZOOM {v}X",
+    "sensor": "IR CAMPO STRETTO",
+    "rec": "REG",
+    "track": "BERSAGLIO {n}",
+    "speed": "VEL {v} KM/H",
+    "contact": "CONTATTO",
+    "alt": "QUOTA {v} M",
+    "range": "DIST {v} KM"
+  },  "editor": {
     "title": "Editor di mappe",
     "new": "Nuova",
     "open": "Apri",

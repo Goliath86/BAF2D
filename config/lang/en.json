@@ -245,7 +245,17 @@
     "unknownVehicle": "Vehicle not defined in vehicles.json: \"{name}\"",
     "unknownRocket": "Rocket not defined in weapons.json: \"{name}\""
   },
-  "editor": {
+  "menuScene": {
+    "mode": { "white": "WHT HOT", "black": "BLK HOT", "ironbow": "IRONBOW" },
+    "zoom": "ZOOM {v}X",
+    "sensor": "IR NFOV",
+    "rec": "REC",
+    "track": "TRK {n}",
+    "speed": "SPD {v} KM/H",
+    "contact": "CONTACT",
+    "alt": "ALT {v} M",
+    "range": "RNG {v} KM"
+  },  "editor": {
     "title": "Map editor",
     "new": "New",
     "open": "Open",
