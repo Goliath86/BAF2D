@@ -1,12 +1,12 @@
-// Scena animata dietro al menu principale (al posto della partita dimostrativa): deserto al tramonto, soldato in
-// primo piano visto di fronte (fucile in mano, piede su una maceria), bandiera rossa a brandelli, carro armato in
+// Scena animata dietro al menu principale (al posto della partita dimostrativa): deserto al tramonto, soldato a
+// mezzo busto in primo piano (ritratto dettagliato col fucile), bandiera rossa a brandelli, carro armato in
 // fiamme col fumo, nuvole e un elicottero Apache che passa ogni tanto (direzione, quota e distanza casuali).
 // Canvas a bassa risoluzione scalato di un fattore intero; disegni in js/menu_art.js, parametri in
 // config/menu_scene.json.
 
 import {
   bayer, mulberry32, rnd, clamp, hex, mixRGB, css, makeCanvas, rect, disc,
-  finish, buildSoldier, SOLDIER, drawTank, drawApache, HELI, makeCloud,
+  finish, buildBust, BUST, BUST_LENSES, insidePoly, drawTank, drawApache, HELI, makeCloud,
 } from './menu_art.js';
 
 const M = 3; // margine degli sprite (contorno)
@@ -76,7 +76,7 @@ export class MenuScene {
   resize() {
     const cw = window.innerWidth;
     const ch = window.innerHeight;
-    this.scale = Math.max(1, Math.floor(ch / (this.cfg.targetHeight ?? 176)));
+    this.scale = Math.max(1, Math.floor(ch / (this.cfg.targetHeight ?? 270)));
     this.w = Math.ceil(cw / this.scale);
     this.h = Math.ceil(ch / this.scale);
     this.canvas.width = this.w;
@@ -103,10 +103,11 @@ export class MenuScene {
     this.sunX = Math.round(clamp(at(sun.at, 0.12), vx0 + r * 0.5, this.w - r - 4));
     this.sunY = this.groundY + (sun.y ?? -12);
     const sc = cfg.soldier || {};
-    this.soldierX = Math.round(at(sc.at, 0.64) + (sc.x ?? 0));
+    this.soldierX = Math.round(at(sc.at, 0.6) + (sc.x ?? 0));
     this.sunDir = this.sunX < this.soldierX ? -1 : 1;
-    // piedi vicino al fondo, ma l'elmetto resta sempre dentro lo schermo (al limite si tagliano gli anfibi)
-    this.feetY = Math.max(this.h - (sc.bottom ?? 3), (sc.top ?? 3) + SOLDIER.feet);
+    // busto appoggiato al bordo inferiore (se lo schermo è basso si taglia il fondo, mai l'elmetto)
+    this.bustY = Math.max((sc.top ?? 2) - BUST.margin, this.h - BUST.h - BUST.margin + (sc.y ?? 0));
+    this.flagX = Math.round(at(cfg.flag?.at, 0.3));
     const tc = cfg.tank || {};
     this.tankX = Math.round(at(tc.at, 0.2));
     this.tankY = this.groundY + (tc.y ?? 8);
@@ -248,7 +249,7 @@ export class MenuScene {
     if (this._spriteKey === key) return;
     this._spriteKey = key;
     const sc = cfg.soldier || {};
-    this.soldierFrames = [0, 1].map((oy) => buildSoldier(sc, oy, this.sunDir, (cfg.seed ?? 1) + 21));
+    this.bust = buildBust(sc, this.sunDir, (cfg.seed ?? 1) + 21);
     const tc = cfg.tank || {};
     const tank = makeCanvas(66 + M * 2, 34 + M * 2);
     drawTank(tank.g, tc.colors || {}, (cfg.seed ?? 1) + 7, M);
@@ -386,7 +387,8 @@ export class MenuScene {
     gl.timer -= dt;
     if (gl.timer <= 0) {
       gl.timer = range(cfg.soldier?.glint, [4, 9]);
-      gl.on = 0.22;
+      gl.len = this.cfg.soldier?.glintTime ?? 0.6;
+      gl.on = gl.len;
     }
   }
 
@@ -462,23 +464,26 @@ export class MenuScene {
     this._drawTank();
     this._drawFlag();
 
-    // soldato (respira: due fotogrammi) con la coda della kefiah al vento
+    // soldato a mezzo busto (respira: si alza di 1 px) con la coda della kefiah al vento
     const sc = cfg.soldier || {};
     const period = sc.breath ?? 3.4;
-    const oy = this.t % period > period * 0.55 ? 1 : 0;
-    const spr = this.soldierFrames[oy];
-    const sx = Math.round(this.soldierX - SOLDIER.w / 2 - M);
-    const sy = Math.round(this.feetY - SOLDIER.feet - M);
-    this._drawScarf(sx + M, sy + M + oy, sc.colors || {}, sc.outline);
-    g.drawImage(spr, sx, sy);
+    const oy = this.t % period > period * 0.55 ? 0 : 1;
+    const bm = BUST.margin;
+    const sx = Math.round(this.soldierX - BUST.w / 2 - bm);
+    const sy = Math.round(this.bustY + oy);
+    this._drawScarf(sx + bm, sy + bm, sc.colors || {}, sc.outline);
+    g.drawImage(this.bust, sx, sy);
     if (this.glint.on > 0) {
-      // lampo sugli occhiali
-      const k = this.glint.on > 0.11 ? 3 : 2;
-      const gx = sx + M + 51;
-      const gy = sy + M + 23 + oy;
-      g.fillStyle = '#ffffff';
-      g.fillRect(gx, gy - k, 1, k * 2 + 1);
-      g.fillRect(gx - k, gy, k * 2 + 1, 1);
+      // riflesso che scorre sulle lenti
+      const k = 1 - this.glint.on / this.glint.len;
+      const pos = -20 + k * 120;
+      g.fillStyle = sc.glintColor || 'rgba(255,244,220,0.75)';
+      for (let y = 109; y <= 131; y++) {
+        for (let d = 0; d < 4; d++) {
+          const x = Math.round(79 + pos + d - (y - 109) * 0.7);
+          if (BUST_LENSES.some((l) => insidePoly(l, x + 0.5, y + 0.5))) g.fillRect(sx + bm + x, sy + bm + y, 1, 1);
+        }
+      }
     }
 
     g.fillStyle = cfg.sand?.color || 'rgba(255,228,176,0.55)';
@@ -587,9 +592,9 @@ export class MenuScene {
     const fl = this.flag;
     const wave = f.wave || {};
     const cols = f.colors || ['#6e1610', '#9c2218', '#c8301f', '#e8523a'];
-    const px = Math.round(this.soldierX + (f.x ?? 40));
-    const base = this.feetY - (f.base ?? 20);
-    const top = Math.max(f.minTop ?? 6, base - (f.poleHeight ?? 160));
+    const px = this.flagX;
+    const base = this.groundY + (f.base ?? 6);
+    const top = Math.max(f.minTop ?? 6, base - (f.poleHeight ?? 110));
     rect(g, px, top, 3, base - top, f.pole || '#4e4034');
     rect(g, this.sunDir < 0 ? px : px + 2, top, 1, base - top, f.poleLight || '#a69276');
     rect(g, px - 1, top - 3, 5, 3, f.finial || '#d8b060');
@@ -611,17 +616,17 @@ export class MenuScene {
     }
   }
 
-  /** Coda della kefiah mossa dal vento (esce da dietro il collo). */
+  /** Coda della kefiah mossa dal vento (esce da dietro la spalla). */
   _drawScarf(ox, oy, c, outline) {
     const { g } = this;
     const dir = this.wind;
-    const ax = ox + (dir < 0 ? 40 : 84);
-    const ay = oy + 48;
-    const len = 20;
+    const ax = ox + (dir < 0 ? 30 : 208);
+    const ay = oy + 206;
+    const len = 34;
     for (let i = 0; i < len; i++) {
       const x = ax + dir * i;
-      const y = Math.round(ay + i * 0.45 + Math.sin(this.t * 8 - i * 0.55) * i * 0.18);
-      const h = Math.max(2, Math.round(6 - i * 0.2));
+      const y = Math.round(ay + i * 0.35 + Math.sin(this.t * 7 - i * 0.4) * i * 0.2);
+      const h = Math.max(3, Math.round(12 - i * 0.28));
       rect(g, x, y - 1, 1, h + 2, outline || '#1c120e');
       for (let k = 0; k < h; k++) {
         const p = (i + k) % 6 === 0 || (i - k + 60) % 6 === 0;

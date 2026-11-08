@@ -50,8 +50,8 @@ js/main.js            bootstrap: game.json -> Settings -> i18n -> assets/livelli
 js/menu.js            Menu (DOM): principale/nuova partita/opzioni/pausa/fine partita, scena animata dietro
 js/menu_scene.js      MenuScene: scena del menu principale a pixel (canvas #menu-scene, config/menu_scene.json):
                       tramonto nel deserto, soldato di fronte, bandiera a brandelli, carro in fiamme, nuvole, elicottero
-js/menu_art.js        disegni della scena: primitive a pixel, buildSoldier (primo piano ~185 px, parti con
-                      contorno interno, maschere ombra/luce, mimetica), drawTank, drawApache, makeCloud
+js/menu_art.js        disegni della scena: primitive a pixel, buildBust (ritratto a mezzo busto 240x300: ogni part()
+                      ha texture, ombre/luci e contorno interno propri), drawTank, drawApache, makeCloud
 js/settings.js        Settings: impostazioni del giocatore in localStorage (lang, volume, keys, newGame)
 js/engine/
   loader.js           loadJSON / loadImage / loadArrayBuffer (errori = LocalizedError)
