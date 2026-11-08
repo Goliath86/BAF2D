@@ -48,10 +48,13 @@ Sparatutto top-down in pixel-art per browser. Lingua di lavoro con l'utente: **i
 ```
 js/main.js            bootstrap: game.json -> Settings -> i18n -> assets/livelli -> Display/Assets/Audio/Input -> Game -> Menu
 js/menu.js            Menu (DOM): principale/nuova partita/opzioni/pausa/fine partita, scena animata dietro
-js/menu_scene.js      MenuScene: scena del menu principale a pixel (canvas #menu-scene, config/menu_scene.json):
-                      tramonto nel deserto, soldato di fronte, bandiera a brandelli, carro in fiamme, nuvole, elicottero
-js/menu_art.js        disegni della scena: primitive a pixel, buildBust (ritratto a mezzo busto 240x300: ogni part()
-                      ha texture, ombre/luci e contorno interno propri), drawTank, drawApache, makeCloud
+js/menu_scene.js      MenuScene: scena del menu principale (canvas #menu-scene, config/menu_scene.json): notte di
+                      battaglia in controluce su una città in rovina, camera che scorre con parallasse (Strip = strato a
+                      pezzi da 128 px disegnati su richiesta), traccianti, razzi illuminanti, esplosioni con lampo,
+                      elicottero col faro, caccia, squadra in marcia con la bandiera, braci, nebbia, vignettatura
+js/menu_art.js        disegni della scena: primitive a pixel, rimLight (controluce), makeMoon, makeCloudStreak,
+                      paintCity/paintNear/paintFront/paintFore (strati), makeWalker (soldato di profilo, ciclo di passo),
+                      makeHeli, makeJet
 js/settings.js        Settings: impostazioni del giocatore in localStorage (lang, volume, keys, newGame)
 js/engine/
   loader.js           loadJSON / loadImage / loadArrayBuffer (errori = LocalizedError)
@@ -192,12 +195,10 @@ tools/check_level.mjs controllo livelli: celle irraggiungibili e vicoli ciechi (
   config) o altro = partita dimostrativa (attract). Con la scena `Menu.showMain` chiama `game.unload()` (niente
   mappa né update) e `_updateScene()` la accende solo con `mode === 'menu'` e menu visibile (spenta in partita e
   in pausa); `setViewLeft(larghezza pannello)` la centra nella parte scoperta (non col pannello largo).
-  Tutto procedurale in `menu_art.js`: primitive a pixel (`poly`, `line`, `limb`, `disc`...), `camouflage()` /
-  `recolor()` (sostituiscono un colore esatto con un motivo: mimetica digitale, trama della kefiah, barba a
-  ciocche, lenti), `part()` (livello con texture, maschere ombra/luce e contorno interno propri: le chiamate S/L
-  dentro la parte valgono solo per lei; luce da sinistra), fucile e mani in coordinate dell'arma (u, v),
-  `finish()` (tinta, luce dal lato del sole, contorno 1 px); sprite con margine. Posizioni in `menu_scene.json`
-  come frazione della parte visibile (`at`); il busto è appoggiato al fondo (`bustY`, mai l'elmetto tagliato).
+  Tutto procedurale in `menu_art.js`: ogni strato dipende solo da x (`rngFor(i, salt)` per elemento), quindi i pezzi
+  si raccordano e la scena è infinita; i punti in fiamme e le luci rosse tornano dal painter come dati del pezzo.
+  Eventi a tempo in `MenuScene.update` (timers), coordinate di strato convertite con `strip.sx(x, cam)`. La squadra
+  cammina alla velocità della camera (`squad.stride` = px per passo), quindi resta ferma sullo schermo.
 - Editor di mappe: salva livelli nel formato del gioco (`name`/`description` stringhe nel livello; il menu usa
   `levels.<id>.*` del file lingua se c'è, altrimenti quelli: `Menu._levelText`). Prova: main.js legge
   `?test=1` (`readTestLevel`), mette la mappa in testa a `levels` con `test: true` (id `editor.testLevelId`) e

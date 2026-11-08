@@ -1,233 +1,173 @@
 {
-  "targetHeight": 296,
-  "minVisible": 300,
-  "groundHeight": 46,
-  "seed": 11,
-  "wind": 1,
+  "targetHeight": 200,
+  "horizon": 0.7,
+  "seed": 7,
+  "camera": { "speed": 9 },
 
   "sky": {
     "stops": [
-      [0, "#41507e"],
-      [0.3, "#6e5a8c"],
-      [0.55, "#c46e78"],
-      [0.78, "#f0985e"],
-      [1, "#ffd48a"]
+      [0, "#08081a"],
+      [0.3, "#161230"],
+      [0.55, "#3a1a44"],
+      [0.75, "#8a2c4a"],
+      [0.9, "#e0583a"],
+      [1, "#ffa452"]
     ]
   },
 
-  "sun": {
-    "at": 0.06,
-    "y": -12,
-    "radius": 17,
-    "core": "#fff6d2",
-    "edge": "#ffd27a",
-    "glow": "#ffe2a4",
-    "glowRadius": 70,
-    "glowStrength": 0.55
-  },
+  "stars": { "count": 150, "until": 0.62, "color": "#fff2e0" },
 
-  "dunes": {
-    "far": { "height": 22, "base": 6, "waves": [[0.021, 9], [0.047, 4], [0.11, 1.5]], "color": "#9c6878", "light": "#bc8486" },
-    "mid": { "height": 12, "base": -4, "waves": [[0.016, 7], [0.039, 4], [0.09, 2]], "color": "#b07658", "light": "#d0956a", "dark": "#8c5c4a" },
-    "ruins": [
-      { "at": 0.02, "w": 22, "h": 15 },
-      { "at": 0.4, "w": 9, "h": 9 },
-      { "at": 0.46, "w": 14, "h": 12 },
-      { "at": 0.94, "w": 12, "h": 11 }
-    ],
-    "ruinColor": "#7e5048",
-    "ruinLight": "#a46a58"
-  },
-
-  "ground": {
-    "color": "#c08658",
-    "light": "#d8a068",
-    "dark": "#9c6a48",
-    "stone": "#7a5e4a",
-    "stoneLight": "#b49a7a",
-    "grass": "#6e6234",
-    "stones": 0.012,
-    "tufts": 0.006
+  "moon": {
+    "at": 0.8,
+    "y": 0.22,
+    "radius": 12,
+    "halo": 34,
+    "color": "#f0e2cc",
+    "maria": "#c8b4a2",
+    "shade": "#8a7898",
+    "haloColor": "#c8a0c0",
+    "haloAlpha": 0.16
   },
 
   "clouds": {
-    "initial": 3,
-    "interval": [6, 15],
-    "max": 6,
-    "speed": [2.5, 6],
-    "width": [30, 72],
-    "height": [9, 18],
-    "yRange": [0.05, 0.4],
-    "alpha": 0.94,
-    "lit": "#ffd4a0",
-    "mid": "#e2a09a",
-    "shadow": "#a8788e"
+    "count": 4,
+    "yRange": [0.08, 0.45],
+    "width": [50, 120],
+    "height": [10, 20],
+    "speed": [1.5, 4],
+    "top": "#3a2246",
+    "mid": "#6e2e50",
+    "lit": "#d8604a",
+    "alpha": 0.88
+  },
+
+  "mountains": { "parallax": 0.05, "y": -6, "waves": [[0.013, 7], [0.031, 4], [0.08, 1.5]], "color": "#2a1636", "rim": "#5e2a46" },
+
+  "farCity": {
+    "parallax": 0.15,
+    "y": 2,
+    "slot": 11,
+    "width": [6, 18],
+    "height": [8, 38],
+    "gap": 0.05,
+    "ruined": 0.45,
+    "fireChance": 0.35,
+    "color": "#22122c",
+    "rim": "#8a3446",
+    "windows": { "step": 3, "lit": 0.05, "fire": 0.03, "litColor": "#ffb060", "fireColor": "#ff6a30" }
+  },
+
+  "midCity": {
+    "parallax": 0.38,
+    "y": 12,
+    "slot": 18,
+    "width": [10, 30],
+    "height": [14, 64],
+    "gap": 0.15,
+    "ruined": 0.6,
+    "fireChance": 0.45,
+    "color": "#120818",
+    "rim": "#c04a3c",
+    "windows": { "step": 4, "lit": 0.03, "fire": 0.04, "litColor": "#ffb060", "fireColor": "#ff6a30", "dark": "#0a0510" }
+  },
+
+  "near": { "parallax": 0.7, "y": 12, "waves": [[0.02, 3], [0.07, 1.5]], "slot": 46, "color": "#0a0610", "rim": "#d0603a" },
+
+  "front": { "parallax": 1, "y": 18, "waves": [[0.012, 3], [0.05, 1]], "color": "#0e0814", "rim": "#ff8a4a" },
+
+  "fore": { "parallax": 1.4, "y": -4, "waves": [[0.02, 2], [0.06, 1]], "slot": 70, "color": "#020103", "rim": "#b04a34" },
+
+  "fog": { "y": -8, "height": 28, "color": "#7a3448", "alpha": 0.42, "drift": 4 },
+
+  "fires": {
+    "smokeRate": 1.6,
+    "smoke": { "life": [7, 12], "speed": [4, 8], "size": [1.5, 7], "color": "#140c16", "light": "#3a2230", "alpha": 0.78, "drift": -3, "max": 420 },
+    "glow": { "color": "#ff7a30", "radius": 7, "alpha": 0.16 },
+    "flame": ["#fff0b0", "#ffc040", "#ff7020", "#c03010"]
+  },
+
+  "beacons": { "color": "#ff3a2a", "period": 1.6 },
+
+  "tracers": {
+    "interval": [0.6, 2.2],
+    "shots": [6, 16],
+    "rate": 0.07,
+    "speed": [90, 130],
+    "spreadDeg": 35,
+    "life": 1.8,
+    "colors": ["#a8ff88", "#ff7a5a", "#ffd070"],
+    "max": 240
+  },
+
+  "flares": {
+    "firstDelay": [0.5, 2],
+    "interval": [5, 11],
+    "max": 3,
+    "fall": 4,
+    "life": [12, 18],
+    "color": "#ffffff",
+    "glow": "#ffe0b0",
+    "glowRadius": 22,
+    "glowAlpha": 0.07,
+    "trail": "rgba(200,180,190,0.35)"
+  },
+
+  "explosions": {
+    "firstDelay": [1, 3],
+    "interval": [3, 8],
+    "flash": 0.35,
+    "flashDecay": 2.5,
+    "flashColor": "#ff8a4a",
+    "colors": ["#ffffff", "#fff0a0", "#ffb040", "#ff6020", "#a02010"],
+    "sparks": "#ffc060"
   },
 
   "helicopter": {
-    "firstDelay": [2, 5],
-    "interval": [8, 20],
-    "speed": [26, 48],
-    "size": [0.5, 1.1],
-    "yRange": [0.06, 0.4],
-    "body": "#3a3e2e",
-    "dark": "#23261c",
-    "light": "#555a42",
-    "glass": "#7e9aa6",
-    "haze": "#b48496",
-    "rotor": "rgba(26,30,24,0.5)",
-    "rim": "#ffc890"
+    "firstDelay": [3, 6],
+    "interval": [10, 22],
+    "parallax": 0.45,
+    "speed": [18, 28],
+    "yRange": [0.35, 0.6],
+    "color": "#0a0810",
+    "rim": "#ff7a4a",
+    "cockpit": "#3a4a5a",
+    "rotor": "rgba(10,8,16,0.6)",
+    "beam": "rgba(255,236,200,0.07)",
+    "beamCore": "rgba(255,240,210,0.1)",
+    "nav": ["#ff3030", "#30ff60"]
   },
 
-  "tank": {
-    "at": 0.12,
-    "y": 8,
-    "flip": false,
-    "colors": { "hull": "#4a423a", "dark": "#2e2824", "track": "#24201c", "wheel": "#3c3630", "hub": "#6a6058", "char": "#1e1a18", "light": "#6e6254" },
-    "rim": "#ffb070",
-    "glow": { "color": "#ff9440", "radius": 18, "alpha": 0.07, "flicker": 0.4 },
-    "fire": {
-      "emitters": [[27, 4], [9, 15], [48, 15]],
-      "bodies": [[7, 13], [4, 8], [3, 6]],
-      "rate": 40,
-      "life": [0.35, 0.8],
-      "speed": [10, 24],
-      "spread": 3,
-      "colors": ["#fff6c4", "#ffd848", "#ff9a28", "#e04a14", "#7a2a14"],
-      "max": 260
-    },
-    "smoke": {
-      "rate": 7,
-      "life": [6, 10],
-      "speed": [8, 14],
-      "size": [2, 9],
-      "drift": 9,
-      "color": "#342c2a",
-      "light": "#8a7672",
-      "highlight": "#b48a7c",
-      "max": 160
-    },
-    "embers": { "rate": 3, "life": [1, 2.2], "speed": [18, 34], "color": "#ffb048" }
+  "jet": {
+    "firstDelay": [8, 14],
+    "interval": [16, 32],
+    "speed": [150, 190],
+    "yRange": [0.08, 0.3],
+    "color": "#0a0810",
+    "trail": "rgba(220,200,210,0.4)",
+    "burner": "#ffb060"
+  },
+
+  "squad": {
+    "types": ["radio", "rifle", "launcher", "rifle", "flag"],
+    "at": [0.3, 0.44, 0.57, 0.7, 0.84],
+    "stride": 30,
+    "rimSide": 0.2,
+    "frames": 8,
+    "color": "#050307",
+    "far": "#22141e",
+    "rim": "#ff9a50",
+    "rimAmount": 0.75
   },
 
   "flag": {
-    "at": 0.27,
-    "base": 6,
-    "poleHeight": 110,
-    "minTop": 8,
-    "width": 46,
-    "height": 28,
-    "tatter": 10,
-    "holes": 9,
-    "wave": { "speed": 5.2, "length": 0.3, "amplitude": 3.4 },
+    "width": 16,
+    "height": 10,
     "colors": ["#6e1610", "#9c2218", "#c8301f", "#e8523a"],
-    "burnt": "#38100c",
-    "pole": "#4e4034",
-    "poleLight": "#a69276",
-    "finial": "#d8b060"
+    "burnt": "#2a0c08",
+    "wave": { "speed": 7, "length": 0.5, "amplitude": 1.6 }
   },
 
-  "soldier": {
-    "at": 0.6,
-    "x": 0,
-    "y": 0,
-    "top": 2,
-    "breath": 3.4,
-    "glint": [5, 10],
-    "glintTime": 0.6,
-    "glintColor": "rgba(255,244,220,0.75)",
-    "outline": "#1c120e",
-    "rim": "#ffd08c",
-    "rimAmount": 0.55,
-    "shade": { "color": "#2c1a30", "amount": 0.08 },
-    "shadowColor": "#3a1824",
-    "lightColor": "#ffdcaa",
-    "colors": {
-      "inline": "#2e2016",
-      "camo": "#c4a67a",
-      "camoSpots": ["#a68660", "#8a6a4a", "#d8c29a"],
-      "helmet": "#bca27a",
-      "helmetSpots": ["#9e8460", "#7e6648", "#d4be94"],
-      "helmetEdge": "#4e4234",
-      "helmetEdgeLight": "#7a6a52",
-      "velcro": "#a88e66",
-      "velcroLight": "#c8b088",
-      "patch": "#3e4436",
-      "patchLight": "#5e6650",
-      "rail": "#3a3836",
-      "railMid": "#4e4c48",
-      "railDark": "#1e1d1c",
-      "railLight": "#76726c",
-      "cord": "#2e2a24",
-      "cordHook": "#56524a",
-      "metal": "#8a8a84",
-      "cup": "#8e7652",
-      "cupMid": "#a68c64",
-      "cupDark": "#3a3026",
-      "cupLight": "#c0a67a",
-      "cable": "#222020",
-      "mic": "#2a2826",
-      "micLight": "#4e4a46",
-      "skin": "#b98060",
-      "skinMid": "#a46e52",
-      "skinShadow": "#7e4c38",
-      "skinDark": "#4e2a1e",
-      "brows": "#3a2416",
-      "browsLight": "#5c3a26",
-      "beard": "#5a3a26",
-      "beardDark": "#2e1c10",
-      "beardLight": "#7c5638",
-      "beardHighlight": "#a07a58",
-      "mustache": "#4a2e1c",
-      "mustacheDark": "#24150c",
-      "lips": "#5a2a20",
-      "lipsLight": "#94584a",
-      "frame": "#121214",
-      "frameLight": "#3a3a40",
-      "lensMark": "#fe01fe",
-      "lens": ["#241c34", "#3a2444", "#6a2e50", "#a8444e", "#e0744c", "#ffb468"],
-      "glintSoft": "#ffe0c0",
-      "scarf": "#cbb18a",
-      "scarfLight": "#dcc6a0",
-      "scarfDark": "#a8906a",
-      "scarfPattern": "#5e4430",
-      "vest": "#8e7a56",
-      "vestLight": "#ac9670",
-      "vestDark": "#5c4c34",
-      "tourniquet": "#262626",
-      "tourniquetLight": "#3e3e3e",
-      "tourniquetTab": "#c0302a",
-      "antenna": "#262624",
-      "antennaLight": "#46443e",
-      "radio": "#3a3a34",
-      "radioLight": "#5e5e56",
-      "radioDark": "#1e1e1a",
-      "display": "#4e6a3a",
-      "displayLight": "#a8d488",
-      "mag": "#5a4c3a",
-      "magLight": "#7a6a52",
-      "magDark": "#3a3024",
-      "gun": "#2a2a2e",
-      "gunMid": "#3c3c42",
-      "gunDark": "#16161a",
-      "gunLight": "#6c6c76",
-      "furniture": "#3a3632",
-      "furnitureDark": "#24221f",
-      "furnitureLight": "#5a5650",
-      "brass": "#c8a050",
-      "optic": "#2e2e30",
-      "opticDark": "#18181a",
-      "opticGlass": "#c0603a",
-      "opticGlassLight": "#ffb070",
-      "lightLens": "#fff2c0",
-      "gloves": "#a08460",
-      "glovesDark": "#6a5438",
-      "knuckle": "#4a3e30",
-      "knuckleLight": "#6e6050",
-      "cuff": "#5a4a36",
-      "cuffLight": "#7a6a52"
-    }
-  },
-
-  "sand": { "rate": 9, "speed": [40, 85], "color": "rgba(255,228,176,0.55)", "max": 60 }
+  "embers": { "rate": 6, "life": [3, 7], "speed": [8, 20], "colors": ["#ffd070", "#ff8a30", "#c04020"], "max": 90 },
+  "ash": { "rate": 4, "speed": [3, 7], "color": "rgba(200,180,190,0.5)", "max": 60 },
+  "vignette": { "strength": 0.55 }
 }

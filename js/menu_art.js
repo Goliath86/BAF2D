@@ -1,6 +1,6 @@
-// Disegni a pixel della scena del menu (js/menu_scene.js): primitive senza antialiasing, rifiniture
-// (mimetica, ombre, luce di controluce, contorno) e gli sprite procedurali: soldato a mezzo busto,
-// carro armato distrutto, elicottero d'attacco (Apache), nuvole. Colori in config/menu_scene.json.
+// Disegni a pixel della scena del menu (js/menu_scene.js): primitive senza antialiasing e generatori procedurali
+// di sagome in controluce: città in rovina, terreno con ostacoli, soldati in marcia, elicottero, caccia, luna,
+// nuvole. Colori e misure in config/menu_scene.json.
 
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => (v + 0.5) / 16);
 export const bayer = (x, y) => BAYER[(y & 3) * 4 + (x & 3)];
@@ -15,8 +15,13 @@ export function mulberry32(seed) {
   };
 }
 
+/** Generatore casuale stabile per l'elemento i di una serie (stessa i = stesso risultato). */
+export const rngFor = (i, salt) => mulberry32(Math.imul(i, 73856093) ^ Math.imul(salt + 1, 19349663));
+
 export const rnd = (a, b) => a + Math.random() * (b - a);
+export const range = (r, d = [0, 1]) => rnd(...(Array.isArray(r) ? r : d));
 export const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+export const lerp = (a, b, t) => a + (b - a) * t;
 
 export function hex(c) {
   const h = String(c).replace('#', '');
@@ -38,12 +43,12 @@ export function makeCanvas(w, h) {
 // ---------- Primitive a pixel ----------
 
 export function rect(g, x, y, w, h, color) {
-  g.fillStyle = color;
+  if (color) g.fillStyle = color;
   g.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
 }
 
 export function disc(g, cx, cy, r, color) {
-  g.fillStyle = color;
+  if (color) g.fillStyle = color;
   const ir = Math.ceil(r);
   for (let dy = -ir; dy <= ir; dy++) {
     const k = r * r - dy * dy;
@@ -53,7 +58,6 @@ export function disc(g, cx, cy, r, color) {
   }
 }
 
-/** Righe di un'ellisse, solo tra yMin e yMax. */
 export function ellipseRows(g, cx, cy, rx, ry, color, yMin = -Infinity, yMax = Infinity) {
   g.fillStyle = color;
   for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++) {
@@ -67,7 +71,6 @@ export function ellipseRows(g, cx, cy, rx, ry, color, yMin = -Infinity, yMax = I
   }
 }
 
-/** Poligono pieno (scanline, pari-dispari). */
 export function poly(g, pts, color) {
   g.fillStyle = color;
   let y0 = Infinity;
@@ -93,9 +96,8 @@ export function poly(g, pts, color) {
   }
 }
 
-/** Linea spessa w pixel. */
 export function line(g, x0, y0, x1, y1, w, color) {
-  g.fillStyle = color;
+  if (color) g.fillStyle = color;
   x0 = Math.round(x0);
   y0 = Math.round(y0);
   x1 = Math.round(x1);
@@ -121,99 +123,11 @@ export function line(g, x0, y0, x1, y1, w, color) {
   }
 }
 
-/** Arto: quadrilatero tra due punti con larghezze w0 e w1. */
-export function limb(g, x0, y0, x1, y1, w0, w1, color) {
-  const len = Math.hypot(x1 - x0, y1 - y0) || 1;
-  const nx = -(y1 - y0) / len;
-  const ny = (x1 - x0) / len;
-  poly(g, [[x0 + nx * w0 / 2, y0 + ny * w0 / 2], [x1 + nx * w1 / 2, y1 + ny * w1 / 2], [x1 - nx * w1 / 2, y1 - ny * w1 / 2], [x0 - nx * w0 / 2, y0 - ny * w0 / 2]], color);
-}
-
-/** Rumore a macchie stabile 0..1. */
-export function blobNoise(seed, cell) {
-  const r = mulberry32(seed);
-  const N = 64;
-  const grid = Array.from({ length: N * N }, () => r());
-  const at = (i, j) => grid[(((j % N) + N) % N) * N + (((i % N) + N) % N)];
-  const s = (t) => t * t * (3 - 2 * t);
-  return (x, y) => {
-    const fx = x / cell;
-    const fy = y / cell;
-    const i = Math.floor(fx);
-    const j = Math.floor(fy);
-    const u = s(fx - i);
-    const v = s(fy - j);
-    const a = at(i, j) + (at(i + 1, j) - at(i, j)) * u;
-    const b = at(i, j + 1) + (at(i + 1, j + 1) - at(i, j + 1)) * u;
-    return a + (b - a) * v;
-  };
-}
-
-/** Ricolora i pixel di colore esatto "base" con fn(x, y) -> [r,g,b] | null. */
-export function recolor(canvas, base, fn) {
-  const g = canvas.getContext('2d', { willReadFrequently: true });
-  const img = g.getImageData(0, 0, canvas.width, canvas.height);
-  const d = img.data;
-  const B = hex(base);
-  for (let y = 0; y < canvas.height; y++) {
-    for (let x = 0; x < canvas.width; x++) {
-      const i = (y * canvas.width + x) * 4;
-      if (d[i + 3] === 0 || d[i] !== B[0] || d[i + 1] !== B[1] || d[i + 2] !== B[2]) continue;
-      const c = fn(x, y);
-      if (c) {
-        d[i] = c[0];
-        d[i + 1] = c[1];
-        d[i + 2] = c[2];
-      }
-    }
-  }
-  g.putImageData(img, 0, 0);
-}
-
-/** Mimetica a macchie sui pixel di colore "base" (spots: 2-4 colori). */
-export function camouflage(canvas, base, spots, noise, shift = (x, y) => y) {
-  const S = spots.map(hex);
-  recolor(canvas, base, (x, y0) => {
-    const y = shift(x, y0);
-    const v = noise(x, y);
-    const w = noise(x + 37, y + 11);
-    const u = noise(x * 1.7 + 71, y * 1.7 + 5);
-    if (v < 0.3) return S[0];
-    if (w < 0.24) return S[1 % S.length];
-    if (v > 0.74) return S[2 % S.length];
-    if (S[3] && u < 0.2) return S[3];
-    return null;
-  });
-}
-
-/** Ombre e luci dipinte su maschere (alpha = intensità) applicate allo sprite. */
-function applyMasks(canvas, shadowMask, lightMask, shadowColor, lightColor) {
-  const W = canvas.width;
-  const H = canvas.height;
-  const g = canvas.getContext('2d', { willReadFrequently: true });
-  const img = g.getImageData(0, 0, W, H);
-  const d = img.data;
-  const sm = shadowMask.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, W, H).data;
-  const lm = lightMask.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, W, H).data;
-  const S = hex(shadowColor);
-  const L = hex(lightColor);
-  for (let i = 0; i < d.length; i += 4) {
-    if (!d[i + 3]) continue;
-    let c = [d[i], d[i + 1], d[i + 2]];
-    if (sm[i + 3]) c = mixRGB(c, S, sm[i + 3] / 255);
-    if (lm[i + 3]) c = mixRGB(c, L, lm[i + 3] / 255);
-    d[i] = c[0];
-    d[i + 1] = c[1];
-    d[i + 2] = c[2];
-  }
-  g.putImageData(img, 0, 0);
-}
-
 /**
- * Rifinitura: tinta (tint), luce sul lato del sole larga rimWidth px (rimDir -1 = sinistra, +1 = destra; più
- * debole in alto), contorno di 1 px (outline). Lo sprite deve avere un margine trasparente.
+ * Luce di controluce sulle sagome: i pixel pieni con il vuoto sopra (o di lato, side = -1/+1) prendono il colore
+ * della luce, i successivi "depth" pixel sfumano a retino.
  */
-export function finish(canvas, { tint, tintAmount = 0, rim, rimAmount = 0.6, rimDir = 0, rimWidth = 1, outline }) {
+export function rimLight(canvas, color, { amount = 0.8, depth = 2, side = 0, sideAmount = 0.5 } = {}) {
   const W = canvas.width;
   const H = canvas.height;
   const g = canvas.getContext('2d', { willReadFrequently: true });
@@ -221,748 +135,420 @@ export function finish(canvas, { tint, tintAmount = 0, rim, rimAmount = 0.6, rim
   const d = img.data;
   const src = new Uint8ClampedArray(d);
   const a = (x, y) => (x < 0 || y < 0 || x >= W || y >= H ? 0 : src[(y * W + x) * 4 + 3]);
-  const T = tint ? hex(tint) : null;
-  const R = rim ? hex(rim) : null;
-  const O = outline ? hex(outline) : null;
+  const L = hex(color);
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
       const i = (y * W + x) * 4;
-      if (src[i + 3] > 0) {
-        let c = [src[i], src[i + 1], src[i + 2]];
-        if (T) c = mixRGB(c, T, tintAmount);
-        if (R) {
-          let side = 0;
-          if (rimDir) for (let k = 1; k <= rimWidth && !side; k++) if (!a(x + rimDir * k, y)) side = k;
-          const top = !a(x, y - 1);
-          if (side) c = mixRGB(c, R, rimAmount * (side === 1 ? 1 : 0.5));
-          else if (top) c = mixRGB(c, R, rimAmount * 0.45);
+      if (!src[i + 3]) continue;
+      let k = 0;
+      for (let s = 1; s <= depth; s++) {
+        if (!a(x, y - s)) {
+          k = s === 1 ? amount : amount * (1 - (s - 1) / depth) * (bayer(x, y) < 0.5 ? 1 : 0);
+          break;
         }
-        d[i] = c[0];
-        d[i + 1] = c[1];
-        d[i + 2] = c[2];
-      } else if (O && (a(x - 1, y) || a(x + 1, y) || a(x, y - 1) || a(x, y + 1))) {
-        d[i] = O[0];
-        d[i + 1] = O[1];
-        d[i + 2] = O[2];
-        d[i + 3] = 255;
       }
+      if (!k && side && !a(x + side, y)) k = sideAmount;
+      if (!k) continue;
+      const c = mixRGB([src[i], src[i + 1], src[i + 2]], L, k);
+      d[i] = c[0];
+      d[i + 1] = c[1];
+      d[i + 2] = c[2];
     }
   }
   g.putImageData(img, 0, 0);
 }
 
-/** Aggiunge un contorno di 1 px (colore color) attorno ai pixel pieni di un livello. */
-function outlineLayer(canvas, color) {
-  const W = canvas.width;
-  const H = canvas.height;
-  const g = canvas.getContext('2d', { willReadFrequently: true });
-  const img = g.getImageData(0, 0, W, H);
-  const d = img.data;
-  const src = new Uint8ClampedArray(d);
-  const a = (x, y) => (x < 0 || y < 0 || x >= W || y >= H ? 0 : src[(y * W + x) * 4 + 3]);
-  const O = hex(color);
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      const i = (y * W + x) * 4;
-      if (src[i + 3] || !(a(x - 1, y) || a(x + 1, y) || a(x, y - 1) || a(x, y + 1))) continue;
-      d[i] = O[0];
-      d[i + 1] = O[1];
-      d[i + 2] = O[2];
-      d[i + 3] = 255;
+// ---------- Cielo: luna e nuvole ----------
+
+/** Luna con mari scuri, lato in ombra e un alone a fasce. */
+export function makeMoon(cfg) {
+  const R = cfg.radius ?? 13;
+  const HR = cfg.halo ?? 34;
+  const { c, g } = makeCanvas(HR * 2 + 2, HR * 2 + 2);
+  const cx = HR + 1;
+  const cy = HR + 1;
+  const halo = hex(cfg.haloColor || '#c8a8c8');
+  for (let y = 0; y < c.height; y++) {
+    for (let x = 0; x < c.width; x++) {
+      const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy);
+      if (d <= R || d >= HR) continue;
+      const k = ((1 - (d - R) / (HR - R)) ** 2) * (cfg.haloAlpha ?? 0.35);
+      const q = Math.floor(k * 12 + bayer(x, y)) / 12;
+      if (q <= 0) continue;
+      g.fillStyle = `rgba(${halo[0]},${halo[1]},${halo[2]},${q})`;
+      g.fillRect(x, y, 1, 1);
     }
   }
-  g.putImageData(img, 0, 0);
-}
-
-// ---------- Soldato a mezzo busto (primo piano) ----------
-
-export const BUST = { w: 240, h: 300, margin: 3 };
-
-/** Punti di una curva quadratica (p0 -> p2, controllo p1). */
-function quad(p0, p1, p2, n = 18) {
-  const out = [];
-  for (let i = 0; i <= n; i++) {
-    const t = i / n;
-    const a = (1 - t) * (1 - t);
-    const b = 2 * (1 - t) * t;
-    const cc = t * t;
-    out.push([a * p0[0] + b * p1[0] + cc * p2[0], a * p0[1] + b * p1[1] + cc * p2[1]]);
+  disc(g, cx, cy, R, cfg.color || '#f2e6d4');
+  const r = mulberry32(cfg.seed ?? 3);
+  for (let i = 0; i < 7; i++) {
+    const a = r() * Math.PI * 2;
+    const dd = r() * R * 0.6;
+    disc(g, cx + Math.cos(a) * dd - 1, cy + Math.sin(a) * dd, 1 + r() * R * 0.28, cfg.maria || '#cbb8a8');
   }
-  return out;
-}
-
-/** Punto dentro un poligono (pari-dispari). */
-export function insidePoly(pts, x, y) {
-  let ins = false;
-  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
-    const [xi, yi] = pts[i];
-    const [xj, yj] = pts[j];
-    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) ins = !ins;
+  for (let y = -R; y <= R; y++) {
+    for (let x = -R; x <= R; x++) {
+      if (x * x + y * y > R * R) continue;
+      const t = (x + R) / (2 * R);
+      if (t > 0.72 + bayer(x + 52, y + 52) * 0.18) {
+        g.fillStyle = cfg.shade || '#9a86a0';
+        g.fillRect(cx + x, cy + y, 1, 1);
+      }
+    }
   }
-  return ins;
+  return c;
 }
 
-/** Lenti degli occhiali (coordinate dello sprite senza margine): servono anche al riflesso animato. */
-export const BUST_LENSES = [
-  [[79, 109], [117, 109], [117, 125], [112, 131], [84, 131], [79, 125]],
-  [[123, 109], [161, 109], [161, 125], [156, 131], [128, 131], [123, 125]],
-];
-
-/**
- * Ritratto a mezzo busto, visto di fronte, luce calda da sinistra: elmetto con copertura in mimetica digitale,
- * slitta del visore, pannelli a velcro, binari laterali ed elastici; cuffie con microfono e cavi; occhiali
- * avvolgenti col tramonto riflesso; sopracciglia aggrottate, rughe, barba e baffi a ciocche; kefiah con trama e
- * pieghe; spallacci con fettucce MOLLE, radio con antenna, laccio emostatico, caricatori; fucile in primo piano
- * con calcio, castello, mirino olografico, slitte, torcia; guanti con paranocche. Restituisce il canvas rifinito.
- */
-export function buildBust(sc, sunDir, seed) {
-  const c = sc.colors || {};
-  const M = BUST.margin;
-  const W = BUST.w + M * 2;
-  const H = BUST.h + M * 2;
-  const main = makeCanvas(W, H);
-  const shade = makeCanvas(W, H);
-  const light = makeCanvas(W, H);
-  for (const k of [main, shade, light]) k.g.translate(M, M);
-  let g = main.g;
-  let sg = shade.g;
-  let lg = light.g;
+/** Nuvola notturna a sbuffi: scura in alto, accesa dal basso dal riverbero degli incendi, bordi sfumati a retino. */
+export function makeCloudStreak(cfg, w, h, seed) {
   const r = mulberry32(seed);
-  const A = (a) => `rgba(0,0,0,${a})`;
-  const S = (pts, a = 0.5) => poly(sg, pts, A(a));
-  const Sr = (x, y, w, h, a = 0.5) => rect(sg, x, y, w, h, A(a));
-  const Sl = (x0, y0, x1, y1, w = 1, a = 0.5) => line(sg, x0, y0, x1, y1, w, A(a));
-  const Sp = (pts, w = 1, a = 0.5) => {
-    for (let i = 0; i + 1 < pts.length; i++) line(sg, pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], w, A(a));
-  };
-  const L = (pts, a = 0.35) => poly(lg, pts, A(a));
-  const Lr = (x, y, w, h, a = 0.35) => rect(lg, x, y, w, h, A(a));
-  const Ll = (x0, y0, x1, y1, w = 1, a = 0.35) => line(lg, x0, y0, x1, y1, w, A(a));
-  const Lp = (pts, w = 1, a = 0.35) => {
-    for (let i = 0; i + 1 < pts.length; i++) line(lg, pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], w, A(a));
-  };
-  const path = (pts, w, col) => {
-    for (let i = 0; i + 1 < pts.length; i++) line(g, pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], w, col);
-  };
-  const mirrorX = (pts) => pts.map(([x, y]) => [240 - x, y]);
-  let ty = 0; // spostamento verticale delle parti in corso (fucile e mani)
-  /** Disegna fn spostato in basso di d px (parti e maschere di ombra/luce). */
-  const shiftY = (d, fn) => {
-    ty += d;
-    sg.save();
-    lg.save();
-    sg.translate(0, d);
-    lg.translate(0, d);
-    fn();
-    sg.restore();
-    lg.restore();
-    ty -= d;
-  };
-  /**
-   * Parte su un livello a sé: colori, texture (mimetica, trame, barba...), ombre e luci proprie (le chiamate
-   * S/L dentro fn valgono solo per questa parte), poi un contorno interno e l'incollaggio sul resto.
-   */
-  const part = (fn, outline = c.inline || '#3a281c') => {
-    const Lc = makeCanvas(W, H);
-    const Ls = makeCanvas(W, H);
-    const Ll = makeCanvas(W, H);
-    for (const k of [Lc, Ls, Ll]) k.g.translate(M, M + ty);
-    const prev = [g, sg, lg];
-    [g, sg, lg] = [Lc.g, Ls.g, Ll.g];
-    fn();
-    [g, sg, lg] = prev;
-    textures(Lc.c);
-    applyMasks(Lc.c, Ls.c, Ll.c, sc.shadowColor || '#2a1630', sc.lightColor || '#ffd8a0');
-    outlineLayer(Lc.c, outline);
-    main.g.save();
-    main.g.setTransform(1, 0, 0, 1, 0, 0);
-    main.g.drawImage(Lc.c, 0, 0);
-    main.g.restore();
-  };
-
-  // ===== texture (applicate a ogni parte): mimetica digitale, trama della kefiah, barba a ciocche, pelle, lenti =====
-  const textures = (cv) => {
-    const camoN = blobNoise(seed + 3, 7);
-    const helmN = blobNoise(seed + 5, 6);
-    const digital = (noise, spots) => {
-      const Sx = spots.map(hex);
-      return (x, y) => {
-        const bx = Math.floor(x / 3) * 3;
-        const by = Math.floor(y / 3) * 3;
-        const v = noise(bx, by);
-        const w = noise(bx + 53, by + 17);
-        if (v < 0.3) return Sx[0];
-        if (w < 0.26) return Sx[1 % Sx.length];
-        if (v > 0.72) return Sx[2 % Sx.length];
-        return null;
-      };
-    };
-    recolor(cv, c.camo, digital(camoN, c.camoSpots || [c.camo]));
-    recolor(cv, c.helmet, digital(helmN, c.helmetSpots || [c.helmet]));
-    const scN = blobNoise(seed + 11, 5);
-    const scDark = hex(c.scarfPattern);
-    const scMid = hex(c.scarfDark);
-    const scLight = hex(c.scarfLight || c.scarf);
-    recolor(cv, c.scarf, (x, y) => {
-      const bx = Math.floor(x / 4);
-      const by = Math.floor(y / 4);
-      const v = scN(bx * 4, by * 4);
-      if (v < 0.28 || ((bx + by * 2) % 7 === 0 && v < 0.5)) return scDark;
-      if (v > 0.7) return scMid;
-      return (x + y) % 3 === 0 ? scLight : null;
-    });
-    const hairN = blobNoise(seed + 13, 2);
-    const BD = hex(c.beardDark);
-    const BL = hex(c.beardLight);
-    const BH = hex(c.beardHighlight || c.beardLight);
-    const MD = hex(c.mustacheDark || c.beardDark);
-    const strands = (x, y, dark, mid, lightC) => {
-      const v = hairN(x * 2.4, y * 0.45);
-      const w = hairN(x * 2.4 + 40, y * 0.45 + 9);
-      if (v < 0.32) return dark;
-      if (v > 0.8) return lightC;
-      if (w > 0.78) return BH;
-      return mid;
-    };
-    recolor(cv, c.beard, (x, y) => strands(x, y, BD, hex(c.beard), BL));
-    recolor(cv, c.mustache, (x, y) => strands(x, y, MD, hex(c.mustache), BL));
-    const skinN = blobNoise(seed + 17, 1.3);
-    const SKM = hex(c.skinMid);
-    recolor(cv, c.skin, (x, y) => (skinN(x, y) < 0.18 ? SKM : null));
-    const lens = (c.lens || ['#2a2038', '#4a2a4c', '#8a3a56', '#c8564c', '#f08a52', '#ffc272']).map(hex);
-    const GL = hex(c.glintSoft || '#ffd0a8');
-    recolor(cv, c.lensMark, (x, y0) => {
-      const y = y0 - M;
-      const t = clamp((y - 109) / 22, 0, 0.999);
-      let col = lens[Math.floor(t * lens.length)];
-      if (t > 0.6 && t < 0.7) col = mixRGB(col, lens[0], 0.6); // riflesso dell'orizzonte
-      const d = (x - M - y * 0.7 + 400) % 34;
-      if (t < 0.55 && d < 3) col = mixRGB(col, GL, 0.55);
-      if (bayer(x, y0) < 0.25 && t > 0.2 && t < 0.6) col = mixRGB(col, lens[Math.min(lens.length - 1, Math.floor(t * lens.length) + 1)], 0.5);
-      return col;
-    });
-  };
-
-  // ===== spalle e camicia mimetica =====
-  part(() => {
-    poly(g, [[0, 224], [22, 206], [62, 194], [178, 194], [218, 206], [240, 224], [240, 300], [0, 300]], c.camo);
-    S([[178, 196], [218, 206], [240, 224], [240, 300], [196, 300]], 0.35);
-    Sl(6, 236, 22, 256, 1, 0.45);
-    Sl(10, 230, 26, 240, 1, 0.35);
-    Sl(222, 238, 234, 258, 1, 0.45);
-    Ll(4, 228, 22, 212, 2, 0.35);
-  });
-
-  // ===== giubbotto: spallacci con fettucce, pannello frontale =====
-  const leftStrap = [[30, 212], [80, 204], [94, 300], [20, 300]];
-  const rightStrap = mirrorX(leftStrap).reverse();
-  const front = [[88, 244], [152, 244], [160, 300], [80, 300]];
-  /** Fettucce MOLLE dentro un poligono: strisce orizzontali con cuciture verticali. */
-  const molle = (pts, y0, y1) => {
-    for (let y = y0; y < y1; y += 6) {
-      for (let x = 0; x < 240; x++) {
-        if (!insidePoly(pts, x + 0.5, y + 0.5)) continue;
-        rect(g, x, y, 1, 1, c.vestDark);
-        rect(g, x, y + 1, 1, 1, c.vestLight);
-        if ((x + Math.floor(y / 6) * 3) % 9 === 0) rect(g, x, y + 2, 1, 3, c.vestDark);
-      }
-    }
-  };
-  part(() => {
-    poly(g, leftStrap, c.vest);
-    poly(g, rightStrap, c.vest);
-    poly(g, front, c.vest);
-    molle(leftStrap, 214, 300);
-    molle(rightStrap, 214, 300);
-    molle(front, 250, 300);
-    // bordature dei lati degli spallacci
-    path([[30, 212], [20, 300]], 2, c.vestDark);
-    path([[80, 204], [94, 300]], 2, c.vestDark);
-    path([[160, 204], [146, 300]], 2, c.vestDark);
-    path([[210, 212], [220, 300]], 2, c.vestDark);
-    S(rightStrap, 0.3);
-    S([[70, 206], [80, 204], [94, 300], [84, 300]], 0.3);
-    Sr(20, 230, 200, 8, 0.3); // ombra sotto la kefiah
-  });
-
-  // laccio emostatico e anello a D sullo spallaccio sinistro
-  part(() => {
-    rect(g, 42, 222, 12, 30, c.tourniquet);
-    rect(g, 42, 222, 12, 2, c.tourniquetLight);
-    for (let y = 228; y < 250; y += 4) rect(g, 43, y, 10, 1, c.tourniquetLight);
-    rect(g, 44, 250, 8, 5, c.tourniquetTab);
-    rect(g, 60, 228, 8, 3, c.metal);
-    rect(g, 60, 231, 2, 6, c.metal);
-    rect(g, 66, 231, 2, 6, c.metal);
-    rect(g, 60, 236, 8, 2, c.metal);
-  });
-
-  // radio sullo spallaccio destro, antenna e cavo verso le cuffie
-  part(() => {
-    // antenna (dietro la testa, sale oltre la spalla)
-    line(g, 190, 226, 218, 92, 4, c.antenna);
-    for (let i = 0; i < 14; i++) {
-      const y = 214 - i * 9;
-      const x = 190 + ((226 - y) / 134) * 28;
-      rect(g, x - 1, y, 4, 1, c.antennaLight);
-    }
-    rect(g, 215, 88, 6, 6, c.antenna);
-    rect(g, 183, 214, 8, 14, c.antenna);
-    // radio
-    rect(g, 164, 224, 34, 46, c.radio);
-    rect(g, 164, 224, 34, 2, c.radioLight);
-    rect(g, 168, 230, 26, 12, c.radioDark);
-    for (let y = 231; y < 242; y += 2) rect(g, 169, y, 24, 1, c.radio);
-    rect(g, 170, 246, 10, 6, c.display);
-    rect(g, 171, 247, 3, 1, c.displayLight);
-    disc(g, 172, 220, 3, c.radioDark);
-    disc(g, 182, 221, 2, c.radioDark);
-    rect(g, 171, 219, 2, 1, c.radioLight);
-    // tasca: elastici sopra la radio
-    rect(g, 162, 256, 38, 4, c.vest);
-    rect(g, 162, 256, 38, 1, c.vestLight);
-    rect(g, 162, 264, 38, 4, c.vest);
-    S([[190, 224], [198, 224], [198, 270], [190, 270]], 0.35);
-  });
-
-  // caricatori nelle tasche aperte (in basso al centro)
-  part(() => {
-    for (const x of [122, 138]) {
-      rect(g, x, 262, 12, 38, c.mag);
-      rect(g, x, 262, 12, 2, c.magLight);
-      for (let y = 268; y < 300; y += 3) rect(g, x + 1, y, 10, 1, c.magDark);
-    }
-    rect(g, 118, 276, 36, 24, c.vest);
-    rect(g, 118, 276, 36, 1, c.vestLight);
-    rect(g, 132, 276, 2, 24, c.vestDark);
-  });
-
-  // ===== kefiah avvolta attorno al collo =====
-  const scarf = [[66, 182], [174, 182], [202, 196], [216, 214], [208, 232], [182, 244], [150, 252], [120, 256], [90, 252], [58, 244], [32, 232], [24, 214], [38, 196]];
-  part(() => {
-  poly(g, scarf, c.scarf);
-  // pieghe: ombre curve con il bordo superiore illuminato
-  for (const [a, b, cc, w] of [
-    [[40, 204], [120, 236], [200, 204], 3],
-    [[30, 220], [120, 254], [210, 220], 3],
-    [[56, 192], [120, 214], [184, 192], 2],
-    [[70, 236], [96, 226], [118, 252], 2],
-    [[150, 228], [170, 238], [190, 232], 2],
-  ]) {
-    Sp(quad(a, b, cc), w, 0.28);
-    Sp(quad([a[0], a[1] + w], [b[0], b[1] + w], [cc[0], cc[1] + w]), 1, 0.15);
-    Lp(quad([a[0], a[1] - w], [b[0], b[1] - w], [cc[0], cc[1] - w]), 1, 0.35);
+  const { c, g } = makeCanvas(w + 8, h + 6);
+  const base = h + 2;
+  const puffs = [];
+  let x = 6;
+  while (x < w) {
+    const k = 1 - Math.abs(x / w - 0.5) * 1.3;
+    const ry = Math.max(2, h * (0.35 + r() * 0.5) * Math.max(0.3, k));
+    puffs.push([x, base - ry * 0.55, 5 + r() * 9, ry]);
+    x += 4 + r() * 8;
   }
-  S([[150, 186], [174, 182], [202, 196], [216, 214], [208, 232], [182, 244], [160, 248]], 0.35);
-  });
-
-  // ===== testa: viso =====
-  const face = [[76, 90], [164, 90], [167, 128], [164, 160], [154, 184], [136, 200], [104, 200], [86, 184], [76, 160], [73, 128]];
-  part(() => {
-    poly(g, face, c.skin);
-    // fronte: rughe
-    for (const [x0, y0, x1, y1] of [[92, 99], [126, 99], [100, 95]].map(([x, y], i) => [x, y, x + [18, 20, 40][i], y + [-1, 1, 0][i]])) line(g, x0, y0, x1, y1, 1, c.skinMid);
-    // sopracciglia aggrottate e ruga tra le sopracciglia
-    poly(g, [[82, 99], [115, 102], [116, 106], [84, 104]], c.brows);
-    poly(g, [[124, 102], [158, 99], [156, 104], [124, 106]], c.brows);
-    for (let x = 84; x < 114; x += 3) rect(g, x, 99 + Math.round((x - 82) * 0.09), 2, 1, c.browsLight);
-    for (let x = 126; x < 156; x += 3) rect(g, x, 102 - Math.round((x - 124) * 0.09), 2, 1, c.browsLight);
-    line(g, 118, 97, 118, 106, 1, c.skinShadow);
-    line(g, 121, 97, 122, 106, 1, c.skinShadow);
-    // naso
-    poly(g, [[116, 122], [124, 122], [130, 146], [134, 152], [128, 157], [112, 157], [106, 152], [110, 146]], c.skin);
-    path([[110, 146], [106, 152], [111, 157]], 1, c.skinShadow);
-    path([[130, 146], [134, 152], [129, 157]], 1, c.skinShadow);
-    ellipseRows(g, 114, 153.5, 3, 1.6, c.skinDark);
-    ellipseRows(g, 126, 153.5, 3, 1.6, c.skinDark);
-    // pieghe naso-labiali, zampe di gallina
-    path([[105, 150], [99, 160], [95, 168]], 1, c.skinShadow);
-    path([[135, 150], [141, 160], [145, 168]], 1, c.skinShadow);
-    for (const [x, y, dx, dy] of [[74, 118, -4, -2], [74, 122, -5, 0], [74, 126, -4, 2], [166, 118, 4, -2], [166, 122, 5, 0], [166, 126, 4, 2]]) line(g, x, y, x + dx, y + dy, 1, c.skinShadow);
-    // barba (ciocche più avanti) con il bordo irregolare
-    const beard = [[74, 138], [86, 147], [100, 153], [107, 158], [133, 158], [140, 153], [154, 147], [166, 138], [168, 160], [161, 183], [149, 201], [133, 213], [107, 213], [91, 201], [79, 183], [72, 160]];
-    poly(g, beard, c.beard);
-    for (let i = 0; i < 70; i++) {
-      // ciuffi che sporgono in basso e peluria sulle guance
-      const t = r();
-      if (i < 40) {
-        const x = 82 + t * 76;
-        const yb = 212 - Math.abs(x - 120) * 0.55;
-        line(g, x, yb - 2, x + (r() - 0.5) * 3, yb + 2 + r() * 4, 1, c.beard);
-      } else {
-        const x = 76 + t * 88;
-        const yt = 140 + Math.abs(x - 120) * -0.05 + (x < 107 ? (107 - x) * -0.2 + 12 : x > 133 ? (x - 133) * -0.2 + 12 : 17);
-        rect(g, x, yt - 2 - r() * 4, 1, 2, c.beard);
-      }
-    }
-    // baffi
-    poly(g, [[104, 158], [120, 156], [136, 158], [147, 168], [143, 177], [136, 170], [120, 168], [104, 170], [97, 177], [93, 168]], c.mustache);
-    // bocca
-    rect(g, 108, 171, 24, 2, c.lips);
-    rect(g, 110, 173, 20, 3, c.lipsLight);
-    rect(g, 113, 176, 14, 1, c.lips);
-    // occhiali avvolgenti: montatura, lenti, aste
-    poly(g, [[76, 106], [119, 107], [119, 126], [113, 134], [83, 134], [76, 126]], c.frame);
-    poly(g, [[121, 107], [164, 106], [164, 126], [157, 134], [127, 134], [121, 126]], c.frame);
-    rect(g, 76, 106, 88, 3, c.frame);
-    rect(g, 116, 108, 8, 6, c.frame);
-    line(g, 76, 110, 64, 114, 3, c.frame);
-    line(g, 164, 110, 176, 114, 3, c.frame);
-    rect(g, 78, 106, 40, 1, c.frameLight);
-    for (const lens of BUST_LENSES) poly(g, lens, c.lensMark);
-  // ombre del viso: sotto l'elmetto, lato destro, sotto gli occhiali, attorno al naso
-  Sr(73, 90, 96, 6, 0.6);
-  Sr(73, 96, 96, 3, 0.35);
-  S([[146, 96], [164, 90], [167, 128], [164, 160], [150, 152], [146, 132]], 0.4);
-  Sr(80, 134, 80, 4, 0.35);
-  S([[123, 124], [130, 146], [134, 152], [128, 157], [122, 157]], 0.4);
-  Sr(108, 157, 24, 3, 0.45);
-  S([[136, 158], [147, 168], [143, 177], [154, 186], [161, 183], [168, 160], [166, 140]], 0.3);
-  L([[80, 136], [100, 136], [97, 148], [82, 146]], 0.3);
-  Ll(117, 124, 112, 146, 2, 0.45);
-  Lr(115, 148, 5, 2, 0.5);
-  Ll(80, 96, 112, 95, 1, 0.3);
-  // volume: ombra graduata a retino verso destra e sotto l'elmetto, luce su naso e zigomo sinistro
-  for (let y = 96; y < 200; y++) {
-    for (let x = 136; x < 168; x++) if (bayer(x, y) < (x - 136) / 34) Sr(x, y, 1, 1, 0.3);
-  }
-  for (let y = 99; y < 106; y++) for (let x = 74; x < 166; x++) if (bayer(x, y) < 1 - (y - 99) / 7) Sr(x, y, 1, 1, 0.3);
-  S([[78, 140], [96, 146], [92, 160], [76, 156]], 0.2);
-  Ll(119, 112, 119, 124, 2, 0.4);
-  Lr(84, 92, 22, 2, 0.25);
-  Ll(84, 138, 96, 136, 1, 0.45);
-  });
-
-  // ===== elmetto =====
-  part(() => {
-    ellipseRows(g, 120, 96, 78, 94, c.helmet, 2, 91);
-    rect(g, 43, 88, 154, 5, c.helmetEdge);
-    rect(g, 43, 88, 154, 1, c.helmetEdgeLight);
-    // pannelli a velcro con cuciture
-    for (const pts of [[[56, 42], [94, 28], [98, 54], [60, 66]], mirrorX([[56, 42], [94, 28], [98, 54], [60, 66]])]) {
-      poly(g, pts, c.velcro);
-      for (let i = 0; i < pts.length; i++) {
-        const a = pts[i];
-        const b = pts[(i + 1) % pts.length];
-        const n = Math.round(Math.hypot(b[0] - a[0], b[1] - a[1]) / 3);
-        for (let k = 0; k < n; k += 1) {
-          const t = k / n;
-          rect(g, a[0] + (b[0] - a[0]) * t + (pts[2][0] - a[0]) * 0.06, a[1] + (b[1] - a[1]) * t + (pts[2][1] - a[1]) * 0.06, 1, 1, c.velcroLight);
-        }
-      }
-    }
-    // toppa a infrarossi sul velcro di destra
-    rect(g, 150, 38, 18, 11, c.patch);
-    for (let x = 151; x < 167; x += 3) rect(g, x, 39, 1, 9, c.patchLight);
-    // binari laterali con fessure
-    for (const pts of [[[42, 50], [58, 44], [62, 90], [45, 92]], mirrorX([[42, 50], [58, 44], [62, 90], [45, 92]])]) {
-      poly(g, pts, c.rail);
-      const xm = (pts[0][0] + pts[1][0]) / 2;
-      for (let y = 54; y < 88; y += 6) rect(g, xm - 5 + (y - 54) * 0.06 * Math.sign(120 - xm), y, 10, 2, c.railDark);
-      rect(g, xm - 6, 48, 12, 1, c.railLight);
-    }
-    // elastici sulla calotta
-    path(quad([50, 72], [70, 18], [104, 10]), 2, c.cord);
-    path(quad([190, 72], [170, 18], [136, 10]), 2, c.cord);
-    path(quad([62, 82], [120, 74], [178, 82]), 2, c.cord);
-    for (const [x, y] of [[50, 72], [190, 72], [62, 82], [178, 82]]) disc(g, x, y, 2, c.cordHook);
-    // slitta del visore notturno
-    rect(g, 100, 3, 40, 40, c.rail);
-    rect(g, 104, 7, 32, 22, c.railMid);
-    rect(g, 110, 11, 20, 12, c.railDark);
-    rect(g, 112, 13, 16, 2, c.railMid);
-    rect(g, 104, 7, 32, 1, c.railLight);
-    disc(g, 106, 34, 2, c.railLight);
-    disc(g, 134, 34, 2, c.railLight);
-    rect(g, 106, 34, 1, 1, c.railDark);
-    rect(g, 134, 34, 1, 1, c.railDark);
-    rect(g, 108, 40, 24, 10, c.rail);
-    rect(g, 114, 42, 12, 6, c.railMid);
-    for (let x = 115; x < 125; x += 2) rect(g, x, 43, 1, 4, c.railDark);
-    rect(g, 98, 30, 3, 8, c.railMid);
-    rect(g, 139, 30, 3, 8, c.railMid);
-    // rivetti sul bordo
-    for (const x of [70, 96, 144, 170]) rect(g, x, 86, 2, 2, c.metal);
-    S([[140, 6], [184, 34], [198, 70], [197, 92], [150, 92], [146, 44]], 0.35);
-    L([[54, 46], [80, 16], [98, 8], [96, 18], [72, 30], [60, 50]], 0.35);
-  });
-
-  // ===== cuffie con microfono e cavi =====
-  part(() => {
-    for (const [cx, side] of [[50, -1], [190, 1]]) {
-      rect(g, cx - 4, 86, 8, 18, c.cupDark); // braccio verso il binario
-      rect(g, cx - 3, 88, 2, 14, c.cupLight);
-      ellipseRows(g, cx, 132, 21, 31, c.cupDark);
-      ellipseRows(g, cx, 132, 18, 28, c.cup);
-      ellipseRows(g, cx + side * 2, 133, 12, 20, c.cupMid);
-      for (let y = 118; y < 150; y += 3) rect(g, cx + side * 2 - 7, y, 14, 1, c.cupDark);
-      rect(g, cx - side * 14 - 3, 110, 6, 5, c.cupDark); // pulsanti
-      rect(g, cx - side * 14 - 3, 117, 6, 5, c.cupDark);
-      rect(g, cx - side * 14 - 2, 111, 4, 1, c.cupLight);
-      rect(g, cx - side * 14 - 2, 118, 4, 1, c.cupLight);
-      rect(g, cx - 2, 160, 4, 6, c.cupDark); // uscita del cavo
-    }
-    S([[60, 104], [72, 120], [70, 160], [56, 162]], 0.35);
-    S([[200, 104], [212, 120], [210, 160], [196, 162]], 0.4);
-    L([[30, 120], [36, 106], [40, 108], [34, 126]], 0.4);
-  });
-  // cavi: dalle cuffie al petto, con un'ansa
-  part(() => {
-    path(quad([50, 166], [30, 190], [44, 206]), 2, c.cable);
-    path(quad([44, 206], [58, 220], [48, 232]), 2, c.cable);
-    path(quad([190, 166], [214, 180], [204, 200]), 2, c.cable);
-    path(quad([204, 200], [192, 214], [176, 222]), 2, c.cable);
-  });
-  // microfono a stelo dalla cuffia destra alla bocca
-  part(() => {
-    path(quad([176, 150], [170, 178], [152, 182]), 3, c.cupDark);
-    ellipseRows(g, 146, 183, 7, 5.5, c.mic);
-    for (let x = 141; x < 152; x += 2) rect(g, x, 180 + ((x >> 1) & 1), 1, 1, c.micLight);
-  });
-
-  // ===== fucile in primo piano (con braccia e guanti: spostati in basso sul petto) =====
-  shiftY(30, () => {
-  const B0 = [-6, 186];
-  const dx = 0.931;
-  const dy = 0.365;
-  const nx = -0.365;
-  const ny = 0.931;
-  const R = (u, v) => [B0[0] + dx * u + nx * v, B0[1] + dy * u + ny * v];
-  const rp = (pts, col) => poly(g, pts.map(([u, v]) => R(u, v)), col);
-  const rb = (u0, u1, v0, v1, col) => rp([[u0, v0], [u1, v0], [u1, v1], [u0, v1]], col);
-  const rpx = (u, v, col, w = 1, h = 1) => {
-    const [x, y] = R(u, v);
-    rect(g, x, y, w, h, col);
-  };
-  const rsh = (pts, a = 0.4) => poly(sg, pts.map(([u, v]) => R(u, v)), A(a));
-  const rli = (pts, a = 0.35) => poly(lg, pts.map(([u, v]) => R(u, v)), A(a));
-  part(() => {
-    // calcio regolabile con appoggiaguancia
-    rp([[-24, -15], [32, -13], [40, -5], [40, 11], [28, 13], [-24, 13]], c.furniture);
-    rb(-2, 30, -18, -13, c.furnitureDark);
-    rb(6, 26, -4, 3, c.furnitureDark);
-    rb(14, 18, 5, 12, c.gun);
-    for (let u = -20; u < 28; u += 4) rpx(u, 8, c.furnitureLight);
-    // tubo del calcio
-    rb(40, 62, -5, 5, c.gun);
-    rb(40, 62, -5, -4, c.gunLight);
-    // castello inferiore, pozzetto, caricatore
-    rb(60, 134, -2, 10, c.gun);
-    rb(92, 114, 8, 17, c.gun);
-    rp([[94, 16], [112, 16], [117, 56], [99, 56]], c.mag);
-    for (let v = 22; v < 54; v += 5) rp([[96 + v * 0.1, v], [112 + v * 0.12, v], [112 + v * 0.12, v + 1], [96 + v * 0.1, v + 1]], c.magDark);
-    // impugnatura e grilletto
-    rp([[118, 10], [131, 10], [138, 36], [125, 36]], c.furniture);
-    for (let v = 16; v < 34; v += 3) rp([[120 + v * 0.27, v], [130 + v * 0.27, v], [130 + v * 0.27, v + 1], [120 + v * 0.27, v + 1]], c.furnitureDark);
-    rb(108, 124, 10, 12, c.gun);
-    rb(112, 114, 9, 14, c.gunLight);
-    // castello superiore: finestra di espulsione, manetta, slitta
-    rb(58, 136, -13, -2, c.gunMid);
-    rb(58, 66, -16, -12, c.gun);
-    rb(96, 114, -8, -4, c.gunDark);
-    rb(100, 104, -7, -5, c.brass);
-    for (let u = 60; u < 136; u += 3) rb(u, u + 2, -16, -13, c.gun);
-    rb(64, 70, -4, 0, c.gunLight);
-    // mirino olografico
-    rb(78, 120, -21, -16, c.gun);
-    rp([[78, -44], [118, -44], [122, -36], [122, -21], [78, -21]], c.optic);
-    rb(84, 114, -40, -25, c.opticDark);
-    rb(86, 112, -38, -27, c.opticGlass);
-    rb(86, 112, -38, -35, c.opticGlassLight);
-    rb(116, 121, -34, -30, c.gunLight);
-    rb(116, 121, -28, -24, c.gunLight);
-    rb(80, 92, -24, -21, c.opticDark);
-    for (const [u, v] of [[81, -42], [115, -42], [81, -23], [96, -19], [110, -19]]) rpx(u, v, c.gunLight, 2, 2);
-    // paramano con fessure M-LOK, slitta superiore, torcia
-    rb(134, 262, -13, 8, c.gun);
-    rb(134, 262, -13, -11, c.gunMid);
-    for (let u = 136; u < 262; u += 3) rb(u, u + 2, -16, -13, c.gun);
-    for (let u = 142; u < 256; u += 16) {
-      rb(u, u + 9, -6, 2, c.gunDark);
-      rb(u + 1, u + 8, -5, -4, c.gunMid);
-    }
-    rb(196, 230, 8, 16, c.gunMid);
-    rb(196, 230, 8, 9, c.gunLight);
-    rb(226, 232, 6, 18, c.gun);
-    rb(232, 234, 8, 16, c.lightLens);
-    // anello della cinghia
-    rb(40, 46, 5, 12, c.metal);
-    rli([[-24, -15], [262, -16], [262, -14], [-24, -13]], 0.4);
-    rsh([[-24, 9], [262, 6], [262, 8], [-24, 13]], 0.4);
-    rsh([[78, -21], [122, -21], [122, -18], [78, -18]], 0.3);
-  });
-
-  // ===== avambracci e mani (coordinate del fucile: u lungo l'arma, v verso il basso) =====
-  /** Dito: capsula da (u0,v0) a (u1,v1) larga w, punta più scura. */
-  const finger = (u0, v0, u1, v1, w) => {
-    const [x0, y0] = R(u0, v0);
-    const [x1, y1] = R(u1, v1);
-    limb(g, x0, y0, x1, y1, w, w, c.gloves);
-    disc(g, x0, y0, w / 2 - 0.5, c.gloves);
-    disc(g, x1, y1, w / 2 - 0.5, c.gloves);
-    const [xt, yt] = R(u1 + (u1 - u0) * 0.02, v1 + (v1 - v0) * 0.02);
-    disc(g, xt, yt, Math.max(1, w / 2 - 1.5), c.glovesDark);
-    // cucitura lungo il dito
-    const [xa, ya] = R(u0 + (u1 - u0) * 0.15, v0 + (v1 - v0) * 0.15);
-    const [xb, yb] = R(u0 + (u1 - u0) * 0.8, v0 + (v1 - v0) * 0.8);
-    line(g, xa, ya, xb, yb, 1, c.glovesLight);
-  };
-  const wristR = R(80, 44);
-  const wristL = R(206, 40);
-  // avambraccio destro (da in basso a sinistra) e sinistro (da in basso a destra)
-  part(() => {
-    limb(g, wristR[0] - 46, wristR[1] + 60, wristR[0], wristR[1], 50, 30, c.camo);
-    Sl(wristR[0] - 30, wristR[1] + 40, wristR[0] - 6, wristR[1] + 18, 1, 0.45);
-    Sl(wristR[0] - 36, wristR[1] + 30, wristR[0] - 20, wristR[1] + 22, 1, 0.35);
-    S([[wristR[0] - 10, wristR[1] - 4], [wristR[0] + 14, wristR[1] + 8], [wristR[0] - 20, wristR[1] + 70], [wristR[0] - 40, wristR[1] + 60]], 0.3);
-  });
-  part(() => {
-    limb(g, wristL[0] + 50, wristL[1] + 50, wristL[0], wristL[1], 52, 30, c.camo);
-    Sl(wristL[0] + 12, wristL[1] + 14, wristL[0] + 36, wristL[1] + 30, 1, 0.45);
-    S([[wristL[0] + 6, wristL[1] - 14], [wristL[0] + 30, wristL[1] - 2], [wristL[0] + 76, wristL[1] + 40], [wristL[0] + 40, wristL[1] + 60]], 0.4);
-  });
-  // mano destra sull'impugnatura: dorso con paranocche, tre dita attorno all'impugnatura, indice lungo il
-  // ponticello, pollice sul castello
-  part(() => {
-    rp([[70, 34], [86, 22], [100, 50], [84, 60]], c.cuff);
-    rp([[74, 38], [86, 30], [89, 36], [77, 44]], c.cuffLight);
-    rp([[84, 24], [112, 8], [116, 36], [100, 50], [88, 46]], c.gloves);
-    finger(104, 2, 120, 1, 6); // pollice
-    finger(108, 10, 128, 10, 5); // indice sul ponticello
-    for (const v of [16, 22, 28]) finger(110, v, 136 + v * 0.27, v + 1, 6);
-    rp([[102, 12], [112, 10], [114, 34], [104, 38]], c.knuckle);
-    for (const v of [14, 20, 26, 32]) rp([[103, v], [113, v - 0.5], [113.5, v + 1], [103.5, v + 1.5]], c.knuckleLight);
-    rp([[90, 24], [100, 18], [102, 22], [92, 28]], c.glovesLight);
-    rsh([[96, 26], [114, 22], [116, 36], [100, 50], [92, 46]], 0.35);
-    rli([[84, 24], [100, 14], [102, 18], [88, 28]], 0.35);
-  });
-  // mano sinistra sul paramano: pollice lungo il paramano, quattro dita che lo avvolgono, dorso sotto
-  part(() => {
-    rp([[192, 30], [214, 24], [222, 46], [200, 54]], c.cuff);
-    rp([[196, 34], [212, 30], [214, 36], [198, 40]], c.cuffLight);
-    rp([[166, 6], [206, 4], [212, 30], [172, 36]], c.gloves);
-    finger(170, 6, 150, 4, 6.5); // pollice
-    for (const u of [174, 181, 188, 195]) finger(u, 10, u - 2, -14, 6.5);
-    rp([[170, 8], [200, 6], [202, 14], [172, 16]], c.knuckle);
-    for (const u of [176, 183, 190, 197]) rp([[u - 2, 8], [u + 3, 8], [u + 3, 9], [u - 2, 9]], c.knuckleLight);
-    rsh([[194, -16], [202, -16], [212, 30], [196, 32]], 0.35);
-    rli([[166, 6], [172, 6], [174, 34], [170, 34]], 0.35);
-  });
-  });
-  Sr(0, 286, 240, 14, 0.25); // il basso dell'inquadratura più scuro
-
-  applyMasks(main.c, shade.c, light.c, sc.shadowColor || '#2a1630', sc.lightColor || '#ffd8a0');
-  finish(main.c, { tint: sc.shade?.color, tintAmount: sc.shade?.amount ?? 0, rim: sc.rim, rimAmount: sc.rimAmount ?? 0.6, rimDir: sunDir, rimWidth: 2, outline: sc.outline });
-  return main.c;
-}
-
-// ---------- Carro armato distrutto ----------
-
-export function drawTank(g, c, seed, M) {
-  const r = mulberry32(seed);
-  g.save();
-  g.translate(M, M);
-  poly(g, [[4, 24], [58, 24], [62, 28], [58, 32], [6, 32], [2, 28]], c.track);
-  for (let x = 10; x <= 55; x += 9) {
-    disc(g, x, 28, 3, c.wheel);
-    rect(g, x, 28, 1, 1, c.hub);
-  }
-  rect(g, 4, 24, 55, 1, c.dark);
-  poly(g, [[2, 17], [60, 17], [64, 22], [60, 25], [4, 25], [1, 21]], c.hull);
-  rect(g, 2, 17, 58, 1, c.light);
-  rect(g, 3, 22, 58, 1, c.dark);
-  poly(g, [[18, 8], [38, 7], [44, 12], [42, 17], [16, 17], [14, 12]], c.hull);
-  rect(g, 18, 8, 20, 1, c.light);
-  rect(g, 16, 15, 26, 1, c.dark);
-  rect(g, 24, 6, 6, 2, c.char);
-  line(g, 24, 6, 21, 1, 2, c.dark);
-  line(g, 43, 12, 59, 17, 2, c.dark);
-  rect(g, 58, 16, 3, 3, c.dark);
-  for (let i = 0; i < 9; i++) disc(g, 4 + r() * 56, 9 + r() * 14, 1 + r() * 1.6, c.char);
-  disc(g, 12, 20, 1.5, c.char);
-  disc(g, 50, 19, 1.2, c.char);
-  g.restore();
-}
-
-// ---------- Elicottero d'attacco (Apache), di fianco col muso a destra ----------
-
-export const HELI = { length: 66, height: 30 };
-
-export function drawApache(g, s, cfg, M) {
-  const P = (pts) => pts.map(([x, y]) => [M + x * s, M + y * s]);
-  const R = (x, y, w, h, col) => rect(g, M + x * s, M + y * s, Math.max(1, w * s), Math.max(1, h * s), col);
-  const body = cfg.body;
-  const dark = cfg.dark || body;
-  // trave di coda, deriva, stabilizzatore
-  poly(g, P([[16, 11], [17, 16.5], [3, 14.5], [2, 11.5]]), body);
-  poly(g, P([[0, 3], [4.5, 3], [6.5, 12], [2, 15], [0, 14]]), body);
-  poly(g, P([[-1, 14], [8, 14], [8, 15.5], [-1, 15.5]]), dark);
-  // fusoliera stretta e muso
-  poly(g, P([[15, 10], [34, 8], [46, 9], [56, 11], [62, 14], [61, 16.5], [56, 18.5], [44, 20], [24, 19], [15, 16.5]]), body);
-  // cabine in tandem (pilota dietro e più in alto, artigliere davanti)
-  poly(g, P([[35, 4.5], [45, 5.5], [47, 10], [35, 10]]), cfg.glass);
-  poly(g, P([[47, 8.5], [55, 9.5], [59, 13], [47, 13]]), cfg.glass);
-  R(40, 4.5, 1, 5.5, dark);
-  R(52, 9, 1, 4, dark);
-  R(35, 10, 24, 1, dark);
-  // gondole dei motori con scarico
-  poly(g, P([[24, 9], [34, 8.5], [36, 10.5], [34, 13], [24, 13]]), cfg.light || body);
-  R(22, 9.5, 3, 3, dark);
-  R(26, 11, 7, 1, dark);
-  // alette con lanciarazzi e missili
-  R(27, 16, 16, 1.6, dark);
-  poly(g, P([[28, 17.5], [35, 17.5], [35.5, 22], [28, 22]]), body);
-  R(28, 18, 1, 3.5, dark);
-  R(37, 18, 7, 1.5, dark);
-  R(37, 20.5, 7, 1.5, dark);
-  R(43, 18, 1, 4, cfg.light || body);
-  // cannoncino sotto il muso
-  R(53, 18.5, 3, 3, dark);
-  R(55, 21, 7, 1, dark);
-  // mozzo e albero del rotore
-  R(33, 1.5, 5, 2, dark);
-  R(35, 3, 1.5, 5, dark);
-  // carrello: ruote principali e ruotino di coda
-  R(43, 20, 1, 4, dark);
-  R(50, 19.5, 1, 4.5, dark);
-  disc(g, M + 43.5 * s, M + 24.5 * s, Math.max(1, 1.6 * s), dark);
-  disc(g, M + 50.5 * s, M + 24.5 * s, Math.max(1, 1.6 * s), dark);
-  R(4, 15.5, 1, 2.5, dark);
-  disc(g, M + 4.5 * s, M + 18.5 * s, Math.max(0.6, 1 * s), dark);
-}
-
-// ---------- Nuvole ----------
-
-export function makeCloud(cfg, w, h) {
-  const { c, g } = makeCanvas(w + 2, h + 2);
-  const base = h;
-  let x = 4;
-  while (x < w - 4) {
-    const rr = rnd(h * 0.3, h * 0.62) * (1 - Math.abs(x / w - 0.5) * 0.9);
-    disc(g, x, base - rr * 0.7, rr, '#fff');
-    x += rnd(rr * 0.6, rr * 1.2);
-  }
-  g.clearRect(0, base + 1, c.width, c.height);
+  for (const [px, py, rx, ry] of puffs) ellipseRows(g, px, py + r() * 2, rx, ry, '#fff', -Infinity, base + 2);
   const img = g.getImageData(0, 0, c.width, c.height);
   const d = img.data;
-  const L = hex(cfg.lit);
-  const Mi = hex(cfg.mid);
-  const S = hex(cfg.shadow);
-  let top = c.height;
-  for (let y = 0; y < c.height && top === c.height; y++) for (let xx = 0; xx < c.width; xx++) if (d[(y * c.width + xx) * 4 + 3]) top = y;
+  const top = hex(cfg.top);
+  const mid = hex(cfg.mid);
+  const lit = hex(cfg.lit);
+  const W = c.width;
+  const a = (xx, yy) => (xx < 0 || yy < 0 || xx >= W || yy >= c.height ? 0 : d[(yy * W + xx) * 4 + 3]);
+  const out = new Uint8ClampedArray(d.length);
   for (let y = 0; y < c.height; y++) {
-    for (let xx = 0; xx < c.width; xx++) {
-      const i = (y * c.width + xx) * 4;
+    for (let xx = 0; xx < W; xx++) {
+      const i = (y * W + xx) * 4;
       if (!d[i + 3]) continue;
-      const t = (y - top) / Math.max(1, base - top);
+      // bordo: pixel vicini al vuoto diradati a retino
+      let edge = 0;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [2, 0], [-2, 0], [0, -2]]) if (!a(xx + dx, y + dy)) edge++;
+      if (edge && bayer(xx, y) < edge * 0.16) continue;
+      let below = 0;
+      while (y + below + 1 < c.height && d[((y + below + 1) * W + xx) * 4 + 3]) below++;
       const b = bayer(xx, y);
-      const col = t > 0.72 + b * 0.12 ? L : t > 0.3 + b * 0.18 ? Mi : S;
-      d[i] = col[0];
-      d[i + 1] = col[1];
-      d[i + 2] = col[2];
-      d[i + 3] = 255 * (cfg.alpha ?? 1);
+      const t = below / Math.max(1, h * 0.8);
+      const col = t < 0.28 + b * 0.14 ? lit : t < 0.6 + b * 0.2 ? mid : top;
+      out[i] = col[0];
+      out[i + 1] = col[1];
+      out[i + 2] = col[2];
+      out[i + 3] = 255 * (cfg.alpha ?? 0.9);
     }
   }
-  g.putImageData(img, 0, 0);
+  g.putImageData(new ImageData(out, W, c.height), 0, 0);
+  return c;
+}
+// ---------- Città in rovina (un pezzo di strato alla volta) ----------
+
+/**
+ * Disegna gli edifici dello strato tra x0 e x1 (coordinate dello strato) sul canvas del pezzo (origine = x0).
+ * Ogni edificio dipende solo dal suo indice: i pezzi vicini si raccordano. Restituisce i punti in fiamme
+ * [{ x, y, s }] e le luci di segnalazione [{ x, y }] (coordinate dello strato).
+ */
+export function paintCity(g, x0, x1, baseY, def, salt) {
+  const fires = [];
+  const beacons = [];
+  const S = def.slot ?? 16;
+  const maxW = def.width?.[1] ?? 30;
+  const col = def.color;
+  const win = def.windows || {};
+  for (let i = Math.floor((x0 - maxW - S) / S); i <= Math.ceil(x1 / S); i++) {
+    const r = rngFor(i, salt);
+    if (r() < (def.gap ?? 0.1)) continue;
+    const w = Math.round(lerp(def.width?.[0] ?? 8, maxW, r()));
+    const bx = Math.round(i * S + r() * S * 0.6) - x0;
+    const hh = Math.round(lerp(def.height?.[0] ?? 10, def.height?.[1] ?? 40, r() ** 1.6));
+    const kind = r();
+    const ruined = r() < (def.ruined ?? 0.5);
+    const tops = [];
+    let jag = 0;
+    for (let k = 0; k < w; k++) {
+      if (ruined) {
+        if (r() < 0.3) jag = Math.round(r() * hh * 0.45);
+        tops.push(hh - jag - (k === 0 || k === w - 1 ? 1 : 0));
+      } else tops.push(hh);
+    }
+    for (let k = 0; k < w; k++) rect(g, bx + k, baseY - tops[k], 1, tops[k] + 60, col);
+    const topY = baseY - hh;
+    if (!ruined) {
+      if (kind < 0.18) {
+        // cupola e minareto
+        ellipseRows(g, bx + w / 2, topY, w * 0.42, w * 0.36, col, topY - w, topY);
+        const mh = Math.round(hh * 0.6);
+        const mx = bx + (r() < 0.5 ? 1 : w - 3);
+        rect(g, mx, topY - mh, 2, mh, col);
+        rect(g, mx - 1, topY - mh - 2, 4, 2, col);
+        rect(g, mx, topY - mh - 5, 2, 3, col);
+      } else if (kind < 0.32) {
+        // torre con antenna e luce rossa
+        const ah = 6 + Math.round(r() * 12);
+        rect(g, bx + Math.floor(w / 2), topY - ah, 1, ah, col);
+        rect(g, bx + Math.floor(w / 2) - 1, topY - 2, 3, 2, col);
+        beacons.push({ x: bx + Math.floor(w / 2) + x0, y: topY - ah - 1, ph: r() * 6 });
+      } else if (kind < 0.45) {
+        // serbatoio d'acqua
+        rect(g, bx + 2, topY - 6, w - 4, 4, col);
+        rect(g, bx + 3, topY - 2, 1, 2, col);
+        rect(g, bx + w - 4, topY - 2, 1, 2, col);
+      } else if (kind < 0.6) {
+        rect(g, bx + 1, topY - 3, Math.max(2, w * 0.4), 3, col);
+      }
+    } else {
+      // ferri che spuntano dalle rovine
+      for (let k = 0; k < 3; k++) {
+        if (r() < 0.5) continue;
+        const kx = Math.floor(r() * w);
+        line(g, bx + kx, baseY - tops[kx], bx + kx + Math.round((r() - 0.5) * 4), baseY - tops[kx] - 2 - r() * 4, 1, col);
+      }
+      if (r() < (def.fireChance ?? 0.3)) {
+        const kx = Math.floor(r() * w);
+        fires.push({ x: bx + kx + x0, y: baseY - tops[kx], s: 0.6 + r() * 0.8, ph: r() * 6 });
+      }
+    }
+    // finestre: buie, accese o in fiamme
+    const step = win.step ?? 3;
+    for (let wy = topY + 3; wy < baseY - 2; wy += step) {
+      for (let wx = bx + 2; wx < bx + w - 2; wx += step) {
+        const k = wx - bx;
+        if (wy < baseY - tops[k] + 2) continue;
+        const v = r();
+        if (v < (win.lit ?? 0.04)) rect(g, wx, wy, 1, 1, win.litColor || '#ffb050');
+        else if (v < (win.lit ?? 0.04) + (win.fire ?? 0.02)) rect(g, wx, wy, 1, 1, win.fireColor || '#ff6a2a');
+        else if (v < 0.35 && win.dark) rect(g, wx, wy, 1, 1, win.dark);
+      }
+    }
+  }
+  return { fires, beacons };
+}
+
+/** Terreno vicino: profilo e ostacoli (reticolati, sacchetti, carcasse, cavalli di Frisia, lampioni, alberi). */
+export function paintNear(g, x0, x1, groundAt, def, salt) {
+  const col = def.color;
+  for (let x = x0; x < x1; x++) rect(g, x - x0, Math.round(groundAt(x)), 1, 400, col);
+  const S = def.slot ?? 46;
+  for (let i = Math.floor((x0 - 60) / S); i <= Math.ceil(x1 / S); i++) {
+    const r = rngFor(i, salt);
+    const kind = r();
+    const px = Math.round(i * S + r() * S * 0.5);
+    const lx = px - x0;
+    const gy = Math.round(groundAt(px));
+    if (kind < 0.18) {
+      // reticolato: paletti con il filo spinato
+      const n = 3 + Math.floor(r() * 4);
+      for (let k = 0; k < n; k++) {
+        const x = lx + k * 9;
+        const y = Math.round(groundAt(px + k * 9));
+        line(g, x, y, x + (k % 2 ? 1 : -1), y - 9, 1, col);
+        if (k + 1 < n) {
+          for (const h of [3, 6, 8]) {
+            for (let s = 0; s < 9; s++) if ((s + h) % 3) rect(g, x + s, y - h + ((s >> 1) & 1), 1, 1, col);
+          }
+        }
+      }
+    } else if (kind < 0.32) {
+      // muretto di sacchetti di sabbia
+      const n = 3 + Math.floor(r() * 3);
+      for (let row = 0; row < 3; row++) {
+        for (let k = 0; k < n - row * 0.5; k++) ellipseRows(g, lx + k * 6 + row * 3 + 3, gy - row * 3 - 2, 3.5, 2, col);
+      }
+    } else if (kind < 0.44) {
+      // carcassa d'auto
+      poly(g, [[lx, gy - 3], [lx + 3, gy - 7], [lx + 8, gy - 8], [lx + 12, gy - 12], [lx + 20, gy - 12], [lx + 24, gy - 7], [lx + 29, gy - 6], [lx + 30, gy - 2], [lx, gy - 1]], col);
+      disc(g, lx + 6, gy - 1, 2.5, col);
+      disc(g, lx + 24, gy - 1, 2.5, col);
+      g.clearRect(lx + 13, gy - 11, 3, 3);
+      g.clearRect(lx + 17, gy - 11, 2, 3);
+    } else if (kind < 0.56) {
+      // cavalli di Frisia
+      for (let k = 0; k < 1 + Math.floor(r() * 2); k++) {
+        const x = lx + k * 14;
+        line(g, x, gy, x + 8, gy - 9, 1, col);
+        line(g, x + 8, gy, x, gy - 9, 1, col);
+        line(g, x + 4, gy, x + 4, gy - 10, 1, col);
+      }
+    } else if (kind < 0.66) {
+      // lampione piegato
+      line(g, lx, gy, lx + 1, gy - 22, 1, col);
+      line(g, lx + 1, gy - 22, lx + 7, gy - 24, 1, col);
+      rect(g, lx + 6, gy - 24, 3, 2, col);
+    } else if (kind < 0.76) {
+      // albero bruciato
+      line(g, lx, gy, lx + 1, gy - 18, 2, col);
+      line(g, lx + 1, gy - 12, lx - 5, gy - 18, 1, col);
+      line(g, lx + 1, gy - 15, lx + 7, gy - 21, 1, col);
+      line(g, lx + 4, gy - 18, lx + 6, gy - 24, 1, col);
+      line(g, lx - 3, gy - 16, lx - 4, gy - 21, 1, col);
+    } else if (kind < 0.9) {
+      // cumulo di macerie
+      poly(g, [[lx - 2, gy], [lx + 3, gy - 5], [lx + 8, gy - 4], [lx + 11, gy - 8], [lx + 16, gy - 5], [lx + 22, gy]], col);
+      line(g, lx + 11, gy - 8, lx + 14, gy - 13, 1, col);
+    }
+  }
+}
+
+/** Primo piano: crinale con sassi e ciuffi d'erba secca. */
+export function paintFront(g, x0, x1, groundAt, def, salt) {
+  const col = def.color;
+  for (let x = x0; x < x1; x++) rect(g, x - x0, Math.round(groundAt(x)), 1, 400, col);
+  for (let i = Math.floor(x0 / 7) - 1; i <= Math.ceil(x1 / 7); i++) {
+    const r = rngFor(i, salt);
+    const x = i * 7 + Math.floor(r() * 7);
+    const y = Math.round(groundAt(x));
+    const v = r();
+    if (v < 0.35) {
+      for (let k = -2; k <= 2; k++) line(g, x - x0 + k, y, x - x0 + k * 2, y - 2 - Math.round(r() * 4), 1, col);
+    } else if (v < 0.5) ellipseRows(g, x - x0, y, 2 + r() * 3, 1.5 + r() * 1.5, col);
+  }
+}
+
+/** Primissimo piano (più veloce della camera): erba alta, paletti storti e filo spinato a spirale. */
+export function paintFore(g, x0, x1, groundAt, def, salt) {
+  const col = def.color;
+  for (let x = x0; x < x1; x++) rect(g, x - x0, Math.round(groundAt(x)), 1, 400, col);
+  const S = def.slot ?? 70;
+  for (let i = Math.floor((x0 - 90) / S); i <= Math.ceil(x1 / S); i++) {
+    const r = rngFor(i, salt);
+    const px = Math.round(i * S + r() * S * 0.6);
+    const lx = px - x0;
+    const gy = Math.round(groundAt(px));
+    const kind = r();
+    if (kind < 0.4) {
+      // ciuffi d'erba alta
+      for (let k = 0; k < 7; k++) {
+        const bx = lx + Math.round((r() - 0.5) * 10);
+        line(g, bx, gy, bx + Math.round((r() - 0.3) * 8), gy - 6 - Math.round(r() * 14), 1, col);
+      }
+    } else if (kind < 0.75) {
+      // filo spinato a spirale tra due paletti storti
+      const len = 30 + Math.floor(r() * 40);
+      line(g, lx, gy, lx - 2, gy - 18, 2, col);
+      line(g, lx + len, gy, lx + len + 2, gy - 16, 2, col);
+      for (let k = 0; k <= len; k += 5) {
+        const cx = lx + k;
+        const cy = gy - 8 - Math.sin(k * 0.3) * 1.5;
+        for (let a = 0; a < 6.3; a += 0.45) rect(g, cx + Math.cos(a) * 3.5, cy + Math.sin(a) * 5, 1, 1, col);
+      }
+      for (let k = 0; k < len; k += 2) if (r() < 0.4) rect(g, lx + k, gy - 13 + Math.round(r() * 10), 1, 1, col);
+    } else if (kind < 0.85) {
+      // paletto spezzato con un elmetto appeso
+      line(g, lx, gy, lx + 1, gy - 22, 2, col);
+      ellipseRows(g, lx + 1, gy - 22, 4, 3, col, gy - 26, gy - 22);
+      rect(g, lx - 4, gy - 22, 10, 1, col);
+    }
+  }
+}
+
+// ---------- Soldati in marcia (sagome) ----------
+
+export const WALKER = { w: 44, h: 80, fx: 18, fy: 76 };
+
+/**
+ * Sagoma di un soldato che cammina verso destra (profilo, ~50 px), fotogramma f di n.
+ * type: 'rifle' | 'flag' | 'radio' | 'launcher'. Restituisce { canvas, pole, fx, fy } (pole = cima dell'asta).
+ */
+export function makeWalker(type, f, n, cfg) {
+  const { c, g } = makeCanvas(WALKER.w, WALKER.h);
+  const col = cfg.color || '#07050a';
+  const far = cfg.far || '#22141e';
+  const ph = (f / n) * Math.PI * 2;
+  const ox = WALKER.fx;
+  const oy = WALKER.fy;
+  const bob = Math.abs(Math.sin(ph)) < 0.4 ? -1 : 0;
+  const P = (x, y) => [ox + x, oy + y + bob];
+  const L = (x0, y0, x1, y1, w, color) => line(g, ...P(x0, y0), ...P(x1, y1), w, color);
+  const poly2 = (pts, color) => poly(g, pts.map(([x, y]) => P(x, y)), color);
+  /** Gamba: coscia e stinco con il ginocchio che si piega quando la gamba avanza, scarpone in avanti. */
+  const leg = (p, color) => {
+    const th = Math.sin(p) * 0.45;
+    const shin = th - 0.55 * Math.max(0, Math.cos(p)) + 0.05;
+    const hx = 0;
+    const hy = -24;
+    const kx = hx + Math.sin(th) * 12;
+    const ky = hy + Math.cos(th) * 12;
+    const fx = kx + Math.sin(shin) * 12;
+    const fy = ky + Math.cos(shin) * 12 - bob;
+    poly2([[hx - 2, hy], [hx + 2.5, hy], [kx + 2, ky], [kx - 1.5, ky]], color);
+    L(kx, ky, fx, fy, 3, color);
+    poly2([[fx - 2, fy - 2], [fx + 1, fy - 2], [fx + 4, fy], [fx + 4, fy + 1], [fx - 2, fy + 1]], color);
+  };
+  // braccio e gamba lontani (più chiari, dietro)
+  leg(ph + Math.PI, far);
+  if (type !== 'flag') {
+    L(1, -39, 4, -33, 3, far);
+    L(4, -33, 9, -30, 2, far);
+  }
+  // zaino con materassino arrotolato
+  poly2([[-9, -40], [-4, -41], [-4, -27], [-8, -28], [-10, -32]], col);
+  poly2([[-10, -43], [-4, -43], [-4, -40], [-10, -40]], col);
+  // busto con giubbotto, leggermente in avanti
+  poly2([[-4, -41], [3, -41], [5, -37], [5, -31], [3, -24], [-3, -24], [-4, -32]], col);
+  // collo, testa di profilo ed elmetto
+  poly2([[-1, -43], [2, -43], [2, -41], [-1, -41]], col);
+  poly2([[-2, -47], [3, -47], [4, -45.5], [5, -44.5], [4, -43.5], [4, -42], [-2, -42]], col);
+  ellipseRows(g, ...P(0.5, -46), 4.8, 4, col, oy - 51 + bob, oy - 46 + bob);
+  poly2([[-5, -46.5], [6, -46.5], [7, -45.5], [-5, -45.5]], col);
+  leg(ph, col);
+  let pole = null;
+  if (type === 'flag') {
+    // fucile a tracolla sulla schiena, asta stretta con due mani
+    L(-6, -41, 2, -25, 2, col);
+    L(0, -39, 4, -33, 3, col);
+    L(4, -33, 6, -30, 2, col);
+    L(1, -39, 6, -36, 2, col);
+    L(5, -22, 11, -74, 1, col);
+    L(5.5, -22, 11.5, -74, 1, col);
+    pole = P(11, -74);
+  } else {
+    // fucile in posizione di pronto: calcio sotto l'ascella, canna in basso in avanti
+    L(-2, -34, 8, -30, 3, col);
+    L(8, -30, 15, -27, 2, col);
+    L(3, -31, 4, -27, 2, col);
+    L(-3, -35, -1, -32, 2, col);
+    // braccio vicino: spalla, gomito, mano sull'impugnatura
+    L(0, -39, -1, -33, 3, col);
+    L(-1, -33, 2, -31, 3, col);
+    if (type === 'radio') L(-7, -43, -14, -68, 1, col);
+    if (type === 'launcher') {
+      L(-14, -36, 10, -40, 3, col);
+      poly2([[-15, -38], [-12, -38], [-12, -34], [-15, -34]], col);
+      poly2([[9, -42], [12, -42], [12, -38], [9, -38]], col);
+    }
+  }
+  rimLight(c, cfg.rim || '#ff9a50', { amount: cfg.rimAmount ?? 0.75, depth: 1, side: -1, sideAmount: cfg.rimSide ?? 0.25 });
+  return { canvas: c, pole, fx: ox, fy: oy };
+}
+// ---------- Velivoli (sagome) ----------
+
+/** Elicottero da trasporto di fianco, muso a destra (le luci di posizione sono disegnate a parte). */
+export function makeHeli(cfg) {
+  const { c, g } = makeCanvas(50, 20);
+  const col = cfg.color || '#0a0810';
+  poly(g, [[14, 7], [30, 5], [38, 6], [44, 9], [46, 12], [42, 14], [24, 15], [14, 13]], col);
+  poly(g, [[2, 8], [16, 8], [16, 12], [2, 10]], col);
+  poly(g, [[0, 3], [3, 3], [5, 10], [1, 10]], col);
+  rect(g, 20, 3, 12, 3, col);
+  rect(g, 25, 1, 2, 3, col);
+  rect(g, 22, 15, 1, 3, col);
+  rect(g, 36, 14, 1, 4, col);
+  disc(g, 22, 18, 1, col);
+  disc(g, 36, 18, 1, col);
+  rimLight(c, cfg.rim || '#ff7a4a', { amount: 0.45, depth: 1 });
+  rect(g, 38, 8, 3, 2, cfg.cockpit || '#3a4a5a');
+  return c;
+}
+
+/** Caccia di fianco, muso a destra. */
+export function makeJet(cfg) {
+  const { c, g } = makeCanvas(22, 8);
+  const col = cfg.color || '#0a0810';
+  poly(g, [[2, 3], [16, 3], [21, 4], [16, 5], [2, 5]], col);
+  poly(g, [[6, 4], [11, 4], [7, 7], [5, 7]], col);
+  poly(g, [[1, 0], [4, 0], [6, 3], [2, 3]], col);
+  rect(g, 13, 2, 3, 1, col);
   return c;
 }

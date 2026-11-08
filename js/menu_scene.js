@@ -1,39 +1,95 @@
-// Scena animata dietro al menu principale (al posto della partita dimostrativa): deserto al tramonto, soldato a
-// mezzo busto in primo piano (ritratto dettagliato col fucile), bandiera rossa a brandelli, carro armato in
-// fiamme col fumo, nuvole e un elicottero Apache che passa ogni tanto (direzione, quota e distanza casuali).
-// Canvas a bassa risoluzione scalato di un fattore intero; disegni in js/menu_art.js, parametri in
+// Scena animata dietro al menu principale: notte di battaglia su una città in rovina nel deserto, in controluce.
+// La camera scorre lentamente verso destra e gli strati si muovono a velocità diverse (parallasse): cielo con
+// stelle, luna e nuvole accese dal basso, montagne, due file di città con incendi e colonne di fumo, terreno con
+// reticolati e carcasse, nebbia bassa e in primo piano una squadra di soldati che marcia sul crinale con la
+// bandiera rossa a brandelli. Nel cielo: traccianti contraerei, razzi illuminanti, esplosioni che illuminano
+// tutto, un elicottero col faro e ogni tanto un caccia. Tutto procedurale (js/menu_art.js), parametri in
 // config/menu_scene.json.
 
 import {
-  bayer, mulberry32, rnd, clamp, hex, mixRGB, css, makeCanvas, rect, disc,
-  finish, buildBust, BUST, BUST_LENSES, insidePoly, drawTank, drawApache, HELI, makeCloud,
+  bayer, mulberry32, rnd, range, clamp, hex, mixRGB, css, makeCanvas, rect, disc, line,
+  rimLight, makeMoon, makeCloudStreak, paintCity, paintNear, paintFront, paintFore, makeWalker, makeHeli, makeJet,
 } from './menu_art.js';
 
-const M = 3; // margine degli sprite (contorno)
-const range = (r, d = [0, 1]) => rnd(...(Array.isArray(r) ? r : d));
+const CHUNK = 128;
+
+/** Strato a pezzi larghi CHUNK, disegnati su richiesta e scartati quando escono dallo schermo. */
+class Strip {
+  constructor(factor, paint) {
+    this.factor = factor;
+    this.paint = paint; // (g, x0, x1) -> dati del pezzo (es. fuochi)
+    this.chunks = new Map();
+  }
+
+  reset() {
+    this.chunks.clear();
+  }
+
+  off(cam) {
+    return Math.round(cam * this.factor);
+  }
+
+  /** Pezzi visibili: [{ i, canvas, data }]. */
+  visible(cam, w, h) {
+    const off = this.off(cam);
+    const i0 = Math.floor(off / CHUNK);
+    const i1 = Math.floor((off + w) / CHUNK);
+    const out = [];
+    for (let i = i0; i <= i1; i++) {
+      let ch = this.chunks.get(i);
+      if (!ch) {
+        const { c, g } = makeCanvas(CHUNK, h);
+        const data = this.paint(g, i * CHUNK, (i + 1) * CHUNK, c) || {};
+        ch = { i, canvas: c, data };
+        this.chunks.set(i, ch);
+      }
+      out.push(ch);
+    }
+    for (const k of this.chunks.keys()) if (k < i0 - 1 || k > i1 + 1) this.chunks.delete(k);
+    return out;
+  }
+
+  draw(g, cam, w, h) {
+    const off = this.off(cam);
+    for (const ch of this.visible(cam, w, h)) g.drawImage(ch.canvas, ch.i * CHUNK - off, 0);
+  }
+
+  /** Da coordinate dello strato a coordinate dello schermo. */
+  sx(x, cam) {
+    return x - this.off(cam);
+  }
+}
 
 export class MenuScene {
   constructor(canvas, cfg) {
     this.canvas = canvas;
     this.g = canvas.getContext('2d');
     this.cfg = cfg;
-    this.wind = Math.sign(cfg.wind ?? 1) || 1;
     this.viewLeft = 0;
     this.visible = false;
-    this.t = 0;
     this.raf = 0;
-    this.warm = false;
-    this.clouds = [];
-    this.helis = [];
-    this.flames = [];
+    this.t = 0;
+    this.cam = 0;
+    this.flash = 0;
     this.smoke = [];
+    this.bullets = [];
+    this.bursts = [];
+    this.flares = [];
+    this.booms = [];
+    this.sparks = [];
+    this.helis = [];
+    this.jets = [];
+    this.trails = [];
     this.embers = [];
-    this.sand = [];
-    this.heliTimer = range(cfg.helicopter?.firstDelay, [2, 5]);
-    this.cloudTimer = range(cfg.clouds?.interval, [6, 14]);
-    this.glint = { timer: range(cfg.soldier?.glint, [4, 9]), on: 0 };
-    this.heliCache = new Map();
-    this._buildFlag();
+    this.ash = [];
+    this.timers = {
+      tracer: range(cfg.tracers?.interval, [0.6, 2]),
+      flare: range(cfg.flares?.firstDelay, [1, 3]),
+      boom: range(cfg.explosions?.firstDelay, [1, 3]),
+      heli: range(cfg.helicopter?.firstDelay, [3, 6]),
+      jet: range(cfg.jet?.firstDelay, [8, 14]),
+    };
+    this.walkers = new Map();
     window.addEventListener('resize', () => {
       if (this.visible) this.resize();
     });
@@ -45,9 +101,9 @@ export class MenuScene {
     this.canvas.classList.remove('hidden');
     this.resize();
     if (!this.warm) {
-      // all'avvio fumo e fuoco sono già in corso
+      // all'avvio fumo, nuvole e razzi sono già in scena
       this.warm = true;
-      for (let i = 0; i < 160; i++) this.update(1 / 20);
+      for (let i = 0; i < 200; i++) this.update(1 / 20);
     }
     let last = performance.now();
     const frame = (now) => {
@@ -66,7 +122,7 @@ export class MenuScene {
     this.canvas.classList.add('hidden');
   }
 
-  /** Larghezza in px CSS coperta dal pannello del menu a sinistra: la scena si compone nel resto. */
+  /** Larghezza in px CSS coperta dal pannello del menu: la squadra e la luna stanno nella parte scoperta. */
   setViewLeft(px) {
     if (Math.abs(px - this.viewLeft) < 1) return;
     this.viewLeft = px;
@@ -76,7 +132,7 @@ export class MenuScene {
   resize() {
     const cw = window.innerWidth;
     const ch = window.innerHeight;
-    this.scale = Math.max(1, Math.floor(ch / (this.cfg.targetHeight ?? 270)));
+    this.scale = Math.max(1, Math.round(ch / (this.cfg.targetHeight ?? 200)));
     this.w = Math.ceil(cw / this.scale);
     this.h = Math.ceil(ch / this.scale);
     this.canvas.width = this.w;
@@ -84,209 +140,160 @@ export class MenuScene {
     this.canvas.style.width = `${this.w * this.scale}px`;
     this.canvas.style.height = `${this.h * this.scale}px`;
     this.g.imageSmoothingEnabled = false;
-    this.groundY = this.h - (this.cfg.groundHeight ?? 46);
+    this.horizon = Math.round(this.h * (this.cfg.horizon ?? 0.6));
+    this._buildStatic();
     this._layout();
   }
 
-  /** Posizioni (dipendono dalla parte visibile) e livelli statici: cielo con sole, dune, terreno, sprite. */
   _layout() {
-    const cfg = this.cfg;
     const s = this.scale || 1;
-    let vx0 = this.viewLeft / s;
-    const minVis = cfg.minVisible ?? 200;
-    if (this.w - vx0 < minVis) vx0 = Math.max(0, this.w - minVis);
-    this.vx0 = vx0;
-    const vis = this.w - vx0;
-    const at = (a, d) => vx0 + vis * (a ?? d);
-    const sun = cfg.sun || {};
-    const r = sun.radius ?? 17;
-    this.sunX = Math.round(clamp(at(sun.at, 0.12), vx0 + r * 0.5, this.w - r - 4));
-    this.sunY = this.groundY + (sun.y ?? -12);
-    const sc = cfg.soldier || {};
-    this.soldierX = Math.round(at(sc.at, 0.6) + (sc.x ?? 0));
-    this.sunDir = this.sunX < this.soldierX ? -1 : 1;
-    // busto appoggiato al bordo inferiore (se lo schermo è basso si taglia il fondo, mai l'elmetto)
-    this.bustY = Math.max((sc.top ?? 2) - BUST.margin, this.h - BUST.h - BUST.margin + (sc.y ?? 0));
-    this.flagX = Math.round(at(cfg.flag?.at, 0.3));
-    const tc = cfg.tank || {};
-    this.tankX = Math.round(at(tc.at, 0.2));
-    this.tankY = this.groundY + (tc.y ?? 8);
-    this._buildSky();
-    this._buildDunes();
-    this._buildGround();
-    this._buildSprites();
+    this.vx0 = Math.min(this.viewLeft / s, this.w * 0.6);
+    this.vis = this.w - this.vx0;
   }
 
-  // ---------- Livelli statici ----------
-
-  _buildSky() {
-    const { w, h, groundY } = this;
-    const { c, g } = makeCanvas(w, h);
-    const stops = (this.cfg.sky?.stops || [[0, '#41507e'], [1, '#ffd48a']]).map(([t, col]) => [t, hex(col)]);
-    const atT = (t) => {
-      for (let i = 1; i < stops.length; i++) {
-        if (t <= stops[i][0]) {
-          const [t0, c0] = stops[i - 1];
-          const [t1, c1] = stops[i];
-          return mixRGB(c0, c1, (t - t0) / Math.max(1e-6, t1 - t0));
-        }
-      }
-      return stops[stops.length - 1][1];
-    };
-    const LEVELS = 24;
-    const pal = Array.from({ length: LEVELS }, (_, i) => atT(i / (LEVELS - 1)));
-    const sun = this.cfg.sun || {};
-    const glow = hex(sun.glow || '#ffe2a4');
-    const core = hex(sun.core || '#fff6d2');
-    const edge = hex(sun.edge || '#ffd27a');
-    const R = sun.radius ?? 17;
-    const GR = sun.glowRadius ?? 70;
-    const GS = sun.glowStrength ?? 0.5;
-    const img = g.createImageData(w, h);
-    const d = img.data;
-    for (let y = 0; y < h; y++) {
-      const t = clamp(y / Math.max(1, groundY), 0, 1) * (LEVELS - 1);
-      const i0 = Math.floor(t);
-      const f = t - i0;
-      for (let x = 0; x < w; x++) {
-        const b = bayer(x, y);
-        let col = pal[Math.min(LEVELS - 1, f > b ? i0 + 1 : i0)];
-        const dist = Math.hypot(x + 0.5 - this.sunX, y + 0.5 - this.sunY);
-        if (dist < GR) {
-          const k = (1 - dist / GR) ** 2 * GS;
-          const q = Math.floor(k * 8 + b) / 8;
-          if (q > 0) col = mixRGB(col, glow, Math.min(1, q));
-        }
-        if (dist <= R) col = dist > R - 1.6 ? edge : mixRGB(core, edge, Math.max(0, (y - (this.sunY - R)) / (2 * R)) * 0.5);
-        const k = (y * w + x) * 4;
-        d[k] = col[0];
-        d[k + 1] = col[1];
-        d[k + 2] = col[2];
-        d[k + 3] = 255;
-      }
-    }
-    g.putImageData(img, 0, 0);
-    this.sky = c;
-  }
-
-  _ridge(def, x, salt) {
-    let y = this.groundY - (def.base ?? 0) - (def.height ?? 10) / 2;
+  /** Profilo di un terreno: somma di onde (stabile per x). */
+  _wave(def, x, salt) {
+    let y = 0;
     (def.waves || []).forEach(([f, a], i) => {
-      y -= Math.sin(x * f + salt * 1.7 + i * 2.1) * a;
+      y += Math.sin(x * f + salt * 1.3 + i * 2.7) * a;
     });
     return y;
   }
 
-  _buildDunes() {
-    const { w, h } = this;
-    const dcfg = this.cfg.dunes || {};
-    const layer = (def, salt, shaded) => {
-      const { c, g } = makeCanvas(w, h);
-      const col = def.color || '#9c6878';
-      const light = def.light || col;
-      const dark = def.dark || col;
-      for (let x = 0; x < w; x++) {
-        const top = Math.round(this._ridge(def, x, salt));
-        const slope = this._ridge(def, x + 1, salt) - this._ridge(def, x - 1, salt);
-        const lit = this.sunDir < 0 ? slope < 0.05 : slope > -0.05;
-        rect(g, x, top, 1, h - top, col);
-        rect(g, x, top, 1, lit ? 2 : 1, light);
-        if (shaded && !lit) for (let y = top + 2; y < top + 9; y++) if (bayer(x, y) < 0.5 - (y - top) * 0.05) rect(g, x, y, 1, 1, dark);
-      }
-      return { c, g };
-    };
-    this.farDunes = layer(dcfg.far || {}, 1, false).c;
-    const mid = layer(dcfg.mid || {}, 2, true);
-    const r = mulberry32((this.cfg.seed ?? 1) + 5);
-    const vis = this.w - this.vx0;
-    for (const ru of dcfg.ruins || []) {
-      const x0 = Math.round(this.vx0 + vis * ru.at);
-      const base = Math.round(this._ridge(dcfg.mid || {}, x0 + ru.w / 2, 2)) + 3;
-      for (let i = 0; i < ru.w; i++) {
-        const hh = Math.round(ru.h - (r() < 0.35 ? r() * ru.h * 0.6 : r() * 2));
-        rect(mid.g, x0 + i, base - hh, 1, hh, dcfg.ruinColor || '#7e5048');
-        if ((this.sunDir < 0 && i === 0) || (this.sunDir > 0 && i === ru.w - 1)) rect(mid.g, x0 + i, base - hh, 1, hh, dcfg.ruinLight || '#a46a58');
-      }
-      if (ru.w > 12) rect(mid.g, x0 + Math.round(ru.w / 3), base - Math.round(ru.h * 0.6), 3, 4, dcfg.far?.color || '#9c6878');
-    }
-    this.midDunes = mid.c;
-  }
+  // ---------- Parti statiche (ricostruite a ogni ridimensionamento) ----------
 
-  _buildGround() {
-    const { w, h, groundY } = this;
-    const gc = this.cfg.ground || {};
-    const { c, g } = makeCanvas(w, h);
-    const r = mulberry32((this.cfg.seed ?? 1) + 9);
-    const base = hex(gc.color || '#c08658');
-    const dark = hex(gc.dark || '#9c6a48');
-    for (let x = 0; x < w; x++) {
-      const top = Math.round(groundY + Math.sin(x * 0.05) * 1.5 + Math.sin(x * 0.13 + 1) * 0.8);
-      for (let y = top; y < h; y++) {
-        const t = (y - top) / Math.max(1, h - top);
-        rect(g, x, y, 1, 1, css(t * 0.9 > bayer(x, y) + 0.35 ? dark : base));
-      }
-      rect(g, x, top, 1, 1, gc.light || '#d8a068');
-      if (r() < 0.3) rect(g, x, top + 1 + Math.floor(r() * (h - top)), 1, 1, r() < 0.5 ? gc.light || '#d8a068' : gc.dark || '#9c6a48');
-    }
-    for (let x = 0; x < w; x++) {
-      if (r() < (gc.stones ?? 0.012)) {
-        const y = groundY + 3 + Math.floor(r() * (h - groundY - 5));
-        const sw = 2 + Math.floor(r() * 3);
-        rect(g, x, y, sw, 2, gc.stone || '#7a5e4a');
-        rect(g, x, y, sw - 1, 1, gc.stoneLight || '#b49a7a');
-      }
-      if (r() < (gc.tufts ?? 0.006)) {
-        const y = groundY + 2 + Math.floor(r() * (h - groundY - 4));
-        for (let k = -2; k <= 2; k++) rect(g, x + k, y - (2 - Math.abs(k)) - 1, 1, 3 - Math.abs(k) + 1, gc.grass || '#6e6234');
-      }
-    }
-    this.ground = c;
-  }
-
-  _buildSprites() {
+  _buildStatic() {
     const cfg = this.cfg;
-    const key = `${this.sunDir}`;
-    if (this._spriteKey === key) return;
-    this._spriteKey = key;
-    const sc = cfg.soldier || {};
-    this.bust = buildBust(sc, this.sunDir, (cfg.seed ?? 1) + 21);
-    const tc = cfg.tank || {};
-    const tank = makeCanvas(66 + M * 2, 34 + M * 2);
-    drawTank(tank.g, tc.colors || {}, (cfg.seed ?? 1) + 7, M);
-    finish(tank.c, { rim: tc.rim, rimAmount: 0.45, rimDir: tc.flip ? -this.sunDir : this.sunDir, outline: sc.outline });
-    this.tank = tank.c;
-    this.heliCache.clear();
+    const { w, h, horizon } = this;
+    // cielo: sfumatura a fasce con retino fino all'orizzonte infuocato
+    const sky = makeCanvas(w, h);
+    const stops = (cfg.sky?.stops || [[0, '#0b0a1e'], [1, '#ffb05a']]).map(([t, c]) => [t, hex(c)]);
+    const at = (t) => {
+      for (let i = 1; i < stops.length; i++) {
+        if (t <= stops[i][0]) return mixRGB(stops[i - 1][1], stops[i][1], (t - stops[i - 1][0]) / Math.max(1e-6, stops[i][0] - stops[i - 1][0]));
+      }
+      return stops[stops.length - 1][1];
+    };
+    const LEV = 28;
+    const pal = Array.from({ length: LEV }, (_, i) => at(i / (LEV - 1)));
+    const img = sky.g.createImageData(w, h);
+    for (let y = 0; y < h; y++) {
+      const t = clamp(y / Math.max(1, horizon + 8), 0, 1) * (LEV - 1);
+      const i0 = Math.floor(t);
+      for (let x = 0; x < w; x++) {
+        const col = pal[Math.min(LEV - 1, t - i0 > bayer(x, y) ? i0 + 1 : i0)];
+        const k = (y * w + x) * 4;
+        img.data[k] = col[0];
+        img.data[k + 1] = col[1];
+        img.data[k + 2] = col[2];
+        img.data[k + 3] = 255;
+      }
+    }
+    sky.g.putImageData(img, 0, 0);
+    this.sky = sky.c;
+
+    // stelle
+    const r = mulberry32((cfg.seed ?? 7) + 1);
+    const sc = cfg.stars || {};
+    this.stars = Array.from({ length: Math.round((sc.count ?? 140) * (w / 400)) }, () => {
+      const y = Math.floor(Math.pow(r(), 1.6) * horizon * (sc.until ?? 0.6));
+      return { x: Math.floor(r() * w), y, b: 0.35 + r() * 0.65, ph: r() * 6, sp: 0.8 + r() * 2.5, big: r() < 0.06 };
+    });
+    this.moon = makeMoon(cfg.moon || {});
+
+    // nuvole iniziali
+    const cc = cfg.clouds || {};
+    this.clouds = [];
+    for (let i = 0; i < (cc.count ?? 5); i++) this._spawnCloud(rnd(-60, w));
+
+    // strati
+    const mt = cfg.mountains || {};
+    const far = cfg.farCity || {};
+    const mid = cfg.midCity || {};
+    const near = cfg.near || {};
+    const front = cfg.front || {};
+    const fore = cfg.fore || {};
+    this.foreY = (x) => h + (fore.y ?? -5) - this._wave(fore, x, 7);
+    this.mountainY = (x) => horizon + (mt.y ?? -8) - this._wave(mt, x, 1);
+    this.nearY = (x) => horizon + (near.y ?? 8) - this._wave(near, x, 3);
+    this.frontY = (x) => horizon + (front.y ?? 16) - this._wave(front, x, 5);
+    const seed = cfg.seed ?? 7;
+    this.strips = {
+      mountains: new Strip(mt.parallax ?? 0.05, (g, x0, x1, c) => {
+        for (let x = x0; x < x1; x++) rect(g, x - x0, Math.round(this.mountainY(x)), 1, h, mt.color || '#2e1a3a');
+        rimLight(c, mt.rim || '#6a2e4a', { amount: 0.7, depth: 2 });
+      }),
+      far: new Strip(far.parallax ?? 0.15, (g, x0, x1, c) => {
+        const d = paintCity(g, x0, x1, horizon + (far.y ?? 2), far, seed + 10);
+        rimLight(c, far.rim || '#8a3446', { amount: 0.75, depth: 2 });
+        return d;
+      }),
+      mid: new Strip(mid.parallax ?? 0.38, (g, x0, x1, c) => {
+        const d = paintCity(g, x0, x1, horizon + (mid.y ?? 12), mid, seed + 20);
+        rimLight(c, mid.rim || '#c04a3c', { amount: 0.8, depth: 2 });
+        return d;
+      }),
+      near: new Strip(near.parallax ?? 0.7, (g, x0, x1, c) => {
+        paintNear(g, x0, x1, this.nearY, near, seed + 30);
+        rimLight(c, near.rim || '#d0603a', { amount: 0.75, depth: 1 });
+      }),
+      front: new Strip(front.parallax ?? 1, (g, x0, x1, c) => {
+        paintFront(g, x0, x1, this.frontY, front, seed + 40);
+        rimLight(c, front.rim || '#ff8a4a', { amount: 0.6, depth: 1 });
+      }),
+      fore: new Strip(fore.parallax ?? 1.4, (g, x0, x1, c) => {
+        paintFore(g, x0, x1, this.foreY, fore, seed + 60);
+        rimLight(c, fore.rim || '#a04a34', { amount: 0.5, depth: 1 });
+      }),
+    };
+
+    // nebbia bassa: fasce a retino che scorrono
+    const fc = cfg.fog || {};
+    const fh = fc.height ?? 16;
+    const fog = makeCanvas(w * 2, fh);
+    const fcol = hex(fc.color || '#6a3048');
+    const fr = mulberry32(seed + 50);
+    const phase = Array.from({ length: 4 }, () => fr() * 6);
+    for (let y = 0; y < fh; y++) {
+      for (let x = 0; x < w * 2; x++) {
+        const v = (Math.sin((x / (w * 2)) * Math.PI * 2 * 3 + phase[0]) + Math.sin((x / (w * 2)) * Math.PI * 2 * 7 + phase[1]) * 0.5 + 1.5) / 3;
+        const vy = 1 - Math.abs(y / fh - 0.5) * 2;
+        if (bayer(x, y) < v * vy * 0.9) {
+          fog.g.fillStyle = `rgba(${fcol[0]},${fcol[1]},${fcol[2]},${fc.alpha ?? 0.35})`;
+          fog.g.fillRect(x, y, 1, 1);
+        }
+      }
+    }
+    this.fog = fog.c;
+
+    // vignettatura
+    const vg = makeCanvas(w, h);
+    const vs = cfg.vignette?.strength ?? 0.55;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const dx = (x / w - 0.5) * 2;
+        const dy = (y / h - 0.45) * 2;
+        const k = clamp((Math.hypot(dx * 0.9, dy) - 0.7) / 0.7, 0, 1) * vs;
+        if (k > 0 && bayer(x, y) < k) {
+          vg.g.fillStyle = 'rgba(0,0,0,0.5)';
+          vg.g.fillRect(x, y, 1, 1);
+        }
+      }
+    }
+    this.vignette = vg.c;
   }
 
-  _buildFlag() {
-    const f = this.cfg.flag || {};
-    const W = f.width ?? 46;
-    const H = f.height ?? 26;
-    const r = mulberry32((this.cfg.seed ?? 1) + 13);
-    const len = new Array(H);
-    let row = 0;
-    while (row < H) {
-      // strisce di 1-3 righe con lunghezze diverse: bordo libero a brandelli
-      const n = 1 + Math.floor(r() * 3);
-      let l = W - Math.floor(r() * (f.tatter ?? 10));
-      if (r() < 0.15) l = W + 2;
-      for (let k = 0; k < n && row < H; k++, row++) len[row] = l - (row >= H - 3 ? Math.floor(r() * 8) + 3 : 0) - (k === n - 1 ? Math.floor(r() * 2) : 0);
-    }
-    const hole = new Set();
-    for (let i = 0; i < (f.holes ?? 8); i++) {
-      const hc = 6 + Math.floor(r() * (W - 14));
-      const hr = 2 + Math.floor(r() * (H - 4));
-      hole.add(`${hr},${hc}`);
-      if (r() < 0.6) hole.add(`${hr},${hc + 1}`);
-      if (r() < 0.4) hole.add(`${hr + 1},${hc}`);
-    }
-    const burnt = new Set();
-    for (const k of hole) {
-      const [hr, hc] = k.split(',').map(Number);
-      for (const [dr, dc] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) if (!hole.has(`${hr + dr},${hc + dc}`)) burnt.add(`${hr + dr},${hc + dc}`);
-    }
-    for (let rr = 0; rr < H; rr++) if (r() < 0.6) burnt.add(`${rr},${len[rr] - 1}`);
-    this.flag = { W, H, len, hole, burnt };
+  _spawnCloud(x) {
+    const cc = this.cfg.clouds || {};
+    const w = Math.round(range(cc.width, [60, 150]));
+    const h = Math.round(range(cc.height, [5, 11]));
+    const [y0, y1] = cc.yRange || [0.08, 0.42];
+    this.clouds.push({
+      img: makeCloudStreak(cc, w, h, Math.floor(Math.random() * 1e6)),
+      x,
+      y: Math.round(this.horizon * rnd(y0, y1)),
+      v: range(cc.speed, [1.5, 4]),
+    });
   }
 
   // ---------- Aggiornamento ----------
@@ -295,342 +302,532 @@ export class MenuScene {
     const cfg = this.cfg;
     this.t += dt;
     if (!this.w) return;
-    const wind = this.wind;
+    this.cam += (cfg.camera?.speed ?? 9) * dt;
+    this.flash = Math.max(0, this.flash - dt * (cfg.explosions?.flashDecay ?? 2.5));
+    const { w, h } = this;
+    const S = this.strips;
 
     // nuvole
-    const cc = cfg.clouds || {};
-    if (!this._cloudsInit) {
-      this._cloudsInit = true;
-      for (let i = 0; i < (cc.initial ?? 3); i++) this._spawnCloud(rnd(0, this.w));
-    }
-    this.cloudTimer -= dt;
-    if (this.cloudTimer <= 0) {
-      this.cloudTimer = range(cc.interval, [6, 14]);
-      if (this.clouds.length < (cc.max ?? 6)) this._spawnCloud(wind < 0 ? this.w + 2 : null);
-    }
-    for (const c of this.clouds) c.x += c.v * wind * dt;
-    this.clouds = this.clouds.filter((c) => c.x > -c.img.width - 4 && c.x < this.w + 4);
+    for (const c of this.clouds) c.x -= c.v * dt + (cfg.camera?.speed ?? 9) * 0.04 * dt;
+    this.clouds = this.clouds.filter((c) => c.x > -c.img.width - 4);
+    while (this.clouds.length < (cfg.clouds?.count ?? 5)) this._spawnCloud(w + rnd(0, 40));
 
-    // elicottero
-    const hc = cfg.helicopter || {};
-    this.heliTimer -= dt;
-    if (this.heliTimer <= 0) {
-      this.heliTimer = range(hc.interval, [8, 20]);
-      this._spawnHeli();
+    // fumo dai punti in fiamme degli strati di città
+    const fc = cfg.fires || {};
+    const sm = fc.smoke || {};
+    for (const [name, strip] of [['far', S.far], ['mid', S.mid]]) {
+      for (const ch of strip.visible(this.cam, w, h)) {
+        for (const f of ch.data.fires || []) {
+          if (Math.random() < dt * (fc.smokeRate ?? 1.6) * f.s && this.smoke.length < (sm.max ?? 400)) {
+            const k = name === 'far' ? 0.7 : 1;
+            this.smoke.push({ strip: name, x: f.x + rnd(-1, 1), y: f.y - 2, vx: rnd(-1, 1), vy: -range(sm.speed, [4, 8]) * k, age: 0, life: range(sm.life, [7, 12]), r0: (sm.size?.[0] ?? 1.5) * k * f.s, r1: (sm.size?.[1] ?? 7) * k * (0.6 + f.s * 0.5) });
+          }
+        }
+      }
     }
-    for (const hl of this.helis) hl.x += hl.v * hl.dir * dt;
-    this.helis = this.helis.filter((hl) => hl.x > -hl.sprite.width - 10 && hl.x < this.w + 10);
-
-    // fuoco, fumo e scintille del carro armato
-    const tc = cfg.tank || {};
-    const fire = tc.fire || {};
-    const emitters = (fire.emitters || [[27, 5]]).map(([x, y]) => this._tankPoint(x, y));
-    this._fireAcc = (this._fireAcc || 0) + dt * (fire.rate ?? 26);
-    while (this._fireAcc >= 1 && this.flames.length < (fire.max ?? 220)) {
-      this._fireAcc -= 1;
-      const e = emitters[Math.floor(Math.random() * emitters.length)];
-      const big = e === emitters[0];
-      this.flames.push({ x: e.x + rnd(-(fire.spread ?? 3), fire.spread ?? 3), y: e.y, vx: rnd(-4, 4), vy: -range(fire.speed, [14, 30]) * (big ? 1 : 0.6), age: 0, life: range(fire.life, [0.3, 0.7]) * (big ? 1 : 0.7) });
-    }
-    if (this._fireAcc > 1) this._fireAcc = 0;
-    for (const p of this.flames) {
-      p.age += dt;
-      p.x += (p.vx + wind * 4) * dt;
-      p.y += p.vy * dt;
-    }
-    this.flames = this.flames.filter((p) => p.age < p.life);
-
-    const sm = tc.smoke || {};
-    this._smokeAcc = (this._smokeAcc || 0) + dt * (sm.rate ?? 7);
-    while (this._smokeAcc >= 1 && this.smoke.length < (sm.max ?? 160)) {
-      this._smokeAcc -= 1;
-      const e = emitters[Math.random() < 0.7 ? 0 : Math.floor(Math.random() * emitters.length)];
-      const [s0, s1] = sm.size || [2, 9];
-      this.smoke.push({ x: e.x + rnd(-2, 2), y: e.y - 5, vx: rnd(-2, 2), vy: -range(sm.speed, [8, 14]), age: 0, life: range(sm.life, [6, 10]), r0: s0 * rnd(0.8, 1.2), r1: s1 * rnd(0.7, 1.2) });
-    }
-    if (this._smokeAcc > 1) this._smokeAcc = 0;
     for (const p of this.smoke) {
       p.age += dt;
-      const k = p.age / p.life;
-      p.x += (p.vx + wind * (sm.drift ?? 9) * Math.min(1, k * 2.2)) * dt;
-      p.y += p.vy * (1 - k * 0.5) * dt;
+      p.x += (p.vx + (sm.drift ?? -3) * Math.min(1, p.age / 3)) * dt;
+      p.y += p.vy * dt * (1 - (p.age / p.life) * 0.6);
     }
     this.smoke = this.smoke.filter((p) => p.age < p.life);
 
-    const em = tc.embers || {};
-    if (Math.random() < dt * (em.rate ?? 3)) {
-      const e = emitters[0];
-      this.embers.push({ x: e.x, y: e.y - 2, vx: rnd(-6, 6), vy: -range(em.speed, [18, 34]), age: 0, life: range(em.life, [1, 2.2]) });
+    // traccianti contraerei: raffiche dalla città di mezzo
+    const tc = cfg.tracers || {};
+    this.timers.tracer -= dt;
+    if (this.timers.tracer <= 0) {
+      this.timers.tracer = range(tc.interval, [0.6, 2.2]);
+      const sx = rnd(this.vx0 * 0.5, w);
+      const base = (rnd(-90, 90) * Math.PI) / 180;
+      this.bursts.push({
+        x: sx + S.mid.off(this.cam),
+        y: this.horizon + (cfg.midCity?.y ?? 12) - rnd(0, 18),
+        a: -Math.PI / 2 + base * ((tc.spreadDeg ?? 35) / 90),
+        sweep: rnd(-0.4, 0.4),
+        left: Math.round(range(tc.shots, [6, 16])),
+        cd: 0,
+        color: (tc.colors || ['#a0ff80'])[Math.floor(Math.random() * (tc.colors?.length ?? 1))],
+        speed: range(tc.speed, [90, 130]),
+      });
+    }
+    for (const b of this.bursts) {
+      b.cd -= dt;
+      b.a += b.sweep * dt;
+      while (b.cd <= 0 && b.left > 0) {
+        b.cd += tc.rate ?? 0.07;
+        b.left--;
+        if (this.bullets.length < (tc.max ?? 220)) {
+          const a = b.a + rnd(-0.03, 0.03);
+          this.bullets.push({ x: b.x, y: b.y, vx: Math.cos(a) * b.speed, vy: Math.sin(a) * b.speed, age: 0, life: tc.life ?? 1.8, color: b.color });
+        }
+      }
+    }
+    this.bursts = this.bursts.filter((b) => b.left > 0);
+    for (const p of this.bullets) {
+      p.age += dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vy += 14 * dt;
+    }
+    this.bullets = this.bullets.filter((p) => p.age < p.life && p.y > -10);
+
+    // razzi illuminanti che scendono dondolando
+    const fl = cfg.flares || {};
+    this.timers.flare -= dt;
+    if (this.timers.flare <= 0) {
+      this.timers.flare = range(fl.interval, [5, 11]);
+      if (this.flares.length < (fl.max ?? 3)) {
+        this.flares.push({ x: rnd(this.vx0, w) + S.far.off(this.cam), y: this.horizon * rnd(0.12, 0.4), age: 0, life: range(fl.life, [12, 18]), ph: Math.random() * 6, trail: [] });
+      }
+    }
+    for (const f of this.flares) {
+      f.age += dt;
+      f.y += (fl.fall ?? 4) * dt;
+      f.x += Math.sin(f.age * 1.2 + f.ph) * 3 * dt;
+      f.tt = (f.tt || 0) + dt;
+      if (f.tt > 0.12) {
+        f.tt = 0;
+        f.trail.push({ x: f.x, y: f.y - 2, age: 0 });
+      }
+      for (const p of f.trail) {
+        p.age += dt;
+        p.y -= 1.5 * dt;
+        p.x -= 2 * dt;
+      }
+      f.trail = f.trail.filter((p) => p.age < 4);
+    }
+    this.flares = this.flares.filter((f) => f.age < f.life);
+
+    // esplosioni tra gli edifici (lontane o più vicine): lampo, palla di fuoco, scintille, fumo
+    const ex = cfg.explosions || {};
+    this.timers.boom -= dt;
+    if (this.timers.boom <= 0) {
+      this.timers.boom = range(ex.interval, [3, 8]);
+      const strip = Math.random() < 0.55 ? 'far' : 'mid';
+      const big = strip === 'mid' && Math.random() < 0.5;
+      const sx = rnd(this.vx0 * 0.6, w);
+      const by = this.horizon + (strip === 'far' ? cfg.farCity?.y ?? 2 : cfg.midCity?.y ?? 12) - rnd(4, 16);
+      this.booms.push({ strip, x: sx + S[strip].off(this.cam), y: by, age: 0, size: (strip === 'far' ? 0.6 : 1) * (big ? 1.5 : 1) });
+      this.flash = Math.min(1, this.flash + (ex.flash ?? 0.35) * (strip === 'far' ? 0.6 : 1) * (big ? 1.4 : 1));
+      for (let i = 0; i < (big ? 26 : 14); i++) {
+        const a = rnd(-Math.PI, 0);
+        const v = rnd(20, 55);
+        this.sparks.push({ strip, x: sx + S[strip].off(this.cam), y: by, vx: Math.cos(a) * v, vy: Math.sin(a) * v, age: 0, life: rnd(0.6, 1.4) });
+      }
+    }
+    for (const b of this.booms) {
+      b.age += dt;
+      if (b.age > 0.35 && !b.smoked) {
+        b.smoked = true;
+        for (let i = 0; i < 8; i++) {
+          this.smoke.push({ strip: b.strip, x: b.x + rnd(-4, 4) * b.size, y: b.y - rnd(0, 6) * b.size, vx: rnd(-2, 2), vy: -rnd(4, 9), age: 0, life: rnd(5, 9), r0: 3 * b.size, r1: 9 * b.size });
+        }
+      }
+    }
+    this.booms = this.booms.filter((b) => b.age < 1.2);
+    for (const p of this.sparks) {
+      p.age += dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vy += 40 * dt;
+    }
+    this.sparks = this.sparks.filter((p) => p.age < p.life);
+
+    // elicottero col faro
+    const hc = cfg.helicopter || {};
+    this.timers.heli -= dt;
+    if (this.timers.heli <= 0) {
+      this.timers.heli = range(hc.interval, [10, 22]);
+      const dir = Math.random() < 0.5 ? 1 : -1;
+      const f = hc.parallax ?? 0.45;
+      this.helis.push({ dir, f, x: (dir > 0 ? -60 : w + 10) + this.cam * f, y: this.horizon * range(hc.yRange, [0.3, 0.6]), v: range(hc.speed, [18, 28]), ph: Math.random() * 6 });
+    }
+    for (const hl of this.helis) hl.x += hl.v * hl.dir * dt;
+    this.helis = this.helis.filter((hl) => {
+      const sx = hl.x - this.cam * hl.f;
+      return sx > -80 && sx < w + 80;
+    });
+
+    // caccia con la scia
+    const jc = cfg.jet || {};
+    this.timers.jet -= dt;
+    if (this.timers.jet <= 0) {
+      this.timers.jet = range(jc.interval, [16, 32]);
+      const dir = Math.random() < 0.5 ? 1 : -1;
+      this.jets.push({ dir, x: dir > 0 ? -30 : w + 30, y: this.horizon * range(jc.yRange, [0.08, 0.3]), v: range(jc.speed, [150, 190]) });
+    }
+    for (const j of this.jets) {
+      j.x += j.v * j.dir * dt;
+      this.trails.push({ x: j.x - j.dir * 2, y: j.y + 1, age: 0 });
+    }
+    this.jets = this.jets.filter((j) => j.x > -60 && j.x < w + 60);
+    for (const p of this.trails) p.age += dt;
+    this.trails = this.trails.filter((p) => p.age < 3);
+
+    // braci che salgono e cenere che scende
+    const em = cfg.embers || {};
+    if (Math.random() < dt * (em.rate ?? 6) * (w / 400) && this.embers.length < (em.max ?? 90)) {
+      this.embers.push({ x: rnd(0, w), y: h + 2, vx: rnd(-3, 3), vy: -range(em.speed, [8, 20]), age: 0, life: range(em.life, [3, 7]), ph: Math.random() * 6, c: Math.floor(Math.random() * (em.colors?.length ?? 1)) });
     }
     for (const p of this.embers) {
       p.age += dt;
-      p.x += (p.vx + wind * 10 * (p.age / p.life)) * dt + Math.sin(this.t * 9 + p.life * 10) * 0.15;
+      p.x += (p.vx + Math.sin(this.t * 2 + p.ph) * 4 - 3) * dt;
       p.y += p.vy * dt;
-      p.vy *= 1 - dt * 0.6;
     }
     this.embers = this.embers.filter((p) => p.age < p.life);
-
-    // sabbia sollevata dal vento
-    const sd = cfg.sand || {};
-    if (Math.random() < dt * (sd.rate ?? 9) && this.sand.length < (sd.max ?? 60)) {
-      this.sand.push({ x: wind < 0 ? this.w + 1 : -1, y: this.groundY + rnd(-4, this.h - this.groundY), v: range(sd.speed, [40, 85]), ph: Math.random() * 6 });
+    const ac = cfg.ash || {};
+    if (Math.random() < dt * (ac.rate ?? 4) * (w / 400) && this.ash.length < (ac.max ?? 60)) {
+      this.ash.push({ x: rnd(0, w + 40), y: -2, v: range(ac.speed, [3, 7]), ph: Math.random() * 6 });
     }
-    for (const p of this.sand) {
-      p.x += p.v * wind * dt;
-      p.y += Math.sin(this.t * 3 + p.ph) * 4 * dt;
+    for (const p of this.ash) {
+      p.y += p.v * dt;
+      p.x += (Math.sin(this.t + p.ph) * 3 - 5) * dt;
     }
-    this.sand = this.sand.filter((p) => p.x > -4 && p.x < this.w + 4);
-
-    // riflesso sugli occhiali
-    const gl = this.glint;
-    gl.on = Math.max(0, gl.on - dt);
-    gl.timer -= dt;
-    if (gl.timer <= 0) {
-      gl.timer = range(cfg.soldier?.glint, [4, 9]);
-      gl.len = this.cfg.soldier?.glintTime ?? 0.6;
-      gl.on = gl.len;
-    }
-  }
-
-  _spawnCloud(x) {
-    const cc = this.cfg.clouds || {};
-    const w = Math.round(range(cc.width, [30, 72]));
-    const h = Math.round(range(cc.height, [9, 18]));
-    const img = makeCloud(cc, w, h);
-    const [y0, y1] = cc.yRange || [0.05, 0.45];
-    this.clouds.push({ img, x: x ?? -img.width - 2, y: Math.round(this.groundY * rnd(y0, y1)), v: range(cc.speed, [2.5, 6]) * (0.6 + (w / 72) * 0.6) });
-  }
-
-  _spawnHeli() {
-    const hc = this.cfg.helicopter || {};
-    const s = Math.round(range(hc.size, [0.45, 1]) * 20) / 20;
-    const dir = Math.random() < 0.5 ? 1 : -1;
-    const sprite = this._heliSprite(s, dir);
-    const [y0, y1] = hc.yRange || [0.1, 0.48];
-    this.helis.push({
-      s,
-      dir,
-      sprite,
-      x: dir > 0 ? -sprite.width - 4 : this.w + 4,
-      y: Math.round(this.groundY * rnd(y0, y1)),
-      v: range(hc.speed, [26, 48]) * (0.5 + s * 0.5),
-      ph: Math.random() * 6,
-    });
-  }
-
-  _heliSprite(s, dir) {
-    const key = `${s}:${dir}`;
-    if (this.heliCache.has(key)) return this.heliCache.get(key);
-    const hc = this.cfg.helicopter || {};
-    const { c, g } = makeCanvas((HELI.length + 2) * s + M * 2, HELI.height * s + M * 2);
-    drawApache(g, s, hc, M + Math.ceil(s));
-    finish(c, { rim: s > 0.7 ? hc.rim : null, rimAmount: 0.35, rimDir: this.sunDir * dir, tint: hc.haze, tintAmount: (1 - s) * 0.75 });
-    let out = c;
-    if (dir < 0) {
-      const f = makeCanvas(c.width, c.height);
-      f.g.scale(-1, 1);
-      f.g.drawImage(c, -c.width, 0);
-      out = f.c;
-    }
-    this.heliCache.set(key, out);
-    return out;
-  }
-
-  /** Punto dello sprite del carro (coordinate senza margine, muso a destra) in coordinate della scena. */
-  _tankPoint(x, y) {
-    const flip = !!this.cfg.tank?.flip;
-    const W = this.tank?.width ?? 72;
-    const H = this.tank?.height ?? 40;
-    const lx = flip ? W - (x + M) : x + M;
-    return { x: Math.round(this.tankX - W / 2 + lx), y: Math.round(this.tankY - H + y + M) };
+    this.ash = this.ash.filter((p) => p.y < h + 2 && p.x > -4);
   }
 
   // ---------- Disegno ----------
 
+  _glow(x, y, r, color, alpha) {
+    const { g } = this;
+    g.globalCompositeOperation = 'lighter';
+    for (const k of [1, 0.66, 0.38]) {
+      g.globalAlpha = alpha;
+      disc(g, x, y, r * k, color);
+    }
+    g.globalAlpha = 1;
+    g.globalCompositeOperation = 'source-over';
+  }
+
   render() {
-    const { g, cfg } = this;
+    const { g, cfg, w, h } = this;
     if (!this.sky) return;
+    const S = this.strips;
+    const cam = this.cam;
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.globalAlpha = 1;
     g.globalCompositeOperation = 'source-over';
     g.drawImage(this.sky, 0, 0);
 
+    // stelle (scintillano; spariscono nel riverbero vicino all'orizzonte)
+    const st = cfg.stars || {};
+    g.fillStyle = st.color || '#fff2e0';
+    for (const s of this.stars) {
+      const a = s.b * (0.55 + 0.45 * Math.sin(this.t * s.sp + s.ph));
+      g.globalAlpha = a;
+      g.fillRect(s.x, s.y, 1, 1);
+      if (s.big && a > 0.7) {
+        g.globalAlpha = a * 0.4;
+        g.fillRect(s.x - 1, s.y, 3, 1);
+        g.fillRect(s.x, s.y - 1, 1, 3);
+      }
+    }
+    g.globalAlpha = 1;
+    const mc = cfg.moon || {};
+    const mx = Math.round(this.vx0 + this.vis * (mc.at ?? 0.8) - this.moon.width / 2);
+    g.drawImage(this.moon, mx, Math.round(this.horizon * (mc.y ?? 0.25) - this.moon.height / 2));
+
     for (const c of this.clouds) g.drawImage(c.img, Math.round(c.x), c.y);
+
+    // caccia e scie (molto in alto)
+    const jc = cfg.jet || {};
+    g.fillStyle = jc.trail || 'rgba(220,200,210,0.4)';
+    for (const p of this.trails) {
+      g.globalAlpha = 1 - p.age / 3;
+      g.fillRect(Math.round(p.x), Math.round(p.y + p.age * 1.5), 1, 1);
+    }
+    g.globalAlpha = 1;
+    if (!this.jetSprite) this.jetSprite = makeJet(jc);
+    for (const j of this.jets) {
+      const x = Math.round(j.x - 11);
+      const y = Math.round(j.y - 4);
+      if (j.dir > 0) g.drawImage(this.jetSprite, x, y);
+      else {
+        g.save();
+        g.translate(x + 22, y);
+        g.scale(-1, 1);
+        g.drawImage(this.jetSprite, 0, 0);
+        g.restore();
+      }
+      this._glow(j.x - j.dir * 11, j.y + 0.5, 3, jc.burner || '#ffb060', 0.35);
+    }
+
+    S.mountains.draw(g, cam, w, h);
+
+    // città lontana: esplosioni dietro, poi edifici, fuochi e fumo
+    this._drawBooms('far');
+    S.far.draw(g, cam, w, h);
+    this._drawFires('far');
+    this._drawSmoke('far');
+    this._drawFlares();
+
+    // traccianti, esplosioni dietro la città di mezzo, città di mezzo
+    for (const p of this.bullets) {
+      const k = p.age / p.life;
+      const x = p.x - S.mid.off(cam);
+      g.globalAlpha = k > 0.7 ? 1 - (k - 0.7) / 0.3 : 1;
+      line(g, x, p.y, x - p.vx * 0.025, p.y - p.vy * 0.025, 1, p.color);
+    }
+    g.globalAlpha = 1;
+    this._drawBooms('mid');
+    S.mid.draw(g, cam, w, h);
+    this._drawFires('mid');
+    this._drawSmoke('mid');
+    this._drawSparks();
     this._drawHelis();
 
-    g.drawImage(this.farDunes, 0, 0);
-    g.drawImage(this.midDunes, 0, 0);
-    g.drawImage(this.ground, 0, 0);
-    this._drawTank();
-    this._drawFlag();
+    // nebbia, terreno vicino, primo piano con la squadra
+    const fc = cfg.fog || {};
+    const fy = this.horizon + (fc.y ?? 14);
+    const fo = Math.round((cam * 0.55 + this.t * (fc.drift ?? 4)) % this.fog.width);
+    g.drawImage(this.fog, -fo, fy);
+    g.drawImage(this.fog, this.fog.width - fo, fy);
+    S.near.draw(g, cam, w, h);
+    S.front.draw(g, cam, w, h);
+    this._drawSquad();
+    S.fore.draw(g, cam, w, h);
 
-    // soldato a mezzo busto (respira: si alza di 1 px) con la coda della kefiah al vento
-    const sc = cfg.soldier || {};
-    const period = sc.breath ?? 3.4;
-    const oy = this.t % period > period * 0.55 ? 0 : 1;
-    const bm = BUST.margin;
-    const sx = Math.round(this.soldierX - BUST.w / 2 - bm);
-    const sy = Math.round(this.bustY + oy);
-    this._drawScarf(sx + bm, sy + bm, sc.colors || {}, sc.outline);
-    g.drawImage(this.bust, sx, sy);
-    if (this.glint.on > 0) {
-      // riflesso che scorre sulle lenti
-      const k = 1 - this.glint.on / this.glint.len;
-      const pos = -20 + k * 120;
-      g.fillStyle = sc.glintColor || 'rgba(255,244,220,0.75)';
-      for (let y = 109; y <= 131; y++) {
-        for (let d = 0; d < 4; d++) {
-          const x = Math.round(79 + pos + d - (y - 109) * 0.7);
-          if (BUST_LENSES.some((l) => insidePoly(l, x + 0.5, y + 0.5))) g.fillRect(sx + bm + x, sy + bm + y, 1, 1);
+    // braci e cenere
+    const em = cfg.embers || {};
+    const ecols = em.colors || ['#ffd070', '#ff8a30', '#c04020'];
+    for (const p of this.embers) {
+      if (Math.sin(this.t * 14 + p.ph * 10) < -0.5) continue;
+      g.globalAlpha = 1 - p.age / p.life;
+      g.fillStyle = ecols[Math.min(ecols.length - 1, p.c + Math.floor((p.age / p.life) * 2))];
+      g.fillRect(Math.round(p.x), Math.round(p.y), 1, 1);
+    }
+    g.globalAlpha = 1;
+    g.fillStyle = cfg.ash?.color || 'rgba(200,180,190,0.5)';
+    for (const p of this.ash) g.fillRect(Math.round(p.x), Math.round(p.y), 1, 1);
+
+    // lampo delle esplosioni su tutta la scena, poi vignettatura
+    if (this.flash > 0.01) {
+      g.globalCompositeOperation = 'lighter';
+      g.globalAlpha = this.flash * 0.3;
+      g.fillStyle = cfg.explosions?.flashColor || '#ff8a4a';
+      g.fillRect(0, 0, w, h);
+      g.globalAlpha = 1;
+      g.globalCompositeOperation = 'source-over';
+    }
+    g.drawImage(this.vignette, 0, 0);
+  }
+
+  _drawFires(name) {
+    const { g, cfg } = this;
+    const strip = this.strips[name];
+    const fc = cfg.fires || {};
+    const flame = fc.flame || ['#fff0b0', '#ffc040', '#ff7020', '#c03010'];
+    const k = name === 'far' ? 0.7 : 1;
+    for (const ch of strip.visible(this.cam, this.w, this.h)) {
+      for (const f of ch.data.fires || []) {
+        const x = strip.sx(f.x, this.cam);
+        if (x < -20 || x > this.w + 20) continue;
+        const fl = 0.75 + 0.25 * Math.sin(this.t * 9 + f.ph) * Math.sin(this.t * 5.3 + f.ph * 2);
+        this._glow(x, f.y, (fc.glow?.radius ?? 7) * f.s * k * (0.9 + fl * 0.2), fc.glow?.color || '#ff7a30', (fc.glow?.alpha ?? 0.18) * fl);
+        const hgt = Math.round((2 + 4 * f.s * k) * fl);
+        for (let dy = 0; dy < hgt; dy++) {
+          const t = dy / hgt;
+          const hw = Math.max(0, Math.round((1 - t) * 1.6 * f.s * k + Math.sin(this.t * 13 + dy + f.ph) * 0.6));
+          g.fillStyle = flame[Math.min(flame.length - 1, Math.floor(t * flame.length))];
+          g.fillRect(Math.round(x - hw), Math.round(f.y - dy), hw * 2 + 1, 1);
+        }
+      }
+      for (const b of ch.data.beacons || []) {
+        const per = cfg.beacons?.period ?? 1.6;
+        if ((this.t + b.ph) % per < per * 0.3) {
+          const x = strip.sx(b.x, this.cam);
+          g.fillStyle = cfg.beacons?.color || '#ff3a2a';
+          g.fillRect(Math.round(x), b.y, 1, 1);
+          this._glow(x, b.y, 3, cfg.beacons?.color || '#ff3a2a', 0.15);
         }
       }
     }
-
-    g.fillStyle = cfg.sand?.color || 'rgba(255,228,176,0.55)';
-    for (const p of this.sand) g.fillRect(Math.round(p.x), Math.round(p.y), 2, 1);
   }
 
-  _drawHelis() {
-    const { g } = this;
-    const hc = this.cfg.helicopter || {};
-    for (const hl of this.helis) {
-      const x = Math.round(hl.x);
-      const y = Math.round(hl.y + Math.sin(this.t * 2 + hl.ph) * 1.2);
-      g.drawImage(hl.sprite, x, y);
-      const s = hl.s;
-      const off = M + Math.ceil(s);
-      const lx = (u) => (hl.dir > 0 ? x + off + u * s : x + hl.sprite.width - off - u * s);
-      // rotore principale a 4 pale: due fotogrammi alternati
-      const mx = lx(35.75);
-      const my = y + off + Math.round(1.5 * s) - 1;
-      const half = 31 * s;
-      g.fillStyle = hc.rotor || 'rgba(26,30,36,0.5)';
-      if (Math.floor(this.t * 24) % 2) g.fillRect(Math.round(mx - half), my, Math.round(half * 2), 1);
-      else {
-        g.fillRect(Math.round(mx - half), my, Math.round(half * 0.85), 1);
-        g.fillRect(Math.round(mx + half * 0.15), my, Math.round(half * 0.85), 1);
-        g.fillRect(Math.round(mx - half * 0.4), my - 1, Math.round(half * 0.8), 1);
+  _drawSmoke(name) {
+    const { g, cfg } = this;
+    const strip = this.strips[name];
+    const sm = cfg.fires?.smoke || {};
+    const c0 = hex(sm.color || '#140c16');
+    const c1 = hex(sm.light || '#3a2230');
+    const alpha = sm.alpha ?? 0.75;
+    for (const p of this.smoke) {
+      if (p.strip !== name) continue;
+      const k = p.age / p.life;
+      const x = strip.sx(p.x, this.cam);
+      const r = p.r0 + (p.r1 - p.r0) * Math.sqrt(k);
+      if (x < -r - 2 || x > this.w + r + 2) continue;
+      g.globalAlpha = alpha * (k < 0.1 ? k / 0.1 : 1 - Math.max(0, k - 0.6) / 0.4);
+      disc(g, x, p.y, r, css(mixRGB(c0, c1, k)));
+    }
+    g.globalAlpha = 1;
+  }
+
+  _drawFlares() {
+    const { g, cfg } = this;
+    const fl = cfg.flares || {};
+    const strip = this.strips.far;
+    for (const f of this.flares) {
+      g.fillStyle = fl.trail || 'rgba(200,180,190,0.35)';
+      for (const p of f.trail) {
+        g.globalAlpha = 1 - p.age / 4;
+        g.fillRect(Math.round(strip.sx(p.x, this.cam)), Math.round(p.y), 1, 1);
       }
-      // rotore di coda
-      g.globalAlpha = Math.floor(this.t * 20) % 2 ? 0.55 : 0.3;
-      disc(g, lx(2), y + off + 5 * s, Math.max(1, 4 * s), hc.body || '#363a2c');
+      g.globalAlpha = 1;
+      const x = strip.sx(f.x, this.cam);
+      const fade = Math.min(1, f.age / 0.5, (f.life - f.age) / 2);
+      const fli = 0.85 + Math.sin(this.t * 23 + f.ph) * 0.15;
+      this._glow(x, f.y, (fl.glowRadius ?? 20) * fli, fl.glow || '#ffe0b0', (fl.glowAlpha ?? 0.07) * fade);
+      g.globalAlpha = fade;
+      g.fillStyle = fl.color || '#ffffff';
+      g.fillRect(Math.round(x), Math.round(f.y), 2, 2);
       g.globalAlpha = 1;
     }
   }
 
-  _drawTank() {
+  _drawBooms(name) {
     const { g, cfg } = this;
-    const tc = cfg.tank || {};
-    const glow = tc.glow || {};
-    const hatch = this._tankPoint(...((tc.fire?.emitters || [[27, 5]])[0]));
-    g.globalCompositeOperation = 'lighter';
-    const fl = 1 + (Math.sin(this.t * 13) * 0.5 + Math.sin(this.t * 7.3) * 0.5) * (glow.flicker ?? 0.35);
-    const gr = glow.radius ?? 26;
-    for (const k of [1, 0.66, 0.36]) {
-      g.globalAlpha = (glow.alpha ?? 0.14) * fl;
-      disc(g, hatch.x, hatch.y + 4, gr * k, glow.color || '#ff9440');
-    }
-    g.globalAlpha = 1;
-    g.globalCompositeOperation = 'source-over';
-    const tw = this.tank.width;
-    const th = this.tank.height;
-    const tx = Math.round(this.tankX - tw / 2);
-    const ty = Math.round(this.tankY - th);
-    if (tc.flip) {
-      g.save();
-      g.translate(tx + tw, ty);
-      g.scale(-1, 1);
-      g.drawImage(this.tank, 0, 0);
-      g.restore();
-    } else g.drawImage(this.tank, tx, ty);
-
-    // fumo: sbuffi pieni (prima i più vecchi), lato verso il sole più chiaro; si dissolvono alla fine
-    const sm = tc.smoke || {};
-    const sc0 = hex(sm.color || '#342c2a');
-    const sc1 = hex(sm.light || '#8a7672');
-    const shl = hex(sm.highlight || '#b48a7c');
-    for (const p of this.smoke) {
-      const k = p.age / p.life;
-      const r = p.r0 + (p.r1 - p.r0) * Math.sqrt(k);
-      const col = mixRGB(sc0, sc1, k);
-      g.globalAlpha = k > 0.8 ? 1 - (k - 0.8) / 0.2 : 1;
-      disc(g, p.x + this.sunDir, p.y - 1, r, css(mixRGB(col, shl, 0.55)));
-      disc(g, p.x, p.y, r, css(col));
-    }
-    g.globalAlpha = 1;
-    // fiamme: corpo pieno che tremola sopra ogni punto in fiamme + lingue che salgono
-    const fire = tc.fire || {};
-    const fcols = fire.colors || ['#fff6c4', '#ffd848', '#ff9a28', '#e04a14', '#7a2a14'];
-    const bodies = fire.bodies || [[7, 13]];
-    (fire.emitters || [[27, 4]]).forEach(([ex, ey], n) => {
-      const e = this._tankPoint(ex, ey);
-      const [bw, bh] = bodies[n] || bodies[bodies.length - 1];
-      const fh = bh * (0.85 + 0.15 * Math.sin(this.t * 11 + n * 2));
-      for (let dy = 0; dy < fh; dy++) {
-        const k = dy / fh;
-        const hw = (bw / 2) * (1 - k * k) * (0.8 + 0.2 * Math.sin(this.t * 17 + dy * 1.3 + n));
-        const sway = Math.round(Math.sin(this.t * 6 + dy * 0.5 + n) * k * 1.5 + this.wind * k * 2);
-        g.fillStyle = fcols[Math.min(fcols.length - 2, Math.floor(k * (fcols.length - 1) + 0.3))];
-        g.fillRect(Math.round(e.x - hw) + sway, e.y - dy, Math.max(1, Math.round(hw * 2)), 1);
+    const strip = this.strips[name];
+    const cols = cfg.explosions?.colors || ['#ffffff', '#fff0a0', '#ffb040', '#ff6020', '#a02010'];
+    for (const b of this.booms) {
+      if (b.strip !== name) continue;
+      const x = strip.sx(b.x, this.cam);
+      const k = b.age / 1.2;
+      const r = (4 + 14 * Math.sqrt(k)) * b.size;
+      this._glow(x, b.y, r * 2.2, cols[2], 0.12 * (1 - k));
+      // palla di fuoco: anelli dal bianco al rosso, si spegne dall'esterno
+      const n = cols.length;
+      for (let i = n - 1; i >= 0; i--) {
+        const rr = r * (1 - i / n) * (1 - k * 0.5);
+        if (rr < 0.5 || k > 0.85) continue;
+        disc(g, x, b.y - k * 6 * b.size, rr, cols[Math.min(n - 1, i + Math.floor(k * 3))]);
       }
-    });
-    for (const p of this.flames) {
-      const k = p.age / p.life;
-      const w = k < 0.4 ? 2 : 1;
-      const h = k < 0.3 ? 4 : k < 0.65 ? 3 : 1;
-      g.fillStyle = fcols[Math.min(fcols.length - 1, Math.floor(k * fcols.length))];
-      g.fillRect(Math.round(p.x - w / 2), Math.round(p.y - h / 2), w, h);
     }
-    g.fillStyle = tc.embers?.color || '#ffb048';
-    for (const p of this.embers) if (Math.sin(this.t * 25 + p.life * 40) > -0.3) g.fillRect(Math.round(p.x), Math.round(p.y), 1, 1);
   }
 
-  /** Bandiera a brandelli: colonna per colonna con un'onda che cresce verso il bordo libero. */
-  _drawFlag() {
-    const { g } = this;
-    const f = this.cfg.flag || {};
-    const fl = this.flag;
+  _drawSparks() {
+    const { g, cfg } = this;
+    g.fillStyle = cfg.explosions?.sparks || '#ffc060';
+    for (const p of this.sparks) {
+      const x = this.strips[p.strip].sx(p.x, this.cam);
+      g.globalAlpha = 1 - p.age / p.life;
+      g.fillRect(Math.round(x), Math.round(p.y), 1, 1);
+    }
+    g.globalAlpha = 1;
+  }
+
+  _drawHelis() {
+    const { g, cfg } = this;
+    const hc = cfg.helicopter || {};
+    if (!this.heliSprite) this.heliSprite = makeHeli(hc);
+    const spr = this.heliSprite;
+    for (const hl of this.helis) {
+      const sx = Math.round(hl.x - this.cam * hl.f);
+      const sy = Math.round(hl.y + Math.sin(this.t * 1.7 + hl.ph) * 1.5);
+      // faro: cono di luce che spazza il terreno
+      const nose = hl.dir > 0 ? sx + 40 : sx + 10;
+      const by = sy + 14;
+      const ang = Math.PI / 2 - hl.dir * (0.45 + Math.sin(this.t * 0.9 + hl.ph) * 0.35);
+      const len = this.horizon + 30 - by;
+      const spread = 0.12;
+      const p1 = [nose + Math.cos(ang - spread) * len * 1.4, by + Math.sin(ang - spread) * len * 1.4];
+      const p2 = [nose + Math.cos(ang + spread) * len * 1.4, by + Math.sin(ang + spread) * len * 1.4];
+      g.globalCompositeOperation = 'lighter';
+      g.fillStyle = hc.beam || 'rgba(255,236,200,0.07)';
+      g.beginPath();
+      g.moveTo(nose, by);
+      g.lineTo(p1[0], p1[1]);
+      g.lineTo(p2[0], p2[1]);
+      g.closePath();
+      g.fill();
+      const q1 = [nose + Math.cos(ang - spread * 0.4) * len * 1.4, by + Math.sin(ang - spread * 0.4) * len * 1.4];
+      const q2 = [nose + Math.cos(ang + spread * 0.4) * len * 1.4, by + Math.sin(ang + spread * 0.4) * len * 1.4];
+      g.fillStyle = hc.beamCore || 'rgba(255,240,210,0.1)';
+      g.beginPath();
+      g.moveTo(nose, by);
+      g.lineTo(q1[0], q1[1]);
+      g.lineTo(q2[0], q2[1]);
+      g.closePath();
+      g.fill();
+      g.globalCompositeOperation = 'source-over';
+      if (hl.dir > 0) g.drawImage(spr, sx, sy);
+      else {
+        g.save();
+        g.translate(sx + spr.width, sy);
+        g.scale(-1, 1);
+        g.drawImage(spr, 0, 0);
+        g.restore();
+      }
+      // rotore e luci di posizione lampeggianti
+      g.fillStyle = hc.rotor || 'rgba(10,8,16,0.6)';
+      const half = 24;
+      const cx = sx + 26 + (hl.dir > 0 ? 0 : -2);
+      if (Math.floor(this.t * 24) % 2) g.fillRect(cx - half, sy + 1, half * 2, 1);
+      else {
+        g.fillRect(cx - half, sy + 1, half - 4, 1);
+        g.fillRect(cx + 4, sy + 1, half - 4, 1);
+      }
+      const nav = hc.nav || ['#ff3030', '#30ff60'];
+      if (Math.floor(this.t * 1.5 + hl.ph) % 2 === 0) {
+        const tx = hl.dir > 0 ? sx + 1 : sx + spr.width - 2;
+        g.fillStyle = nav[0];
+        g.fillRect(tx, sy + 3, 1, 1);
+        this._glow(tx, sy + 3, 2.5, nav[0], 0.2);
+      }
+      g.fillStyle = nav[1];
+      g.fillRect(hl.dir > 0 ? sx + 30 : sx + spr.width - 31, sy + 13, 1, 1);
+    }
+  }
+
+  /** Squadra in marcia sul crinale: cammina alla velocità della camera, quindi resta al suo posto sullo schermo. */
+  _drawSquad() {
+    const { g, cfg } = this;
+    const sq = cfg.squad || {};
+    const n = sq.frames ?? 8;
+    const stride = sq.stride ?? 15;
+    const types = sq.types || ['rifle', 'rifle', 'flag'];
+    const ats = sq.at || [0.55, 0.65, 0.75];
+    types.forEach((type, i) => {
+      const sx = Math.round(this.vx0 + this.vis * (ats[i] ?? 0.6));
+      const wx = this.cam + sx;
+      const frame = (Math.floor(((wx + i * 5.3) / stride) * n) % n + n) % n;
+      const key = `${type}:${frame}`;
+      let wk = this.walkers.get(key);
+      if (!wk) {
+        wk = makeWalker(type, frame, n, sq);
+        this.walkers.set(key, wk);
+      }
+      const fy = Math.round(this.frontY(wx));
+      const x = sx - wk.fx;
+      const y = fy - wk.fy;
+      if (type === 'flag' && wk.pole) this._drawFlag(x + wk.pole[0], y + wk.pole[1]);
+      g.drawImage(wk.canvas, x, y);
+    });
+  }
+
+  /** Bandiera a brandelli che sventola all'indietro (verso sinistra) dalla cima dell'asta. */
+  _drawFlag(px, py) {
+    const { g, cfg } = this;
+    const f = cfg.flag || {};
+    if (!this.flagShape) {
+      const W = f.width ?? 16;
+      const H = f.height ?? 10;
+      const r = mulberry32((cfg.seed ?? 7) + 77);
+      const len = Array.from({ length: H }, (_, k) => W - Math.floor(r() * 5) - (k >= H - 2 ? 3 : 0));
+      const holes = new Set(Array.from({ length: 4 }, () => `${1 + Math.floor(r() * (H - 2))},${3 + Math.floor(r() * (W - 6))}`));
+      this.flagShape = { W, H, len, holes };
+    }
+    const fs = this.flagShape;
     const wave = f.wave || {};
     const cols = f.colors || ['#6e1610', '#9c2218', '#c8301f', '#e8523a'];
-    const px = this.flagX;
-    const base = this.groundY + (f.base ?? 6);
-    const top = Math.max(f.minTop ?? 6, base - (f.poleHeight ?? 110));
-    rect(g, px, top, 3, base - top, f.pole || '#4e4034');
-    rect(g, this.sunDir < 0 ? px : px + 2, top, 1, base - top, f.poleLight || '#a69276');
-    rect(g, px - 1, top - 3, 5, 3, f.finial || '#d8b060');
-    const dir = this.wind;
-    const W = Math.max(...fl.len) + 1;
-    for (let c = 0; c < W; c++) {
-      const ph = this.t * (wave.speed ?? 5.2) - c * (wave.length ?? 0.3);
-      const amp = (wave.amplitude ?? 3.4) * Math.pow(c / fl.W, 0.8);
-      const dy = Math.round(Math.sin(ph) * amp + (c / fl.W) * 2);
-      const shade = clamp(Math.round(1.6 + Math.cos(ph) * 1.6 * Math.min(1, c / 6 + 0.2)), 0, cols.length - 1);
-      const x = dir < 0 ? px - 1 - c : px + 3 + c;
-      for (let r = 0; r < fl.H; r++) {
-        if (c >= fl.len[r]) continue;
-        const k = `${r},${c}`;
-        if (fl.hole.has(k)) continue;
-        g.fillStyle = fl.burnt.has(k) ? f.burnt || '#38100c' : cols[shade];
-        g.fillRect(x, top + 1 + r + dy, 1, 1);
-      }
-    }
-  }
-
-  /** Coda della kefiah mossa dal vento (esce da dietro la spalla). */
-  _drawScarf(ox, oy, c, outline) {
-    const { g } = this;
-    const dir = this.wind;
-    const ax = ox + (dir < 0 ? 30 : 208);
-    const ay = oy + 206;
-    const len = 34;
-    for (let i = 0; i < len; i++) {
-      const x = ax + dir * i;
-      const y = Math.round(ay + i * 0.35 + Math.sin(this.t * 7 - i * 0.4) * i * 0.2);
-      const h = Math.max(3, Math.round(12 - i * 0.28));
-      rect(g, x, y - 1, 1, h + 2, outline || '#1c120e');
-      for (let k = 0; k < h; k++) {
-        const p = (i + k) % 6 === 0 || (i - k + 60) % 6 === 0;
-        rect(g, x, y + k, 1, 1, p ? c.scarfPattern || '#6a5440' : k === h - 1 ? c.scarfDark || '#a8987a' : c.scarf || '#d8caa8');
+    for (let c = 0; c < fs.W; c++) {
+      const ph = this.t * (wave.speed ?? 7) - c * (wave.length ?? 0.5);
+      const dy = Math.round(Math.sin(ph) * (wave.amplitude ?? 1.6) * (c / fs.W) + (c / fs.W) * 1.5);
+      const shade = clamp(Math.round(1.5 + Math.cos(ph) * 1.5), 0, cols.length - 1);
+      for (let r = 0; r < fs.H; r++) {
+        if (c >= fs.len[r] || fs.holes.has(`${r},${c}`)) continue;
+        g.fillStyle = c === fs.len[r] - 1 ? f.burnt || '#2a0c08' : cols[shade];
+        g.fillRect(px - 1 - c, py + 1 + r + dy, 1, 1);
       }
     }
   }
