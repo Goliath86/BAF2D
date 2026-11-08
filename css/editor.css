@@ -1,0 +1,612 @@
+/* Editor di mappe (editor.html): stessi colori e stile pixel del menu del gioco (css/style.css). */
+
+:root {
+  --bg: #0b0b12;
+  --panel: #10101a;
+  --panel-2: #161624;
+  --line: #23233a;
+  --text: #e8e8f0;
+  --dim: #9a9ab0;
+  --accent: #3fa9f5;
+  --accent-dark: #0b2a44;
+  --gold: #ffd36b;
+  --gold-dark: #4a3608;
+  --error: #ff5a4a;
+  --warn: #ffb03a;
+  --ok: #7ad46a;
+  --side: 310px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Courier New", monospace;
+  font-size: 13px;
+}
+
+body {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+.hidden {
+  display: none !important;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* ---------- Barra in alto ---------- */
+
+.ed-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 12px;
+  background: var(--panel);
+  border-bottom: 3px solid var(--line);
+  flex-wrap: wrap;
+}
+
+.ed-logo {
+  font-size: 20px;
+  letter-spacing: 3px;
+  color: var(--accent);
+  text-shadow: 2px 2px 0 var(--accent-dark);
+  white-space: nowrap;
+}
+
+.ed-logo span {
+  color: var(--gold);
+  text-shadow: 2px 2px 0 var(--gold-dark);
+  font-size: 14px;
+  text-transform: uppercase;
+}
+
+.ed-actions,
+.ed-right-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ed-right-bar {
+  margin-left: auto;
+}
+
+.ed-sep {
+  width: 2px;
+  height: 22px;
+  background: var(--line);
+  margin: 0 4px;
+}
+
+.ed-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 4px 10px;
+  border: 2px solid var(--line);
+  background: var(--panel-2);
+  color: var(--text);
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.6);
+}
+
+.ed-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.ed-btn:active:not(:disabled) {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.6);
+}
+
+.ed-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.ed-btn.primary {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: #1a1206;
+  box-shadow: 2px 2px 0 var(--gold-dark);
+}
+
+.ed-btn.primary:hover:not(:disabled) {
+  background: #ffe08f;
+  color: #1a1206;
+}
+
+.ed-btn.icon {
+  min-width: 28px;
+  padding: 2px 6px;
+  font-size: 15px;
+}
+
+.ed-btn.small {
+  min-height: 24px;
+  padding: 2px 8px;
+  font-size: 11px;
+}
+
+.ed-select,
+.ed-field input[type="text"],
+.ed-field textarea,
+.ed-num {
+  background: var(--bg);
+  border: 2px solid var(--line);
+  padding: 3px 6px;
+  min-height: 28px;
+  outline: none;
+}
+
+.ed-select:focus,
+.ed-field input:focus,
+.ed-field textarea:focus,
+.ed-num:focus {
+  border-color: var(--accent);
+}
+
+.ed-num {
+  width: 64px;
+}
+
+/* ---------- Area principale ---------- */
+
+.ed-main {
+  display: grid;
+  grid-template-columns: var(--side) 1fr var(--side);
+  min-height: 0;
+}
+
+.ed-side {
+  background: var(--panel);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+
+.ed-left {
+  border-right: 3px solid var(--line);
+}
+
+.ed-right {
+  border-left: 3px solid var(--line);
+}
+
+.ed-group {
+  padding: 12px;
+  border-bottom: 2px solid var(--line);
+}
+
+.ed-group h2 {
+  font-size: 13px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--gold);
+  text-shadow: 2px 2px 0 var(--gold-dark);
+  margin-bottom: 10px;
+}
+
+.ed-sub {
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin: 10px 0 6px;
+}
+
+.ed-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.ed-field > span {
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.ed-field textarea {
+  resize: vertical;
+  min-height: 52px;
+}
+
+.ed-field input[type="color"] {
+  width: 64px;
+  height: 28px;
+  border: 2px solid var(--line);
+  background: var(--bg);
+  padding: 0 2px;
+}
+
+.ed-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ed-row input[type="range"] {
+  flex: 1;
+  accent-color: var(--gold);
+}
+
+.ed-value {
+  min-width: 48px;
+  text-align: center;
+  color: var(--gold);
+}
+
+.ed-note {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--dim);
+  margin-top: 4px;
+}
+
+.ed-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.ed-checks label,
+.ed-check-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  margin-bottom: 4px;
+}
+
+.ed-checks input,
+.ed-check-row input {
+  accent-color: var(--gold);
+}
+
+/* ---------- Strumenti ---------- */
+
+.ed-tools {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.ed-tool {
+  height: 34px;
+  border: 2px solid var(--line);
+  background: var(--panel-2);
+  font-size: 17px;
+  cursor: pointer;
+}
+
+.ed-tool:hover {
+  border-color: var(--accent);
+}
+
+.ed-tool[aria-pressed="true"] {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: #1a1206;
+}
+
+.ed-help {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--dim);
+}
+
+/* ---------- Canvas ---------- */
+
+.ed-canvas-wrap {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+#ed-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+#ed-canvas[data-tool="picker"] {
+  cursor: copy;
+}
+
+#ed-canvas.panning {
+  cursor: grabbing;
+}
+
+/* ---------- Tavolozza ---------- */
+
+.ed-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.ed-tab {
+  min-height: 28px;
+  border: 2px solid var(--line);
+  background: var(--panel-2);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.ed-tab[aria-pressed="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.ed-current {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 4px;
+  border: 2px dashed var(--line);
+  margin-bottom: 6px;
+}
+
+.ed-current .ed-icon {
+  width: 40px;
+  height: 40px;
+}
+
+.ed-current-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ed-current-info strong {
+  color: var(--gold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ed-current-info span {
+  font-size: 11px;
+  color: var(--dim);
+}
+
+.ed-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+  gap: 4px;
+}
+
+.ed-swatch {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--line);
+  background: #07070c;
+  cursor: pointer;
+  padding: 2px;
+}
+
+.ed-swatch:hover {
+  border-color: var(--accent);
+}
+
+.ed-swatch[aria-pressed="true"] {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px var(--gold-dark);
+}
+
+.ed-icon {
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.ed-options {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 2px solid var(--line);
+}
+
+/* ---------- Bandiere ---------- */
+
+.ed-flag-row {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 42px 42px 52px;
+  gap: 3px;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.ed-flag-row.head span {
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.ed-flag-row .ed-select,
+.ed-flag-row .ed-num {
+  width: 100%;
+  min-width: 0;
+  padding: 2px 3px;
+}
+
+.ed-flag-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.ed-flag-actions .ed-btn.icon {
+  min-width: 24px;
+  min-height: 24px;
+  font-size: 12px;
+  padding: 0 4px;
+}
+
+/* ---------- Controllo ---------- */
+
+.ed-check {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.ed-check li {
+  padding: 4px 6px 4px 10px;
+  border-left: 4px solid var(--line);
+  background: var(--panel-2);
+}
+
+.ed-check li.error {
+  border-color: var(--error);
+}
+
+.ed-check li.warn {
+  border-color: var(--warn);
+}
+
+.ed-check li.ok {
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
+.ed-check li.link {
+  cursor: pointer;
+}
+
+.ed-check li.link:hover {
+  color: var(--accent);
+}
+
+/* ---------- Barra di stato ---------- */
+
+.ed-status {
+  display: flex;
+  gap: 24px;
+  padding: 4px 12px;
+  min-height: 24px;
+  background: var(--panel);
+  border-top: 3px solid var(--line);
+  font-size: 12px;
+  color: var(--dim);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+#status-msg {
+  margin-left: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#status-msg.info {
+  color: var(--ok);
+}
+
+#status-msg.warn {
+  color: var(--warn);
+}
+
+#status-msg.error {
+  color: var(--error);
+}
+
+/* ---------- Dialogo e caricamento ---------- */
+
+.ed-dialog {
+  margin: auto;
+  width: min(420px, 92vw);
+  padding: 18px;
+  background: var(--panel);
+  color: var(--text);
+  border: 3px solid var(--line);
+  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.6);
+}
+
+.ed-dialog::backdrop {
+  background: rgba(5, 5, 10, 0.7);
+}
+
+.ed-dialog h2 {
+  font-size: 16px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--gold);
+  text-shadow: 2px 2px 0 var(--gold-dark);
+  margin-bottom: 14px;
+}
+
+.ed-dialog-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.ed-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  z-index: 10;
+  font-size: 15px;
+  text-align: center;
+  padding: 24px;
+}
+
+/* schermi stretti: pannelli laterali più piccoli (l'editor è pensato per desktop con mouse) */
+@media (max-width: 1100px) {
+  :root {
+    --side: 260px;
+  }
+}

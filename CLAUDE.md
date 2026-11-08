@@ -90,6 +90,13 @@ config/
                       e di esplosione ("explosions")
   levels/*.json       livelli
   lang/*.json         testi
+js/editor/            editor di mappe (editor.html + css/editor.css, cfg game.json -> editor, testi lang -> editor.*)
+  model.js            EditorMap: griglia di pennelli (tile o varianti con pesi) + un oggetto per cella, fromLevel/
+                      toLevel (formato di config/levels, caratteri della legend riusati), simmetria, snapshot
+  view.js             MapView: canvas offscreen aggiornato per cella, zoom/pan, oggetti, griglia, esiti del controllo
+  editor.js           UI: strumenti, tavolozza, bandiere, controllo, file (File System Access o download), bozza
+                      in localStorage, prova (localStorage editor.testKey -> index.html?test=1)
+js/engine/levelcheck.js checkGrid (celle irraggiungibili, vicoli ciechi): usato da check_level.mjs e dall'editor
 tools/serve.mjs       server statico (solo moduli Node built-in)
 tools/build-zip.mjs   zip HTML5 per itch.io in dist/ (gitignored): index.html, manifest, LICENSE, css, js, config,
                       arts/icons; versione da game.json; percorsi con "/" (non usare Compress-Archive di PS 5.1)
@@ -177,6 +184,12 @@ tools/check_level.mjs controllo livelli: celle irraggiungibili e vicoli ciechi (
   fa `preventDefault` da disabilitato (i pulsanti HTML ricevono Invio/Spazio). Tasto `pause` (Esc/P) gestito dal Menu
   in capture; su touch `#pause-button` sotto l'HUD.
 - Versione del gioco: `game.json -> version` (in basso a destra nel menu).
+- Editor di mappe: salva livelli nel formato del gioco (`name`/`description` stringhe nel livello; il menu usa
+  `levels.<id>.*` del file lingua se c'è, altrimenti quelli: `Menu._levelText`). Prova: main.js legge
+  `?test=1` (`readTestLevel`), mette la mappa in testa a `levels` con `test: true` (id `editor.testLevelId`) e
+  `menu.openNewGame(id)`; anche la partita dimostrativa la usa. Voce di menu `data-action="editor"` (`.desktop-only`).
+  `window.BAF2D_EDITOR` = istanza dell'editor. Nuovi tile/decorazioni: aggiungere `editor.tileNames.<base>` /
+  `editor.props.<tipo>` alle lingue (altrimenti si vede l'id).
 - Controllo dei soldati: `Player.update(dt, game, ctrl)` con `ctrl = { move, aim(unit), firing, reload, grenade,
   repeat, faceMove }`: dall'umano (`Game._humanControl`) o dall'IA (`BotBrain.think`). `game.units` = giocatore + bot.
 - Bot (`game.json` -> `bots`, IA in `bots.ai`): `Game.bots` = slot `{ team, weapon, unit, brain, respawn }`; rientro con
@@ -334,6 +347,7 @@ tools/check_level.mjs controllo livelli: celle irraggiungibili e vicoli ciechi (
   procedurali grass/mud/sandbags/hedge/planks/field/fence e sprite "tree"), punteggi con classifica di fine partita
   (nomi fittizi per i bot), 18 gradi con insegne a pixel, promozioni in partita e carriera salvata in localStorage.
 - Fatto anche: raccolta di armi (scambio con E, anche i bot) e granate da terra, punti fissi con respawn sulle mappe.
+- Fatto anche: editor di mappe (`editor.html`) con salvataggio/caricamento JSON, controllo e prova nel gioco.
 - Non ancora presenti: mappa procedurale, riserva di munizioni (ora infinita),
   asset grafici reali.
 - Controlli touch (stick + pulsante ricarica) verificati dall'utente su un dispositivo reale (2026-11-02).

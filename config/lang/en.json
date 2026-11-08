@@ -16,7 +16,8 @@
     "paused": "Paused",
     "resume": "Resume",
     "quit": "Quit to main menu",
-    "pause": "Pause"
+    "pause": "Pause",
+    "editor": "Map editor"
   },
   "newGame": {
     "title": "New game",
@@ -33,7 +34,8 @@
     "tickets": "Tickets",
     "procedural": "Procedural",
     "proceduralDesc": "A new map generated for every match.",
-    "comingSoon": "Coming soon"
+    "comingSoon": "Coming soon",
+    "testMap": "Editor test"
   },
   "teams": {
     "blue": "Blue",
@@ -242,5 +244,208 @@
     "noLevels": "No levels defined in game.json (\"levels\")",
     "unknownVehicle": "Vehicle not defined in vehicles.json: \"{name}\"",
     "unknownRocket": "Rocket not defined in weapons.json: \"{name}\""
+  },
+  "editor": {
+    "title": "Map editor",
+    "new": "New",
+    "open": "Open",
+    "openLevel": "Game maps…",
+    "openLevelHint": "Open one of the game's maps",
+    "save": "Save",
+    "saveAs": "Save as",
+    "undo": "Undo (Ctrl+Z)",
+    "redo": "Redo (Ctrl+Y)",
+    "test": "Test map",
+    "backToGame": "Back to game",
+    "cancel": "Cancel",
+    "fileType": "BAF2D map (JSON)",
+    "map": {
+      "title": "Map",
+      "name": "Name",
+      "description": "Description",
+      "tileset": "Tileset",
+      "size": "Size (tiles)",
+      "cols": "Width",
+      "rows": "Height",
+      "anchorCenter": "From the centre",
+      "anchorTopLeft": "Right and bottom",
+      "resize": "Resize",
+      "resizeHint": "New cells use the fill tile; cells outside the new size are lost (Undo brings them back).",
+      "fill": "Fill tile",
+      "weather": "Weather",
+      "noWeather": "None",
+      "background": "Background"
+    },
+    "tools": {
+      "title": "Tools",
+      "size": "Brush size",
+      "symmetry": "Symmetry",
+      "pencil": "Pencil",
+      "line": "Line",
+      "rect": "Filled rectangle",
+      "rectOutline": "Rectangle outline",
+      "fill": "Flood fill",
+      "picker": "Picker",
+      "erase": "Erase objects"
+    },
+    "symmetry": {
+      "none": "None",
+      "rotate": "180° rotation",
+      "horizontal": "Mirror left-right",
+      "vertical": "Mirror top-bottom"
+    },
+    "view": {
+      "grid": "Grid",
+      "objects": "Objects",
+      "preview": "Game preview (edges and shadows)",
+      "zoom": "Zoom",
+      "fit": "Fit"
+    },
+    "help": {
+      "title": "Shortcuts",
+      "lines": [
+        "Left button: paint · Right button: pick tile or object",
+        "Middle button or Space + drag: pan · Wheel: zoom",
+        "Shift + click: straight line from the last point",
+        "B L R U G I E: tools · [ ]: brush size",
+        "H: grid · O: objects · P: preview · 0: fit",
+        "Ctrl+Z / Ctrl+Y: undo / redo · Ctrl+S: save · Ctrl+O: open · Ctrl+Enter: test"
+      ]
+    },
+    "palette": {
+      "title": "Palette",
+      "tiles": "Tiles",
+      "objects": "Objects",
+      "groups": "Random variants",
+      "single": "Single tiles",
+      "inMap": "Used in this map",
+      "variants": "{name} · {count} variants",
+      "weighted": "{name} · {count} weighted variants",
+      "solid": "solid",
+      "shootThrough": "blocks movement, not shots",
+      "walkable": "walkable"
+    },
+    "objects": {
+      "spawns": "Team bases",
+      "flags": "Flags",
+      "pickups": "Pickups",
+      "props": "Decorations",
+      "vehicles": "Vehicles",
+      "spawnOf": "Base: {team}",
+      "flag": "Flag",
+      "flagId": "Flag {id}",
+      "grenades": "{count} grenades",
+      "neutral": "Neutral",
+      "team": "Team",
+      "angle": "Direction",
+      "flagAuto": "Next free letter",
+      "flagLetter": "Letter",
+      "flagHint": "Placing a letter that already exists moves that flag.",
+      "withTile": "Also paints: {tile}"
+    },
+    "flags": {
+      "title": "Flags",
+      "empty": "No flags yet: pick \"Flag\" in the Objects palette and click on the map.",
+      "id": "Flag",
+      "owner": "Owner",
+      "radius": "Radius",
+      "captureTime": "Time",
+      "goTo": "Show on the map",
+      "remove": "Remove"
+    },
+    "check": {
+      "title": "Check",
+      "ok": "No problems found",
+      "noSpawn": "Missing base for team {team}",
+      "spawnSolid": "Base of team {team} is on a solid tile",
+      "noFlags": "No flags: Capture The Flag needs at least one",
+      "flagSolid": "Flag {id} is on a solid tile",
+      "unknownObject": "Unknown object type: \"{type}\"",
+      "objectSolid": "{name} is on a solid tile",
+      "unreachable": "{count} walkable cells can't be reached (red)",
+      "deadEnd": "Dead end at {x},{y}: depth {depth}, entrance {width} wide"
+    },
+    "newMap": {
+      "title": "New map",
+      "base": "Ground",
+      "border": "Solid border around the map",
+      "hint": "The current map is replaced. Save it first if you want to keep it.",
+      "create": "Create",
+      "defaultName": "New map"
+    },
+    "status": {
+      "draftRestored": "Last session's draft restored",
+      "opened": "Opened {file}",
+      "saved": "Saved: {file}",
+      "resized": "Map resized to {cols}×{rows}",
+      "created": "New map {cols}×{rows}",
+      "noFlagIds": "No free letters for a new flag",
+      "testing": "Map opened in the game tab"
+    },
+    "confirm": {
+      "discard": "There are unsaved changes. Continue anyway? (The draft is kept in the browser until it's replaced.)",
+      "tileset": "{count} cells use tiles that this tileset doesn't have: they'll become \"{tile}\". Continue?",
+      "testWithErrors": "The map has problems:\n{errors}\n\nTest it anyway?"
+    },
+    "errors": {
+      "tileset": "Tileset \"{tileset}\" is not defined in assets.json",
+      "noMap": "The file has no \"map\": it isn't a BAF2D map",
+      "json": "Invalid JSON in \"{file}\": {details}",
+      "storage": "Unable to pass the map to the game: browser storage is not available",
+      "popup": "The browser blocked the game tab: allow pop-ups for this site"
+    },
+    "warnings": {
+      "unknownTiles": "Unknown tiles replaced with \"{tile}\": {tiles}",
+      "multiObjects": "Some cells had several objects, only one was kept (characters: {chars})"
+    },
+    "tileNames": {
+      "floor": "Floor",
+      "floor_alt": "Green floor",
+      "wall": "Wall",
+      "crate": "Crate",
+      "sand": "Sand",
+      "road": "Dirt road",
+      "rock": "Rock",
+      "adobe": "Adobe",
+      "plaster": "Plaster",
+      "lowwall": "Dry-stone wall",
+      "rubble": "Rubble",
+      "rubble_floor": "Rubble floor",
+      "house_floor": "House floor",
+      "terracotta": "Terracotta",
+      "water": "Water",
+      "palm_base": "Palm base",
+      "grass": "Grass",
+      "dirt": "Dirt",
+      "trench": "Trench",
+      "duckboard": "Duckboard",
+      "crater": "Crater",
+      "sandbags": "Sandbags",
+      "hedge": "Hedge",
+      "woods": "Woods",
+      "brick": "Brick",
+      "stonewall": "Stone wall",
+      "planks": "Planks",
+      "field": "Field",
+      "field_green": "Green field",
+      "fence_h": "Fence (horizontal)",
+      "fence_v": "Fence (vertical)",
+      "tree_base": "Tree base",
+      "hay": "Hay"
+    },
+    "props": {
+      "palm": "Palm",
+      "bush": "Bush",
+      "bush_dry": "Dry bush",
+      "pebble": "Pebbles",
+      "tree": "Tree",
+      "tree_fruit": "Fruit tree",
+      "bush_green": "Green bush",
+      "stone_grey": "Grey stones"
+    },
+    "weather": {
+      "desert_wind": "Desert wind",
+      "country_breeze": "Country breeze"
+    }
   }
 }

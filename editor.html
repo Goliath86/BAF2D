@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b0b12">
+  <link rel="icon" type="image/png" sizes="32x32" href="arts/icons/icon-32.png">
+  <title>BAF2D</title>
+  <link rel="stylesheet" href="css/editor.css">
+</head>
+<body>
+  <!-- Editor di mappe: i testi vengono da config/lang/*.json (chiavi editor.*), i contenuti dinamici da js/editor/editor.js -->
+  <header class="ed-bar">
+    <h1 class="ed-logo">BAF2D <span data-i18n="editor.title"></span></h1>
+    <nav class="ed-actions">
+      <button type="button" class="ed-btn" data-cmd="new" data-i18n="editor.new"></button>
+      <button type="button" class="ed-btn" data-cmd="open" data-i18n="editor.open"></button>
+      <select id="open-level" class="ed-select" data-i18n-title="editor.openLevelHint"></select>
+      <button type="button" class="ed-btn" data-cmd="save" data-i18n="editor.save"></button>
+      <button type="button" class="ed-btn" data-cmd="saveAs" data-i18n="editor.saveAs"></button>
+      <span class="ed-sep"></span>
+      <button type="button" class="ed-btn icon" data-cmd="undo" data-i18n-title="editor.undo">↶</button>
+      <button type="button" class="ed-btn icon" data-cmd="redo" data-i18n-title="editor.redo">↷</button>
+      <span class="ed-sep"></span>
+      <button type="button" class="ed-btn primary" data-cmd="test" data-i18n="editor.test"></button>
+    </nav>
+    <div class="ed-right-bar">
+      <select id="lang" class="ed-select" data-i18n-title="options.language"></select>
+      <a class="ed-btn" href="index.html" data-i18n="editor.backToGame"></a>
+    </div>
+    <input id="file-input" type="file" accept=".json,application/json" hidden>
+  </header>
+
+  <main class="ed-main">
+    <aside class="ed-side ed-left">
+      <section class="ed-group">
+        <h2 data-i18n="editor.map.title"></h2>
+        <label class="ed-field"><span data-i18n="editor.map.name"></span><input id="map-name" type="text" maxlength="60"></label>
+        <label class="ed-field"><span data-i18n="editor.map.description"></span><textarea id="map-desc" rows="3" maxlength="300"></textarea></label>
+        <label class="ed-field"><span data-i18n="editor.map.tileset"></span><select id="map-tileset" class="ed-select"></select></label>
+        <div class="ed-field">
+          <span data-i18n="editor.map.size"></span>
+          <div class="ed-row">
+            <input id="map-cols" type="number" class="ed-num" data-i18n-title="editor.map.cols">
+            <span>×</span>
+            <input id="map-rows" type="number" class="ed-num" data-i18n-title="editor.map.rows">
+            <select id="resize-anchor" class="ed-select">
+              <option value="center" data-i18n="editor.map.anchorCenter"></option>
+              <option value="topLeft" data-i18n="editor.map.anchorTopLeft"></option>
+            </select>
+          </div>
+          <button type="button" class="ed-btn small" data-cmd="resize" data-i18n="editor.map.resize"></button>
+          <p class="ed-note" data-i18n="editor.map.resizeHint"></p>
+        </div>
+        <label class="ed-field"><span data-i18n="editor.map.fill"></span><select id="map-fill" class="ed-select"></select></label>
+        <label class="ed-field"><span data-i18n="editor.map.weather"></span><select id="map-weather" class="ed-select"></select></label>
+        <label class="ed-field"><span data-i18n="editor.map.background"></span><input id="map-bg" type="color"></label>
+      </section>
+
+      <section class="ed-group">
+        <h2 data-i18n="editor.tools.title"></h2>
+        <div id="tools" class="ed-tools">
+          <button type="button" class="ed-tool" data-tool="pencil"></button>
+          <button type="button" class="ed-tool" data-tool="line"></button>
+          <button type="button" class="ed-tool" data-tool="rect"></button>
+          <button type="button" class="ed-tool" data-tool="rectOutline"></button>
+          <button type="button" class="ed-tool" data-tool="fill"></button>
+          <button type="button" class="ed-tool" data-tool="picker"></button>
+          <button type="button" class="ed-tool" data-tool="erase"></button>
+        </div>
+        <label class="ed-field"><span data-i18n="editor.tools.size"></span>
+          <div class="ed-row"><input id="brush-size" type="range" min="1" step="1"><span id="brush-size-value" class="ed-value"></span></div>
+        </label>
+        <label class="ed-field"><span data-i18n="editor.tools.symmetry"></span>
+          <select id="symmetry" class="ed-select">
+            <option value="none" data-i18n="editor.symmetry.none"></option>
+            <option value="rotate" data-i18n="editor.symmetry.rotate"></option>
+            <option value="horizontal" data-i18n="editor.symmetry.horizontal"></option>
+            <option value="vertical" data-i18n="editor.symmetry.vertical"></option>
+          </select>
+        </label>
+        <div class="ed-checks">
+          <label><input id="show-grid" type="checkbox" checked> <span data-i18n="editor.view.grid"></span></label>
+          <label><input id="show-objects" type="checkbox" checked> <span data-i18n="editor.view.objects"></span></label>
+          <label><input id="show-preview" type="checkbox"> <span data-i18n="editor.view.preview"></span></label>
+        </div>
+        <div class="ed-field">
+          <span data-i18n="editor.view.zoom"></span>
+          <div class="ed-row">
+            <button type="button" class="ed-btn icon" data-cmd="zoomOut">−</button>
+            <span id="zoom-value" class="ed-value"></span>
+            <button type="button" class="ed-btn icon" data-cmd="zoomIn">+</button>
+            <button type="button" class="ed-btn small" data-cmd="fit" data-i18n="editor.view.fit"></button>
+          </div>
+        </div>
+      </section>
+
+      <section class="ed-group">
+        <h2 data-i18n="editor.help.title"></h2>
+        <ul id="help-list" class="ed-help"></ul>
+      </section>
+    </aside>
+
+    <div class="ed-canvas-wrap"><canvas id="ed-canvas"></canvas></div>
+
+    <aside class="ed-side ed-right">
+      <section class="ed-group">
+        <h2 data-i18n="editor.palette.title"></h2>
+        <div class="ed-tabs">
+          <button type="button" class="ed-tab" data-tab="tiles" data-i18n="editor.palette.tiles"></button>
+          <button type="button" class="ed-tab" data-tab="objects" data-i18n="editor.palette.objects"></button>
+        </div>
+        <div id="current" class="ed-current"></div>
+        <div id="palette-tiles" class="ed-palette" data-pane="tiles"></div>
+        <div id="palette-objects" class="ed-palette" data-pane="objects"></div>
+        <div id="object-options" class="ed-options"></div>
+      </section>
+
+      <section class="ed-group">
+        <h2 data-i18n="editor.flags.title"></h2>
+        <div id="flag-list" class="ed-flags"></div>
+      </section>
+
+      <section class="ed-group">
+        <h2 data-i18n="editor.check.title"></h2>
+        <ul id="check-list" class="ed-check"></ul>
+      </section>
+    </aside>
+  </main>
+
+  <footer class="ed-status">
+    <span id="status-cell"></span>
+    <span id="status-msg"></span>
+  </footer>
+
+  <dialog id="dlg-new" class="ed-dialog">
+    <form method="dialog">
+      <h2 data-i18n="editor.newMap.title"></h2>
+      <label class="ed-field"><span data-i18n="editor.map.name"></span><input id="new-name" type="text" maxlength="60"></label>
+      <div class="ed-field">
+        <span data-i18n="editor.map.size"></span>
+        <div class="ed-row">
+          <input id="new-cols" type="number" class="ed-num"> <span>×</span> <input id="new-rows" type="number" class="ed-num">
+        </div>
+      </div>
+      <label class="ed-field"><span data-i18n="editor.map.tileset"></span><select id="new-tileset" class="ed-select"></select></label>
+      <label class="ed-field"><span data-i18n="editor.newMap.base"></span><select id="new-base" class="ed-select"></select></label>
+      <label class="ed-check-row"><input id="new-border-on" type="checkbox"> <span data-i18n="editor.newMap.border"></span></label>
+      <label class="ed-field"><select id="new-border" class="ed-select"></select></label>
+      <p class="ed-note" data-i18n="editor.newMap.hint"></p>
+      <div class="ed-dialog-actions">
+        <button type="submit" class="ed-btn primary" value="create" data-i18n="editor.newMap.create"></button>
+        <button type="submit" class="ed-btn" value="cancel" data-i18n="editor.cancel"></button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="ed-message" class="ed-overlay"><p id="ed-message-text"></p></div>
+
+  <script type="module" src="js/editor/editor.js"></script>
+</body>
+</html>

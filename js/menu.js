@@ -19,11 +19,12 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
 export class Menu {
   /**
-   * levels = [{ id, file, data }] (data = JSON del livello); settings = Settings;
+   * levels = [{ id, file, data }] (data = JSON del livello); testId = id della mappa di prova dall'editor (o null);
+   * settings = Settings;
    * fullscreen() = richiesta di schermo intero + landscape (solo touch, dentro un gesto).
    */
-  constructor({ config, i18n, game, input, audio, assets, display, levels, settings, fullscreen }) {
-    Object.assign(this, { config, i18n, game, input, audio, assets, display, levels, settings, fullscreen });
+  constructor({ config, i18n, game, input, audio, assets, display, levels, testId = null, settings, fullscreen }) {
+    Object.assign(this, { config, i18n, game, input, audio, assets, display, levels, testId, settings, fullscreen });
     this.cfg = config.menu || {};
     this.root = $('menu');
     this.panel = this.root.querySelector('.menu-panel');
@@ -74,7 +75,8 @@ export class Menu {
   /** Menu principale con la partita dimostrativa dietro. */
   showMain() {
     const a = this.cfg.attract || {};
-    const lvl = this._level(a.level) || this._level(this.choice.level);
+    // con una mappa di prova dall'editor la partita dimostrativa si gioca su quella
+    const lvl = this._level(this.testId) || this._level(a.level) || this._level(this.choice.level);
     const { game } = this;
     document.body.classList.remove('match-over', 'match-victory', 'match-defeat', 'match-draw');
     $('overlay-matchend').classList.add('hidden');
@@ -88,6 +90,13 @@ export class Menu {
     game.setup({ level: lvl.data, team: a.team, allies: a.allies ?? 3, enemies: a.enemies ?? 4, attract: true });
     game.running = true;
     this._updatePauseButton();
+  }
+
+  /** Apre "Nuova partita" con la mappa "id" già scelta (prova dall'editor). */
+  openNewGame(id) {
+    if (this._level(id)) this.choice.level = id;
+    this._renderChoice();
+    this._open('newGame');
   }
 
   /** "Inizia": partita con mappa, squadra e numero di bot scelti. */
@@ -563,9 +572,11 @@ export class Menu {
     $('menu-version').textContent = i18n.t('menu.version', { version: this.config.version || '0.0.0' });
     for (const { card, lvl } of this.mapCards) {
       const { flags, cols, rows } = card.querySelector('canvas').dataset;
-      card.querySelector('.map-name').textContent = i18n.t(`levels.${lvl.id}.name`);
+      const name = card.querySelector('.map-name');
+      name.textContent = this._levelText(lvl, 'name');
+      if (lvl.test) name.append(el('span', 'map-badge', i18n.t('newGame.testMap')));
       card.querySelector('.map-meta').textContent = `${i18n.t('newGame.flags', { count: flags })} · ${i18n.t('newGame.size', { cols, rows })}`;
-      card.querySelector('.map-desc').textContent = i18n.t(`levels.${lvl.id}.description`);
+      card.querySelector('.map-desc').textContent = this._levelText(lvl, 'description');
     }
     const p = this.procCard;
     const name = p.querySelector('.map-name');
@@ -584,6 +595,19 @@ export class Menu {
     if (this.stack[this.stack.length - 1] === 'options') this._renderKeys();
   }
 
+  /**
+   * Nome / descrizione di una mappa: dal file lingua (levels.<id>.name) se c'è, altrimenti dal livello stesso
+   * ("name" / "description": testo o { lingua: testo }, es. mappe fatte con l'editor).
+   */
+  _levelText(lvl, field) {
+    const key = `levels.${lvl.id}.${field}`;
+    if (this.i18n.has(key)) return this.i18n.t(key);
+    const v = lvl.data?.[field];
+    if (typeof v === 'string') return v;
+    if (v && typeof v === 'object') return v[this.i18n.lang] ?? v[this.i18n.defaultLang] ?? '';
+    return field === 'name' ? lvl.id : '';
+  }
+
   // ---------- Eventi ----------
 
   _attach() {
@@ -596,6 +620,7 @@ export class Menu {
       else if (t.dataset.action === 'resume') this.resume();
       else if (t.dataset.action === 'quit') this.showMain();
       else if (t.dataset.action === 'resetKeys') this._resetKeys();
+      else if (t.dataset.action === 'editor') location.href = this.config.editor?.page || 'editor.html';
     });
     // un clic fuori dal tasto in ascolto annulla la modifica
     this.root.addEventListener('pointerdown', (e) => {

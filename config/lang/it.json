@@ -16,7 +16,8 @@
     "paused": "Pausa",
     "resume": "Riprendi",
     "quit": "Torna al menu principale",
-    "pause": "Pausa"
+    "pause": "Pausa",
+    "editor": "Editor di mappe"
   },
   "newGame": {
     "title": "Nuova partita",
@@ -33,7 +34,8 @@
     "tickets": "Ticket",
     "procedural": "Procedurale",
     "proceduralDesc": "Una mappa nuova generata a ogni partita.",
-    "comingSoon": "Prossimamente"
+    "comingSoon": "Prossimamente",
+    "testMap": "Prova dall'editor"
   },
   "teams": {
     "blue": "Blu",
@@ -242,5 +244,208 @@
     "noLevels": "Nessun livello definito in game.json (\"levels\")",
     "unknownVehicle": "Mezzo non definito in vehicles.json: \"{name}\"",
     "unknownRocket": "Razzo non definito in weapons.json: \"{name}\""
+  },
+  "editor": {
+    "title": "Editor di mappe",
+    "new": "Nuova",
+    "open": "Apri",
+    "openLevel": "Mappe del gioco…",
+    "openLevelHint": "Apri una delle mappe del gioco",
+    "save": "Salva",
+    "saveAs": "Salva come",
+    "undo": "Annulla (Ctrl+Z)",
+    "redo": "Ripeti (Ctrl+Y)",
+    "test": "Prova mappa",
+    "backToGame": "Torna al gioco",
+    "cancel": "Annulla",
+    "fileType": "Mappa BAF2D (JSON)",
+    "map": {
+      "title": "Mappa",
+      "name": "Nome",
+      "description": "Descrizione",
+      "tileset": "Tileset",
+      "size": "Dimensioni (tile)",
+      "cols": "Larghezza",
+      "rows": "Altezza",
+      "anchorCenter": "Dal centro",
+      "anchorTopLeft": "A destra e in basso",
+      "resize": "Ridimensiona",
+      "resizeHint": "Le celle nuove usano il tile di riempimento; quelle fuori dalle nuove dimensioni si perdono (Annulla le recupera).",
+      "fill": "Tile di riempimento",
+      "weather": "Meteo",
+      "noWeather": "Nessuno",
+      "background": "Sfondo"
+    },
+    "tools": {
+      "title": "Strumenti",
+      "size": "Dimensione pennello",
+      "symmetry": "Simmetria",
+      "pencil": "Matita",
+      "line": "Linea",
+      "rect": "Rettangolo pieno",
+      "rectOutline": "Contorno rettangolo",
+      "fill": "Riempimento",
+      "picker": "Contagocce",
+      "erase": "Cancella oggetti"
+    },
+    "symmetry": {
+      "none": "Nessuna",
+      "rotate": "Rotazione di 180°",
+      "horizontal": "Specchio sinistra-destra",
+      "vertical": "Specchio alto-basso"
+    },
+    "view": {
+      "grid": "Griglia",
+      "objects": "Oggetti",
+      "preview": "Anteprima di gioco (bordi e ombre)",
+      "zoom": "Zoom",
+      "fit": "Adatta"
+    },
+    "help": {
+      "title": "Scorciatoie",
+      "lines": [
+        "Tasto sinistro: disegna · Tasto destro: preleva tile o oggetto",
+        "Tasto centrale o Spazio + trascina: sposta la vista · Rotellina: zoom",
+        "Shift + clic: linea retta dall'ultimo punto",
+        "B L R U G I E: strumenti · [ ]: dimensione pennello",
+        "H: griglia · O: oggetti · P: anteprima · 0: adatta",
+        "Ctrl+Z / Ctrl+Y: annulla / ripeti · Ctrl+S: salva · Ctrl+O: apri · Ctrl+Invio: prova"
+      ]
+    },
+    "palette": {
+      "title": "Tavolozza",
+      "tiles": "Tile",
+      "objects": "Oggetti",
+      "groups": "Varianti casuali",
+      "single": "Tile singoli",
+      "inMap": "Usati in questa mappa",
+      "variants": "{name} · {count} varianti",
+      "weighted": "{name} · {count} varianti con pesi",
+      "solid": "solido",
+      "shootThrough": "blocca il passaggio, non i colpi",
+      "walkable": "percorribile"
+    },
+    "objects": {
+      "spawns": "Basi delle squadre",
+      "flags": "Bandiere",
+      "pickups": "Armi e granate a terra",
+      "props": "Decorazioni",
+      "vehicles": "Mezzi",
+      "spawnOf": "Base: {team}",
+      "flag": "Bandiera",
+      "flagId": "Bandiera {id}",
+      "grenades": "{count} granate",
+      "neutral": "Neutrale",
+      "team": "Squadra",
+      "angle": "Direzione",
+      "flagAuto": "Prima lettera libera",
+      "flagLetter": "Lettera",
+      "flagHint": "Una lettera già presente sposta quella bandiera.",
+      "withTile": "Disegna anche: {tile}"
+    },
+    "flags": {
+      "title": "Bandiere",
+      "empty": "Nessuna bandiera: scegli \"Bandiera\" nella tavolozza Oggetti e fai clic sulla mappa.",
+      "id": "Band.",
+      "owner": "Proprietario",
+      "radius": "Raggio",
+      "captureTime": "Tempo",
+      "goTo": "Mostra sulla mappa",
+      "remove": "Rimuovi"
+    },
+    "check": {
+      "title": "Controllo",
+      "ok": "Nessun problema trovato",
+      "noSpawn": "Manca la base della squadra {team}",
+      "spawnSolid": "La base della squadra {team} è su un tile solido",
+      "noFlags": "Nessuna bandiera: Cattura la bandiera ne richiede almeno una",
+      "flagSolid": "La bandiera {id} è su un tile solido",
+      "unknownObject": "Tipo di oggetto sconosciuto: \"{type}\"",
+      "objectSolid": "{name} è su un tile solido",
+      "unreachable": "{count} celle percorribili non raggiungibili (in rosso)",
+      "deadEnd": "Vicolo cieco in {x},{y}: profondo {depth}, ingresso largo {width}"
+    },
+    "newMap": {
+      "title": "Nuova mappa",
+      "base": "Terreno",
+      "border": "Bordo solido attorno alla mappa",
+      "hint": "La mappa attuale viene sostituita: salvala prima se vuoi tenerla.",
+      "create": "Crea",
+      "defaultName": "Nuova mappa"
+    },
+    "status": {
+      "draftRestored": "Ripristinata la bozza della sessione precedente",
+      "opened": "Aperto {file}",
+      "saved": "Salvato: {file}",
+      "resized": "Mappa ridimensionata a {cols}×{rows}",
+      "created": "Nuova mappa {cols}×{rows}",
+      "noFlagIds": "Nessuna lettera libera per una nuova bandiera",
+      "testing": "Mappa aperta nella scheda del gioco"
+    },
+    "confirm": {
+      "discard": "Ci sono modifiche non salvate. Continuare comunque? (La bozza resta nel browser finché non viene sostituita.)",
+      "tileset": "{count} celle usano tile che questo tileset non ha: diventeranno \"{tile}\". Continuare?",
+      "testWithErrors": "La mappa ha dei problemi:\n{errors}\n\nProvarla comunque?"
+    },
+    "errors": {
+      "tileset": "Il tileset \"{tileset}\" non è definito in assets.json",
+      "noMap": "Il file non ha \"map\": non è una mappa di BAF2D",
+      "json": "JSON non valido in \"{file}\": {details}",
+      "storage": "Impossibile passare la mappa al gioco: la memoria del browser non è disponibile",
+      "popup": "Il browser ha bloccato la scheda del gioco: consenti i pop-up per questo sito"
+    },
+    "warnings": {
+      "unknownTiles": "Tile sconosciuti sostituiti con \"{tile}\": {tiles}",
+      "multiObjects": "Alcune celle avevano più oggetti, ne è stato tenuto uno (caratteri: {chars})"
+    },
+    "tileNames": {
+      "floor": "Pavimento",
+      "floor_alt": "Pavimento verde",
+      "wall": "Muro",
+      "crate": "Cassa",
+      "sand": "Sabbia",
+      "road": "Strada sterrata",
+      "rock": "Roccia",
+      "adobe": "Adobe",
+      "plaster": "Intonaco",
+      "lowwall": "Muretto a secco",
+      "rubble": "Macerie",
+      "rubble_floor": "Calcinacci",
+      "house_floor": "Pavimento di casa",
+      "terracotta": "Cotto",
+      "water": "Acqua",
+      "palm_base": "Base di palma",
+      "grass": "Erba",
+      "dirt": "Terra battuta",
+      "trench": "Trincea",
+      "duckboard": "Passerella",
+      "crater": "Cratere",
+      "sandbags": "Sacchi di sabbia",
+      "hedge": "Siepe",
+      "woods": "Bosco",
+      "brick": "Mattoni",
+      "stonewall": "Muro di pietra",
+      "planks": "Assi di legno",
+      "field": "Campo",
+      "field_green": "Campo verde",
+      "fence_h": "Staccionata (orizzontale)",
+      "fence_v": "Staccionata (verticale)",
+      "tree_base": "Base d'albero",
+      "hay": "Fieno"
+    },
+    "props": {
+      "palm": "Palma",
+      "bush": "Cespuglio",
+      "bush_dry": "Cespuglio secco",
+      "pebble": "Sassolini",
+      "tree": "Albero",
+      "tree_fruit": "Albero da frutto",
+      "bush_green": "Cespuglio verde",
+      "stone_grey": "Sassi grigi"
+    },
+    "weather": {
+      "desert_wind": "Vento del deserto",
+      "country_breeze": "Brezza di campagna"
+    }
   }
 }

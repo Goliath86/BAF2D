@@ -102,7 +102,8 @@ body.is-touch .hint-touch {
   display: block;
 }
 
-body.is-touch .hint-desktop {
+body.is-touch .hint-desktop,
+body.is-touch .desktop-only {
   display: none;
 }
 

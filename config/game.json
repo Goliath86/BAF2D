@@ -41,6 +41,37 @@
     "scoreboardColumn": 9
   },
 
+  "editor": {
+    "page": "editor.html",
+    "storageKey": "baf2d.editor",
+    "testKey": "baf2d.editorTest",
+    "testLevelId": "editorTest",
+    "newMap": { "cols": 97, "rows": 65, "tileset": "countryside", "border": true },
+    "minSize": [24, 14],
+    "maxSize": [256, 256],
+    "zoom": { "levels": [0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4], "default": 1 },
+    "maxBrush": 9,
+    "undoLimit": 120,
+    "autosaveDelay": 1,
+    "checkDelay": 0.8,
+    "previewDelay": 0.4,
+    "flagIds": "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+    "angles": [0, 45, 90, 135, 180, 225, 270, 315],
+    "propTiles": { "tree": "tree_base", "tree_fruit": "tree_base", "palm": "palm_base" },
+    "legendChars": ".#=~-|:;,+*%&$@!?^<>()[]{}/_'`\"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+    "colors": {
+      "grid": "rgba(255,255,255,0.08)",
+      "gridMajor": "rgba(255,255,255,0.18)",
+      "gridMajorEvery": 8,
+      "hover": "#ffd36b",
+      "selection": "rgba(255,211,107,0.25)",
+      "symmetry": "rgba(63,169,245,0.6)",
+      "unreachable": "rgba(255,40,40,0.35)",
+      "deadEnd": "#ff6a3a",
+      "outside": "#06060c"
+    }
+  },
+
   "i18n": {
     "default": "en",
     "language": "auto",

@@ -49,6 +49,33 @@ Le impostazioni (lingua, volume, tasti, ultima partita) stanno in `localStorage`
 in alto a destra l'arma in uso (nome tradotto, icona), i colpi (`12/30` e tacche), la barra di ricarica e gli avvisi
 "RICARICA" / "SCARICO". In alto al centro i ticket (propria squadra a sinistra) e lo stato delle bandiere.
 
+## Editor di mappe
+
+`editor.html` (anche dal menu principale, voce *Editor di mappe*, solo desktop: serve il mouse).
+
+- **Mappa**: nome, descrizione, tileset, dimensioni in tile (ridimensionamento dal centro o verso destra/basso),
+  tile di riempimento, meteo, colore di sfondo.
+- **Tavolozza**: tile del tileset (singoli o come *varianti casuali*: `sand`, `sand2`, `sand3`... scelti a caso ma
+  sempre uguali, come nel gioco) e oggetti: basi delle squadre, bandiere, armi e granate a terra, decorazioni
+  (alberi e palme dipingono anche la loro base, `editor.propTiles`), mezzi con squadra e direzione.
+- **Strumenti**: matita (pennello 1×1...9×9), linea, rettangolo pieno/vuoto, riempimento, contagocce (anche tasto
+  destro), cancella oggetti; **simmetria** (rotazione di 180° come le mappe del gioco, o a specchio): la cella
+  speculare riceve lo stesso tile, le basi e i mezzi passano all'altra squadra, le bandiere ricevono una lettera
+  gemella. Annulla/ripeti, zoom con la rotellina, spostamento col tasto centrale o Spazio + trascina, anteprima
+  con i bordi e le ombre del gioco.
+- **Bandiere**: lettera, proprietario iniziale, raggio e tempo di cattura (vuoto = valore di `ctf.flag`).
+- **Controllo** (automatico): basi mancanti, bandiere assenti o su tile solidi, celle irraggiungibili (in rosso) e
+  vicoli ciechi (riquadri tratteggiati), stesso algoritmo di `tools/check_level.mjs` (`js/engine/levelcheck.js`).
+- **Salva / Apri**: il file è un livello del gioco (`config/levels/*.json`), quindi si riapre e si continua in più
+  volte; con Chrome/Edge *Salva* riscrive lo stesso file, altrove lo scarica. Si possono aprire anche le mappe del
+  gioco. Una bozza viene salvata da sola nel browser (`editor.storageKey`) e ripristinata alla riapertura.
+- **Prova mappa** (Ctrl+Invio): apre il gioco in un'altra scheda (`index.html?test=1`, mappa passata in
+  `localStorage`, `editor.testKey`) con la mappa già scelta in *Nuova partita* e anche nella partita dimostrativa.
+
+Per aggiungere una mappa al gioco: copiarla in `config/levels/` e aggiungerla a `game.json -> levels`; nome e
+descrizione vengono dal file lingua (`levels.<id>.name/description`) o, se mancano, da `name`/`description` del
+livello. Parametri dell'editor in `game.json -> editor`.
+
 ## Modalità: Capture The Flag
 
 Due squadre, **blu** e **rossa** (riconoscibili dalla striscia sull'elmetto e dalle mostrine sulle spalle).
@@ -153,6 +180,7 @@ dove non è supportato (es. iOS Safari) in portrait compare un overlay "ruota il
 
 ```
 index.html, css/style.css, manifest.webmanifest
+editor.html, css/editor.css   editor di mappe (js/editor/)
 config/
   game.json            parametri generali (display, player, input, camera, audio)
   weapons.json         armi (statistiche, sprite, suoni) e granate
