@@ -1,4 +1,4 @@
-# BAF2D — itch.io page (v1.0.2)
+# BAF2D — itch.io page (v1.1.0)
 
 Copy each block into the matching field of the itch.io "Edit game" page.
 
@@ -10,12 +10,12 @@ BAF2D
 
 ## Short description or tagline
 
-Top-down pixel-art capture the flag: squad AI, jeeps, rocket tanks, attack helicopters and a career that ranks you up.
+Top-down pixel-art capture the flag: squad AI, vehicles and helicopters, medals, unlocks, a custom soldier and a map editor.
 
 ## Classification / Kind of project
 
 - Classification: **Games**
-- Kind of project: **HTML** (upload `dist/BAF2D-1.0.2-html5.zip`, tick "This file will be played in the browser")
+- Kind of project: **HTML** (upload `dist/BAF2D-1.1.0-html5.zip`, tick "This file will be played in the browser")
 - Release status: **Released**
 
 ## Embed options (Uploads → HTML)
@@ -37,8 +37,9 @@ tickets: capture and hold the flags, and make every enemy death count. <strong>T
 loses.</strong></p>
 
 <p>You fight alongside (and against) AI soldiers that take cover, peek around corners, flank in pairs, throw grenades,
-pick up better weapons and jump into vehicles. Every match feeds your career: score points, climb
-<strong>18 ranks from Private to General</strong>, and see where you ended up on the end-of-match leaderboard.</p>
+pick up better weapons and jump into vehicles. Every match feeds your career: score points, earn
+<strong>medals</strong>, climb <strong>18 ranks from Private to General</strong> and unlock new gear for
+<strong>your own soldier</strong>.</p>
 
 <hr>
 
@@ -63,6 +64,15 @@ pick up better weapons and jump into vehicles. Every match feeds your career: sc
     8 vs 8.</li>
   <li><strong>Career and ranks.</strong> Points for kills, assists, defending, capturing and destroying vehicles. Your
     rank is saved in the browser and grows from match to match, with a promotion screen when you rank up.</li>
+  <li><strong>Medals.</strong> 16 feats to earn in battle: double and triple kills, killing sprees, grenade and
+    rocket kills, tank buster, roadkill, long shot, revenge, MVP, untouchable... each with its own pixel-art medal,
+    bonus points and a place in your collection.</li>
+  <li><strong>Your soldier.</strong> Pick your call sign and starting weapon, then dress your soldier: camo,
+    tactical vest, headgear, eyewear, beard, gloves, boots, headset, shemagh, knee pads, all shown on a full-body
+    pixel-art portrait. New camos and gear unlock as you rank up.</li>
+  <li><strong>Map editor.</strong> Build your own maps on desktop: tiles, flags, team bases, pickups, vehicles,
+    decorations and weather, with symmetry tools and a check for dead ends. Save them as JSON and test them in the
+    game with one click.</li>
   <li><strong>Desktop and mobile.</strong> Keyboard and mouse, or twin virtual sticks on touch screens
     (landscape).</li>
   <li><strong>English and Italian.</strong></li>
@@ -96,7 +106,8 @@ Keys can be remapped in Options, where you can also turn on <strong>auto reload<
 
 <h3>Notes</h3>
 <ul>
-  <li>Progress (rank, settings) is stored in your browser's local storage.</li>
+  <li>Progress (rank, medals, your soldier, settings) is stored in your browser's local storage.</li>
+  <li>The main menu runs a live thermal-camera drone feed over a city at war.</li>
   <li>On phones, play in landscape: the game asks for fullscreen on the first tap.</li>
   <li>All graphics and sounds are generated in code: no external assets, about 0.5&nbsp;MB to download.</li>
 </ul>
@@ -121,14 +132,57 @@ Source code licensed under the GNU GPL v3.</p>
 
 - Cover image: `arts/cover.png` (630 × 500, the size itch.io asks for).
 - Screenshots (1920 × 1080, in `arts/screenshots/`), suggested order and captions:
-  1. `oasis_battle.png` — Firefight at the oasis: grenades, explosions and a flag to take back.
-  2. `vehicle_combat.png` — Rocket tank vs jeep on the desert road.
-  3. `crossroads_firefight.png` — Holding the centre of Crossroads.
-  4. `promotion.png` — Rank up mid-match: 18 ranks from Private to General.
-  5. `leaderboard.png` — End-of-match leaderboard and career progress.
-  6. `main_menu.png` — Main menu, with a live AI battle running behind it.
-  7. `apache_strike.png` — Attack helicopter run: rockets and cannon fire on the enemy trench line.
-  8. `apache_rocket.png` — Enemy gunship over the desert: a rocket launcher is your best friend.
+  1. `main_menu.png` — The new main menu: a live thermal drone feed over a city at war.
+  2. `soldier_customization.png` — Build your soldier: call sign, starting weapon, camo, vest, gear.
+  3. `oasis_battle.png` — Firefight at the oasis: grenades, explosions and a flag to take back.
+  4. `medal_ingame.png` — Medals in battle: 16 feats, each with its own pixel-art medal.
+  5. `match_end.png` — Victory: leaderboard, medals of the match, promotion and new unlocks.
+  6. `medals.png` — Your medal collection.
+  7. `soldier_unlocks.png` — New camos and gear unlock as you rank up: preview them before you earn them.
+  8. `apache_strike.png` — Attack helicopter run: rockets and cannon fire on the enemy trench line.
+  9. `vehicle_combat.png` — Rocket tank vs jeep on the desert road.
+  10. `map_editor.png` — The map editor: paint tiles, place flags, bases, pickups and vehicles, then test the map.
+  11. `crossroads_firefight.png` — Holding the centre of Crossroads.
+  12. `promotion.png` — Rank up mid-match: 18 ranks from Private to General.
+  13. `apache_rocket.png` — Enemy gunship over the desert: a rocket launcher is your best friend.
+- Not in the list: `leaderboard.png` (superseded by `match_end.png`) and `editor.png` (superseded by
+  `map_editor.png`).
+
+## Release notes (devlog) — v1.1.0
+
+Title: **BAF2D 1.1.0 — Your soldier, medals, unlocks and a map editor**
+
+**Your soldier**
+- New *Soldier* screen: choose your call sign (shown in the leaderboard) and your starting weapon (with damage,
+  rate of fire, magazine, range and reload at a glance).
+- Dress your soldier on a full-body pixel-art portrait: camo (8 patterns), tactical vest (plate carrier, chest rig,
+  standard, heavy), vest colour, headgear (helmet, helmet with night vision, boonie hat, cap), eyewear, beard and
+  beard colour, skin tone, gloves, boots, headset, shemagh and knee pads. Feeling lucky? Hit *Random*.
+
+**Unlocks**
+- Many weapons and looks now unlock as you rank up: the shotgun after your first promotion, then new camos, vests,
+  night vision, the shemagh... Locked items can be previewed with a padlock and the rank they need, and the
+  end-of-match screen tells you what your promotion just unlocked.
+
+**Medals**
+- 16 medals to earn in battle: First blood, Double kill, Triple kill, Rampage, Killing spree, Unstoppable,
+  Grenadier, Bazooka, Tank buster, Roadkill, Long shot, Revenge, Guardian, Flag runner, MVP and Untouchable.
+- Each one pops up with its own pixel-art medal and a jingle and gives bonus points; the end-of-match screen shows
+  the medals of the match and the new *Medals* screen keeps your whole collection.
+
+**Map editor** (desktop)
+- Build your own maps: size, name, description, tiles with random variants, flags, team bases, weapon and grenade
+  pickups, vehicles, decorations and weather, with mirror symmetry and a check for unreachable areas and dead ends.
+- Save and open maps as JSON (an automatic draft keeps your work between sessions) and press *Test map* to play it
+  right away.
+
+**New main menu**
+- The menu now opens on a live thermal camera feed from a drone over a city at war: convoys, patrols, firefights,
+  explosions that blind the sensor, a helicopter dropping flares and a drone HUD that locks on to targets.
+
+**Other**
+- Solid rubble is now drawn as raised piles that clearly stand out from walkable sand.
+- Mobile: the *Start* / *Back* buttons in *New game* now always sit at the bottom of the screen.
 
 ## Release notes (devlog) — v1.0.2
 

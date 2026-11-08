@@ -111,7 +111,9 @@ js/engine/levelcheck.js checkGrid (celle irraggiungibili, vicoli ciechi): usato 
 tools/serve.mjs       server statico (solo moduli Node built-in)
 tools/build-zip.mjs   zip HTML5 per itch.io in dist/ (gitignored): index.html, manifest, LICENSE, css, js, config,
                       arts/icons; versione da game.json; percorsi con "/" (non usare Compress-Archive di PS 5.1)
-docs/itch-io.md       testi e impostazioni della pagina itch.io (inglese)
+docs/itch-io.md       testi e impostazioni della pagina itch.io (inglese), note di rilascio per versione
+CHANGELOG.md          storia delle versioni (inglese); a ogni rilascio: version in game.json, CHANGELOG, note in
+                      docs/itch-io.md, screenshot 1920x1080 in arts/screenshots/, node tools/build-zip.mjs
 tools/gen_desert.mjs  genera config/levels/level03.json (deserto 97x65, simmetrico, verifica raggiungibilità)
 tools/gen_arena.mjs   genera config/levels/level01.json (Test Arena 97x65, 3 bandiere)
 tools/gen_crossroads.mjs genera config/levels/level02.json (Crossroads 97x65, 5 bandiere)

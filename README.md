@@ -216,7 +216,8 @@ js/
 tools/serve.mjs        server statico di sviluppo (solo moduli Node built-in)
 tools/gen_desert.mjs   generatore della mappa del deserto (level03.json)
 tools/build-zip.mjs    zip per itch.io: node tools/build-zip.mjs -> dist/BAF2D-<versione>-html5.zip
-docs/itch-io.md        testi (in inglese) e impostazioni della pagina itch.io
+docs/itch-io.md        testi (in inglese) e impostazioni della pagina itch.io, note di rilascio
+CHANGELOG.md           storia delle versioni (in inglese)
 ```
 
 ## Rendering pixel-art
