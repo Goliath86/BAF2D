@@ -89,6 +89,7 @@ js/game/
   props.js            Props: decorazioni della mappa (palme overhead, cespugli/sassi a terra, ombre, oscillazione col vento)
   weather.js          Weather: vento con raffiche, granelli, lingue di sabbia, velature, tinta (effects.json -> weather)
   pickups.js          Pickups: armi/granate a terra (lasciate dai caduti o da punti fissi della mappa con respawn)
+  medals.js           Medals (config/medals.json): definizioni, collezione salvata in Settings, icon(id) a pixel
   ranks.js            Ranks (gradi da game.json -> ranks, insegne a pixel in canvas) + Career (xp in localStorage)
 config/
   game.json           parametri generali (version, levels, menu, display, i18n, player + arma iniziale, input,
@@ -211,6 +212,17 @@ tools/check_level.mjs controllo livelli: celle irraggiungibili e vicoli ciechi (
   rifle/shotgun/pistol); `game.setLoadout({ weapon, name })` -> arma di partenza in `_spawnPlayer` e nome in
   classifica (vuoto = `scoreboard.you`); il resto (mimetica, tattico, guanti, anfibi...) per ora è solo estetico.
   Nuove scelte: aggiungerle a `SOLDIER_FIELDS` (menu.js), a soldier.json e a `soldier.fields/values` delle lingue.
+  Sblocchi: `soldier.json -> unlocks.<scelta>.<valore>` = id del grado (`Menu._locked`); i valori bloccati si vedono
+  in anteprima (`Menu.view`) ma si salvano solo quelli sbloccati (`Menu.look`); a fine partita `_renderCareer` elenca
+  quelli sbloccati dalla promozione (`_unlocksBetween`).
+- Medaglie (`config/medals.json`, game.json -> `medals`, `js/game/medals.js`, solo giocatore umano): `trigger` =
+  `first` | `chain` (n uccisioni entro `chainWindow` s) | `streak` (senza morire) | `cause` (grenade/rocket/runover/
+  vehicle/bullet, da `source.cause` di `Player.damage` -> `player.killCause`) | `distance` (px dal tiratore) |
+  `revenge` | `vehicle` (mezzo distrutto) | `count` (+ `n`: tipi di punti della partita, es. defend/capture) | `end`
+  (mvp/untouchable). `Game._medalsOnDeath` (prima di `scores.onDeath`), `_medalTrigger`, `_awardMedal`: collezione,
+  fascia HUD (`hud.promote({ medal: true, title, sub, time })`), suono, punti in classifica e carriera
+  (`_careerPoints`). `matchSummary.medals` -> fine partita; schermata "Medaglie" del menu (`_renderMedals`).
+  Testi in `medals.<id>.name/desc`.
   Anteprima a scala intera nel riquadro, respiro = parte sopra `breathCut` spostata di 1 px.
 - Editor di mappe: salva livelli nel formato del gioco (`name`/`description` stringhe nel livello; il menu usa
   `levels.<id>.*` del file lingua se c'è, altrimenti quelli: `Menu._levelText`). Prova: main.js legge

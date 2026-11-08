@@ -39,7 +39,10 @@ export class Hud {
     while (this.popups.length > max) this.popups.shift();
   }
 
-  /** Nuovo grado: { name, insignia (canvas) }, mostrato al centro per promotion.time secondi (in coda). */
+  /**
+   * Nuovo grado: { name, insignia (canvas) }, mostrato al centro per promotion.time secondi (in coda).
+   * Anche le medaglie: { title, name, insignia, sub (es. "+300"), time }.
+   */
   promote(p) {
     this.promotions.push({ ...p, age: 0 });
   }
@@ -51,7 +54,7 @@ export class Hud {
     for (const p of this.popups) p.age += dt;
     this.popups = this.popups.filter((p) => p.age < life);
     const pr = this.promotions[0];
-    if (pr && (pr.age += dt) >= (this.pc.time ?? 4)) this.promotions.shift();
+    if (pr && (pr.age += dt) >= (pr.time ?? this.pc.time ?? 4)) this.promotions.shift();
     const ratio = player.health / player.maxHealth;
     if (this.trail === null) this.trail = ratio;
     if (this.lastHealth !== null && player.health < this.lastHealth) {
@@ -170,7 +173,7 @@ export class Hud {
   _drawPromotion(ui, u, W, H) {
     const pc = this.pc;
     const p = this.promotions[0];
-    const T = pc.time ?? 4;
+    const T = p.time ?? pc.time ?? 4;
     const fadeIn = pc.fadeIn ?? 0.25;
     const fadeOut = pc.fadeOut ?? 0.6;
     const alpha = Math.min(1, p.age / fadeIn, (T - p.age) / fadeOut);
@@ -179,12 +182,13 @@ export class Hud {
     const nameSize = pc.nameSize ?? 10;
     const ins = p.insignia;
     // scala intera più grande possibile entro insigniaHeight (insegne alte = scala minore)
-    const maxScale = Math.max(1, Math.min(pc.scale ?? 3, Math.floor((pc.insigniaHeight ?? 44) / ins.height)));
+    const maxScale = Math.max(1, Math.min(pc.scale ?? 3, Math.floor((p.medal ? pc.medalHeight ?? 46 : pc.insigniaHeight ?? 44) / ins.height)));
     // l'insegna "cresce" di un pixel di scala alla volta, poi resta ferma
     const scale = Math.min(maxScale, 1 + Math.floor(p.age / (pc.growStep ?? 0.06)));
     const insH = ins.height * maxScale;
     const pad = 5;
-    const bandH = pad + titleSize + 4 + insH + 4 + nameSize + pad;
+    const subSize = pc.subSize ?? 7;
+    const bandH = pad + titleSize + 4 + insH + 4 + nameSize + (p.sub ? 3 + subSize : 0) + pad;
     const top = Math.round(H * (pc.y ?? 0.22));
     const cx = Math.floor(W / 2);
 
@@ -201,13 +205,14 @@ export class Hud {
       ui.globalAlpha = alpha;
     }
     let y = top + pad;
-    this._text(ui, u, this.i18n.t('hud.promoted'), cx, y, titleSize, line, 'center');
+    this._text(ui, u, p.title ?? this.i18n.t('hud.promoted'), cx, y, titleSize, line, 'center');
     y += titleSize + 4;
     const iw = ins.width * scale;
     const ih = ins.height * scale;
     ui.drawImage(ins, (cx - Math.floor(iw / 2)) * u, (y + Math.floor((insH - ih) / 2)) * u, iw * u, ih * u);
     y += insH + 4;
     this._text(ui, u, p.name, cx, y, nameSize, this.cfg.text || '#fff', 'center');
+    if (p.sub) this._text(ui, u, p.sub, cx, y + nameSize + 3, subSize, line, 'center');
     ui.globalAlpha = 1;
   }
 

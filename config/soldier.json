@@ -21,6 +21,19 @@
     "kneepads": "on"
   },
 
+  "unlocks": {
+    "weapon": { "shotgun": "privateFirstClass" },
+    "camo": { "woodland": "corporal", "digital": "sergeant", "urban": "masterSergeant", "tiger": "lieutenant", "black": "colonel" },
+    "vest": { "rig": "corporal", "heavy": "staffSergeant" },
+    "vestColor": { "ranger": "corporalMajor", "black": "warrantOfficer", "camo": "captain" },
+    "headgear": { "boonie": "privateFirstClass", "helmetNvg": "secondLieutenant" },
+    "eyewear": { "ballistic": "corporal", "goggles": "staffSergeant" },
+    "beard": { "full": "corporalMajor" },
+    "gloves": { "black": "corporal", "olive": "sergeant" },
+    "boots": { "black": "corporalMajor", "olive": "masterSergeant" },
+    "shemagh": { "on": "major" }
+  },
+
   "options": {
     "camo": {
       "desert": { "pattern": "desert", "colors": ["#cbb68d", "#a8885f", "#7b6145", "#ddd0ad"] },

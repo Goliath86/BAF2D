@@ -1,0 +1,30 @@
+{
+  "storageKey": "medals",
+  "sound": "medal",
+  "bannerTime": 2.6,
+  "chainWindow": 4,
+  "metals": {
+    "gold": ["#fff0b0", "#ffd36b", "#d8a032", "#8a5e14"],
+    "silver": ["#ffffff", "#e0e2ec", "#a8acbc", "#5e6274"],
+    "bronze": ["#f6c49a", "#d88a52", "#a85e2c", "#5e3214"]
+  },
+  "outline": "#0b0b12",
+  "list": [
+    { "id": "firstBlood", "points": 150, "trigger": { "first": true }, "shape": "disc", "metal": "bronze", "ribbon": ["#7a1414", "#d03a3a", "#7a1414"] },
+    { "id": "doubleKill", "points": 100, "trigger": { "chain": 2 }, "shape": "disc", "metal": "silver", "ribbon": ["#24427a", "#e8e8f0", "#24427a"] },
+    { "id": "tripleKill", "points": 250, "trigger": { "chain": 3 }, "shape": "star", "metal": "silver", "ribbon": ["#24427a", "#d03a3a", "#e8e8f0", "#d03a3a", "#24427a"] },
+    { "id": "rampage", "points": 500, "trigger": { "chain": 5 }, "shape": "star", "metal": "gold", "ribbon": ["#7a1414", "#ffd36b", "#7a1414"] },
+    { "id": "streak5", "points": 300, "trigger": { "streak": 5 }, "shape": "cross", "metal": "silver", "ribbon": ["#2e5a2e", "#e8e8f0", "#2e5a2e"] },
+    { "id": "streak10", "points": 800, "trigger": { "streak": 10 }, "shape": "cross", "metal": "gold", "ribbon": ["#2e5a2e", "#ffd36b", "#e8e8f0", "#ffd36b", "#2e5a2e"] },
+    { "id": "grenadier", "points": 150, "trigger": { "cause": "grenade" }, "shape": "disc", "metal": "bronze", "ribbon": ["#5a5a2e", "#d8a032", "#5a5a2e"] },
+    { "id": "bazooka", "points": 150, "trigger": { "cause": "rocket" }, "shape": "disc", "metal": "bronze", "ribbon": ["#3a3a3a", "#e07030", "#3a3a3a"] },
+    { "id": "tankBuster", "points": 300, "trigger": { "vehicle": true }, "shape": "star", "metal": "bronze", "ribbon": ["#3a3a3a", "#ffd36b", "#3a3a3a"] },
+    { "id": "roadkill", "points": 200, "trigger": { "cause": "runover" }, "shape": "disc", "metal": "bronze", "ribbon": ["#5e3214", "#c8b48a", "#5e3214"] },
+    { "id": "longShot", "points": 150, "trigger": { "distance": 220 }, "shape": "disc", "metal": "silver", "ribbon": ["#14506a", "#7ac8e8", "#14506a"] },
+    { "id": "revenge", "points": 100, "trigger": { "revenge": true }, "shape": "disc", "metal": "bronze", "ribbon": ["#4a1a4a", "#c050a0", "#4a1a4a"] },
+    { "id": "guardian", "points": 300, "trigger": { "count": "defend", "n": 3 }, "shape": "cross", "metal": "bronze", "ribbon": ["#24427a", "#3fa9f5", "#24427a"] },
+    { "id": "flagRunner", "points": 300, "trigger": { "count": "capture", "n": 3 }, "shape": "star", "metal": "silver", "ribbon": ["#e8e8f0", "#24427a", "#e8e8f0"] },
+    { "id": "mvp", "points": 500, "trigger": { "end": "mvp" }, "shape": "star", "metal": "gold", "ribbon": ["#ffd36b", "#7a1414", "#ffd36b"] },
+    { "id": "untouchable", "points": 600, "trigger": { "end": "untouchable" }, "shape": "cross", "metal": "gold", "ribbon": ["#e8e8f0", "#ffd36b", "#e8e8f0"] }
+  ]
+}

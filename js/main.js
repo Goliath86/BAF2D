@@ -10,6 +10,7 @@ import { Game } from './game/game.js';
 import { Weapons } from './game/weapons.js';
 import { GrenadeTypes } from './game/grenades.js';
 import { Ranks, Career } from './game/ranks.js';
+import { Medals } from './game/medals.js';
 import { VehicleTypes } from './game/vehicles.js';
 import { RocketTypes } from './game/rockets.js';
 import { Menu } from './menu.js';
@@ -71,13 +72,14 @@ async function boot() {
     if (!levelList.length) throw new LocalizedError('errors.noLevels', {}, 'No levels defined in game.json ("levels")');
     // sfondo del menu: "scene" = scena animata (menu.scene), altrimenti partita dimostrativa
     const useScene = config.menu?.background === 'scene' && config.menu?.scene;
-    const [assetsCfg, effectsCfg, weaponsCfg, vehiclesCfg, sceneCfg, soldierCfg, ...levelData] = await Promise.all([
+    const [assetsCfg, effectsCfg, weaponsCfg, vehiclesCfg, sceneCfg, soldierCfg, medalsCfg, ...levelData] = await Promise.all([
       loadJSON(config.assets),
       loadJSON(config.effects),
       loadJSON(config.weapons),
       config.vehicles ? loadJSON(config.vehicles) : {},
       useScene ? loadJSON(config.menu.scene) : null,
       config.soldier ? loadJSON(config.soldier) : {}, // personalizzazione del soldato (schermata "Soldato")
+      config.medals ? loadJSON(config.medals) : {}, // medaglie (imprese in partita, collezione salvata)
       ...levelList.map((l) => loadJSON(l.file)),
     ]);
     const levels = levelList.map((l, i) => ({ ...l, data: levelData[i] }));
@@ -113,7 +115,8 @@ async function boot() {
     input.setBindings(settings.get('keys', {})); // tasti personalizzati dalle opzioni
     // gradi (game.json -> ranks) e punti di carriera del giocatore salvati tra una partita e l'altra
     const career = new Career(settings, new Ranks(config.ranks));
-    const game = new Game({ config, assets, audio, display, input, effectsCfg, weapons, grenadeTypes, i18n, career, vehicleTypes, rocketTypes });
+    const medals = new Medals(medalsCfg, settings);
+    const game = new Game({ config, assets, audio, display, input, effectsCfg, weapons, grenadeTypes, i18n, career, vehicleTypes, rocketTypes, medals });
     game.setAutoReload(settings.get('autoReload', game.autoReload)); // opzione "ricarica automatica"
 
     const menu = new Menu({

@@ -203,6 +203,8 @@ export class Player {
       this.reload = null;
       this.deathAngle = this.angle;
       this.killer = by;
+      // come è morto (medaglie): bullet/grenade/rocket/runover/vehicle, arma e posizione di chi ha colpito
+      this.killCause = source ? { cause: source.cause ?? null, weapon: source.weapon ?? null, x: source.x, y: source.y } : null;
     }
     return dealt;
   }

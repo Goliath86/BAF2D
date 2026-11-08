@@ -8,6 +8,7 @@
     "objective": "Conquista le bandiere restando vicino ad esse. Ogni morte e ogni bandiera in mano al nemico costano ticket: la squadra che li esaurisce perde."
   },
   "menu": {
+    "medals": "Medaglie",
     "tagline": "Cattura la bandiera, vista dall'alto",
     "newGame": "Nuova partita",
     "soldier": "Soldato",
@@ -111,6 +112,7 @@
     "message": "Ruota il dispositivo in orizzontale"
   },
   "matchEnd": {
+    "medals": "Medaglie",
     "victory": "VITTORIA",
     "defeat": "SCONFITTA",
     "draw": "PAREGGIO",
@@ -121,6 +123,7 @@
     "menu": "Menu principale"
   },
   "hud": {
+    "medal": "MEDAGLIA",
     "reloading": "RICARICA",
     "reloadPrompt": "RICARICA! [{key}]",
     "reloadPromptTouch": "RICARICA!",
@@ -191,6 +194,7 @@
     ]
   },
   "career": {
+    "unlocked": "Sbloccato: {list}",
     "xp": "{xp} PE",
     "progress": "{xp} / {next} PE",
     "next": "Prossimo: {rank}",
@@ -258,6 +262,7 @@
     "range": "DIST {v} KM"
   },
   "soldier": {
+    "locked": "Si sblocca al grado: {rank}",
     "title": "Soldato",
     "name": "Nome in codice",
     "namePlaceholder": "Il tuo nome in classifica",
@@ -304,6 +309,25 @@
       "auto": "Automatica",
       "semi": "Semiautomatica"
     }
+  },
+  "medalBook": { "title": "Medaglie", "summary": "{owned} medaglie su {total} ottenute" },
+  "medals": {
+    "firstBlood": { "name": "Primo sangue", "desc": "Fai la prima uccisione della partita." },
+    "doubleKill": { "name": "Doppia uccisione", "desc": "Due uccisioni a pochi secondi l'una dall'altra." },
+    "tripleKill": { "name": "Tripla uccisione", "desc": "Tre uccisioni a pochi secondi l'una dall'altra." },
+    "rampage": { "name": "Furia", "desc": "Cinque uccisioni di fila in rapida successione." },
+    "streak5": { "name": "Serie letale", "desc": "Cinque uccisioni senza morire." },
+    "streak10": { "name": "Inarrestabile", "desc": "Dieci uccisioni senza morire." },
+    "grenadier": { "name": "Granatiere", "desc": "Uccidi un nemico con una granata." },
+    "bazooka": { "name": "Bazooka", "desc": "Uccidi un soldato nemico con un razzo." },
+    "tankBuster": { "name": "Cacciatore di carri", "desc": "Distruggi un mezzo nemico." },
+    "roadkill": { "name": "Investito", "desc": "Investi un nemico con un mezzo." },
+    "longShot": { "name": "Tiro lungo", "desc": "Uccidi un nemico da molto lontano." },
+    "revenge": { "name": "Vendetta", "desc": "Uccidi il soldato che ti ha ucciso per ultimo." },
+    "guardian": { "name": "Guardiano", "desc": "Difendi le tue bandiere: tre uccisioni in difesa in una partita." },
+    "flagRunner": { "name": "Portabandiera", "desc": "Partecipa a tre catture di bandiera in una partita." },
+    "mvp": { "name": "Migliore in campo", "desc": "Finisci la partita primo in classifica." },
+    "untouchable": { "name": "Intoccabile", "desc": "Vinci una partita senza mai morire." }
   },
   "editor": {
     "title": "Editor di mappe",

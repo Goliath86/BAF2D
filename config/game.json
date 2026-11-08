@@ -5,6 +5,7 @@
   "effects": "config/effects.json",
   "weapons": "config/weapons.json",
   "soldier": "config/soldier.json",
+  "medals": "config/medals.json",
   "vehicles": "config/vehicles.json",
 
   "levels": [

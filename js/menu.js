@@ -168,6 +168,7 @@ export class Menu {
     const summary = this.game.matchSummary;
     this._renderScoreboard($('scoreboard'), summary);
     this._renderCareer($('matchend-career'), summary.xpAfter, summary.xpBefore);
+    this._renderMatchMedals($('matchend-medals'), summary.medals);
     ov.dataset.outcome = outcome;
     document.body.classList.add('match-over', `match-${outcome}`);
     ov.classList.remove('hidden');
@@ -215,6 +216,14 @@ export class Menu {
     parts.push(p.next ? i18n.t('career.progress', { xp, next: p.next.xp }) : i18n.t('career.xp', { xp }));
     parts.push(p.next ? i18n.t('career.next', { rank: i18n.t(`ranks.${p.next.id}.name`) }) : i18n.t('career.maxRank'));
     info.append(name, bar, el('div', 'career-xp', parts.join(' · ')));
+    // promosso: cosa si è sbloccato per il soldato
+    if (xpBefore !== null) {
+      const list = this._unlocksBetween(ranks.indexFor(xpBefore), p.index);
+      if (list.length) {
+        const names = list.map((u) => `${this._soldierValueText(u.key, u.id)} (${i18n.t(`soldier.fields.${u.key}`)})`);
+        info.append(el('div', 'career-unlocks', i18n.t('career.unlocked', { list: names.join(', ') })));
+      }
+    }
     box.append(info);
   }
 
@@ -277,6 +286,7 @@ export class Menu {
     this.root.classList.remove('hidden');
     this.root.classList.toggle('paused', this.mode === 'paused');
     if (name === 'options') this._renderKeys();
+    if (name === 'medals') this._renderMedals();
     this._soldierAnim(name === 'soldier');
     this._layout();
     this._updateScene();
@@ -489,9 +499,34 @@ export class Menu {
     const look = { name: this._cleanName(saved.name ?? def.name ?? '') };
     for (const key of SOLDIER_FIELDS) {
       const values = this._soldierValues(key);
-      look[key] = values.includes(saved[key]) ? saved[key] : values.includes(def[key]) ? def[key] : values[0];
+      // valori esistenti e già sbloccati dal grado del giocatore
+      const ok = (v) => values.includes(v) && !this._locked(key, v);
+      look[key] = ok(saved[key]) ? saved[key] : ok(def[key]) ? def[key] : values.find((v) => !this._locked(key, v)) ?? values[0];
     }
     return look;
+  }
+
+  /** Indice del grado che sblocca il valore (soldier.json -> unlocks.<scelta>.<valore> = id del grado), 0 = libero. */
+  _unlockIndex(key, id) {
+    const rid = this.soldierCfg.unlocks?.[key]?.[id];
+    if (!rid) return 0;
+    return this.game.ranks.list.find((r) => r.id === rid)?.index ?? 0;
+  }
+
+  _locked(key, id) {
+    return this.game.career.rankIndex < this._unlockIndex(key, id);
+  }
+
+  /** Valori sbloccati salendo dal grado "from" (escluso) al grado "to" (incluso): [{ key, id, rank }]. */
+  _unlocksBetween(from, to) {
+    const out = [];
+    for (const key of SOLDIER_FIELDS) {
+      for (const id of this._soldierValues(key)) {
+        const r = this._unlockIndex(key, id);
+        if (r > from && r <= to) out.push({ key, id, rank: r });
+      }
+    }
+    return out;
   }
 
   _cleanName(s) {
@@ -533,31 +568,38 @@ export class Menu {
       const value = el('span', 'step-value');
       const next = el('button', 'step', '›');
       prev.type = next.type = 'button';
+      // si vedono anche i valori bloccati (anteprima), ma si salvano solo quelli sbloccati
       const change = (d) => {
         const values = this._soldierValues(key);
-        const i = values.indexOf(this.look[key]);
-        this.look[key] = values[(i + d + values.length) % values.length];
-        this._saveLook();
+        const i = values.indexOf(this.view[key]);
+        const v = values[(i + d + values.length) % values.length];
+        this.view[key] = v;
+        if (!this._locked(key, v)) {
+          this.look[key] = v;
+          this._saveLook();
+        }
         this._renderSoldier();
       };
       prev.addEventListener('click', () => change(-1));
       next.addEventListener('click', () => change(1));
       box.append(prev, value, next);
-      row.append(label, box);
+      const lock = el('span', 'pick-lock');
+      row.append(label, box, lock);
       rows.append(row);
       // caratteristiche dell'arma subito sotto la sua scelta
       if (key === 'weapon') rows.append($('soldier-stats'));
-      this.soldierRows[key] = { label, value, prev, next };
+      this.soldierRows[key] = { row, label, value, prev, next, lock };
     }
   }
 
-  /** "Casuale": aspetto a caso (arma e nome restano). */
+  /** "Casuale": aspetto a caso tra i valori sbloccati (arma e nome restano). */
   _randomSoldier() {
     for (const key of SOLDIER_FIELDS) {
       if (key === 'weapon') continue;
-      const values = this._soldierValues(key);
+      const values = this._soldierValues(key).filter((v) => !this._locked(key, v));
       this.look[key] = values[Math.floor(Math.random() * values.length)];
     }
+    this.view = { ...this.look };
     this._saveLook();
     this._renderSoldier();
   }
@@ -573,17 +615,22 @@ export class Menu {
 
   _renderSoldier() {
     const { i18n } = this;
+    this.view ||= { ...this.look };
     for (const [key, r] of Object.entries(this.soldierRows)) {
+      const v = this.view[key];
+      const locked = this._locked(key, v);
       r.label.textContent = i18n.t(`soldier.fields.${key}`);
-      r.value.textContent = this._soldierValueText(key, this.look[key]);
+      r.value.textContent = this._soldierValueText(key, v);
+      r.row.classList.toggle('locked', locked);
+      r.lock.textContent = locked ? i18n.t('soldier.locked', { rank: i18n.t(`ranks.${this.game.ranks.get(this._unlockIndex(key, v)).id}.name`) }) : '';
       r.prev.title = r.prev.ariaLabel = `${i18n.t('soldier.previous')} (${r.label.textContent})`;
       r.next.title = r.next.ariaLabel = `${i18n.t('soldier.next')} (${r.label.textContent})`;
     }
     $('soldier-name').placeholder = i18n.t('soldier.namePlaceholder');
     this._renderTape();
     this._renderStats();
-    const w = this.game.weapons.get(this.look.weapon);
-    this.soldierArt = drawSoldier(this.look, this.soldierCfg, w.portrait || 'rifle');
+    const w = this.game.weapons.get(this.view.weapon);
+    this.soldierArt = drawSoldier(this.view, this.soldierCfg, w.portrait || 'rifle');
     this._drawSoldierPreview();
   }
 
@@ -591,7 +638,7 @@ export class Menu {
   _renderStats() {
     const { i18n } = this;
     const all = this._loadoutWeapons.map((id) => this.game.weapons.get(id));
-    const w = this.game.weapons.get(this.look.weapon);
+    const w = this.game.weapons.get(this.view.weapon);
     const stats = [
       ['damage', (x) => x.damage * (x.pellets || 1), (x) => (x.pellets > 1 ? `${x.damage}×${x.pellets}` : String(x.damage))],
       ['rate', (x) => x.fireRate, (x) => String(Math.round(x.fireRate * 60))],
@@ -640,12 +687,62 @@ export class Menu {
     clearInterval(this.soldierTimer);
     this.soldierTimer = 0;
     if (!on) return;
+    this.view = { ...this.look }; // entrando si riparte dalle scelte salvate
     this._renderSoldier();
     this.soldierFrame = 0;
     this.soldierTimer = setInterval(() => {
       this.soldierFrame = 1 - this.soldierFrame;
       this._drawSoldierPreview();
     }, (this.soldierCfg.breathPeriod ?? 1.6) * 500);
+  }
+
+  // ---------- Medaglie ----------
+
+  /** Icona di una medaglia come canvas DOM ingrandito di "scale". */
+  _medalIcon(id, scale) {
+    const src = this.game.medals.icon(id);
+    const c = el('canvas', 'medal-icon');
+    c.width = src.width;
+    c.height = src.height;
+    c.getContext('2d').drawImage(src, 0, 0);
+    c.style.width = `${src.width * scale}px`;
+    c.style.height = `${src.height * scale}px`;
+    return c;
+  }
+
+  /** Medagliere: tutte le medaglie, quelle mai prese in grigio. */
+  _renderMedals() {
+    const { i18n } = this;
+    const m = this.game.medals;
+    const grid = $('medal-grid');
+    grid.textContent = '';
+    if (!m) return;
+    $('medal-summary').textContent = i18n.t('medalBook.summary', { owned: m.owned, total: m.list.length });
+    for (const def of m.list) {
+      const n = m.count(def.id);
+      const card = el('div', n ? 'medal-card' : 'medal-card missing');
+      const info = el('div', 'medal-info');
+      const name = el('strong', 'medal-name', i18n.t(`medals.${def.id}.name`));
+      if (n) name.append(el('span', 'medal-count', `×${n}`));
+      info.append(name, el('span', 'medal-desc', i18n.t(`medals.${def.id}.desc`)), el('span', 'medal-points', `+${def.points ?? 0}`));
+      card.append(this._medalIcon(def.id, 3), info);
+      grid.append(card);
+    }
+  }
+
+  /** Fine partita: medaglie prese (raggruppate, con quante volte). */
+  _renderMatchMedals(box, ids = []) {
+    box.textContent = '';
+    if (!ids.length || !this.game.medals) return;
+    const counts = new Map();
+    for (const id of ids) counts.set(id, (counts.get(id) || 0) + 1);
+    box.append(el('span', 'medal-strip-title', this.i18n.t('matchEnd.medals')));
+    for (const [id, n] of counts) {
+      const item = el('span', 'medal-strip-item');
+      item.title = this.i18n.t(`medals.${id}.desc`);
+      item.append(this._medalIcon(id, window.innerHeight <= 540 ? 1 : 2), el('span', '', n > 1 ? `${this.i18n.t(`medals.${id}.name`)} ×${n}` : this.i18n.t(`medals.${id}.name`)));
+      box.append(item);
+    }
   }
 
   // ---------- Opzioni ----------
@@ -806,6 +903,7 @@ export class Menu {
     this._renderCareer($('menu-career'), this.game.career.xp);
     if (this.stack[this.stack.length - 1] === 'options') this._renderKeys();
     if (this.stack[this.stack.length - 1] === 'soldier') this._renderSoldier();
+    if (this.stack[this.stack.length - 1] === 'medals') this._renderMedals();
   }
 
   /**

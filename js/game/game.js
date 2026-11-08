@@ -30,7 +30,7 @@ function rand(v, def = 0) {
 
 export class Game {
   /** La partita vera e propria si prepara con setup() (mappa, squadra, numero di bot). */
-  constructor({ config, assets, audio, display, input, effectsCfg, weapons, grenadeTypes, i18n, career, vehicleTypes, rocketTypes }) {
+  constructor({ config, assets, audio, display, input, effectsCfg, weapons, grenadeTypes, i18n, career, vehicleTypes, rocketTypes, medals = null }) {
     this.config = config;
     this.i18n = i18n; // per i testi di HUD/menu: this.i18n.t('chiave')
     this.assets = assets;
@@ -47,6 +47,11 @@ export class Game {
 
     this.map = null;
     this.weapons = weapons;
+    // medaglie del giocatore umano (config/medals.json, collezione salvata) e quelle prese nella partita in corso
+    this.medals = medals;
+    this.medalsCfg = medals?.cfg || {};
+    this.matchMedals = [];
+    this.medalState = null;
 
     // Modalità Capture The Flag: squadre, bandiere, ticket (game.json -> teams / ctf)
     this.teams = config.teams || {};
@@ -183,6 +188,8 @@ export class Game {
     }
     this._botNames = names;
     this._botNameIndex = 0;
+    this.matchMedals = [];
+    this.medalState = { anyKill: false, chain: 0, lastKill: -1e9, streak: 0, lastKiller: null, counts: {}, given: new Set() };
     this.playerRecord = this.scores.add({
       name: this.attract ? this._nextBotName() : this.loadout.name || this.i18n.t('scoreboard.you'),
       team: this.playerTeam,
@@ -211,13 +218,103 @@ export class Game {
   _onAward(rec, type, n) {
     if (rec !== this.playerRecord || this.attract) return;
     const c = this.scoringCfg;
+    if (type === 'medal') return this._careerPoints(n);
+    this._medalCount(type);
     this.hud.popup(`+${n} ${this.i18n.t(`score.events.${type}`)}`, c.popupColors?.[type]);
     if (type === 'kill' && c.killSound) this.audio.play(c.killSound);
+    this._careerPoints(n);
+  }
+
+  /** Punti di carriera del giocatore: salvati subito, con le eventuali promozioni (fascia + suono). */
+  _careerPoints(n) {
+    const c = this.scoringCfg;
+    const rec = this.playerRecord;
     for (const i of this.career.add(n)) {
       rec.rank = i;
       const rank = this.ranks.get(i);
       this.hud.promote({ name: this.i18n.t(`ranks.${rank.id}.name`), insignia: this.ranks.insignia(i) });
       if (c.promotionSound) this.audio.play(c.promotionSound);
+    }
+  }
+
+  // ---------- Medaglie (config/medals.json, solo per il giocatore umano) ----------
+
+  /** Un soldato è appena morto: uccisioni del giocatore (serie, causa, distanza, vendetta) o sua morte. */
+  _medalsOnDeath(victim) {
+    const st = this.medalState;
+    if (this.attract || !this.medals || !st) return;
+    const k = victim.killer;
+    const isPlayer = (u) => u && u === this.player;
+    const enemyKill = k && k !== victim && k.team !== victim.team;
+    if (enemyKill && !st.anyKill && isPlayer(k)) this._medalTrigger('first');
+    if (enemyKill) st.anyKill = true;
+    if (victim === this.player) {
+      // morto: la serie riparte, ci si ricorda di chi ci ha ucciso (per la vendetta)
+      st.streak = 0;
+      st.chain = 0;
+      st.lastKiller = enemyKill ? k.combatant : null;
+      return;
+    }
+    if (!enemyKill || !isPlayer(k)) return;
+    const cause = victim.killCause || {};
+    st.chain = this.time - st.lastKill <= (this.medalsCfg.chainWindow ?? 4) ? st.chain + 1 : 1;
+    st.lastKill = this.time;
+    st.streak++;
+    this._medalTrigger('chain', st.chain);
+    this._medalTrigger('streak', st.streak);
+    if (cause.cause) this._medalTrigger('cause', cause.cause);
+    if (cause.cause === 'bullet') this._medalTrigger('distance', Math.hypot(victim.x - (cause.x ?? k.x), victim.y - (cause.y ?? k.y)));
+    if (st.lastKiller && victim.combatant === st.lastKiller) {
+      st.lastKiller = null;
+      this._medalTrigger('revenge');
+    }
+  }
+
+  /** Conteggi di partita (difese, catture) per le medaglie "count". */
+  _medalCount(type) {
+    const st = this.medalState;
+    if (!st) return;
+    st.counts[type] = (st.counts[type] || 0) + 1;
+    this._medalTrigger('count', type);
+  }
+
+  /** Assegna le medaglie il cui trigger corrisponde all'evento (kind, valore). */
+  _medalTrigger(kind, value = true) {
+    const st = this.medalState;
+    if (this.attract || !this.medals || !st) return;
+    for (const def of this.medals.list) {
+      const t = def.trigger || {};
+      let ok = false;
+      if (kind === 'first') ok = !!t.first;
+      else if (kind === 'chain') ok = t.chain === value;
+      else if (kind === 'streak') ok = t.streak === value;
+      else if (kind === 'cause') ok = t.cause === value;
+      else if (kind === 'distance') ok = t.distance > 0 && value >= t.distance;
+      else if (kind === 'revenge') ok = !!t.revenge;
+      else if (kind === 'vehicle') ok = !!t.vehicle;
+      else if (kind === 'count') ok = t.count === value && (st.counts[value] || 0) === (t.n ?? 1);
+      else if (kind === 'end') ok = t.end === value;
+      if (ok) this._awardMedal(def);
+    }
+  }
+
+  /** Medaglia presa: collezione, fascia sull'HUD, suono, punti in classifica e carriera. */
+  _awardMedal(def) {
+    this.medals.add(def.id);
+    this.matchMedals.push(def.id);
+    const n = def.points ?? 0;
+    this.hud.promote({
+      title: this.i18n.t('hud.medal'),
+      name: this.i18n.t(`medals.${def.id}.name`),
+      insignia: this.medals.icon(def.id),
+      sub: n ? `+${n}` : '',
+      time: this.medalsCfg.bannerTime ?? 2.6,
+      medal: true,
+    });
+    if (this.medalsCfg.sound) this.audio.play(this.medalsCfg.sound);
+    if (n) {
+      this.playerRecord.score += n;
+      this._onAward(this.playerRecord, 'medal', n);
     }
   }
 
@@ -228,6 +325,7 @@ export class Game {
       player: this.playerRecord,
       xpBefore: this.matchStartXp,
       xpAfter: this.career.xp,
+      medals: [...this.matchMedals],
     };
   }
 
@@ -337,6 +435,7 @@ export class Game {
       }
       if (!b.respawn) {
         // appena morto: punti, cadavere, ticket in meno, conto alla rovescia
+        this._medalsOnDeath(b.unit);
         this.scores.onDeath(b.unit, this.ctf);
         this._addCorpse(b.unit);
         this.ctf.onDeath(b.team);
@@ -518,10 +617,11 @@ export class Game {
       u.vehicleBrain = null;
       u.x = v.x;
       u.y = v.y;
-      u.damage(1e6, by ? { unit: by, x: by.x, y: by.y } : null);
+      u.damage(1e6, { unit: by, x: by?.x ?? v.x, y: by?.y ?? v.y, cause: 'vehicle' });
     }
     if (by && by.team !== v.team && by.combatant) this.scores.award(by.combatant, 'vehicle');
-    this.explode({ ...(d.blast || {}), explosion: d.explosion, shake: d.shake }, v.x, v.y, by, v);
+    if (by && by === this.player && by.team !== v.team) this._medalTrigger('vehicle');
+    this.explode({ ...(d.blast || {}), explosion: d.explosion, shake: d.shake }, v.x, v.y, by, v, 'vehicle');
   }
 
   /**
@@ -540,7 +640,7 @@ export class Game {
         const oy = v.hh + u.hh - Math.abs(u.y - v.y);
         if (ox <= 0 || oy <= 0) continue;
         if (v.driver && u.team !== v.team && Math.abs(v.speed) >= (run.minSpeed ?? 45)) {
-          u.damage(run.damage ?? 200, { unit: v.driver, x: v.x, y: v.y });
+          u.damage(run.damage ?? 200, { unit: v.driver, x: v.x, y: v.y, cause: 'runover' });
           if (u.dead) {
             this.effects.impact(this.combat.hitImpact || 'flesh', u.x, u.y);
             continue;
@@ -738,9 +838,9 @@ export class Game {
     this.rockets.update(dt, this, (r, x, y, v) => {
       // colpo diretto su un mezzo + esplosione
       if (v) v.damage(r.def.directDamage ?? 0, r.owner);
-      this.explode(r.def, x, y, r.owner);
+      this.explode(r.def, x, y, r.owner, null, 'rocket');
     });
-    this.grenades.update(dt, this.map, (g) => this.explode(g.def, g.x, g.y, g.owner));
+    this.grenades.update(dt, this.map, (g) => this.explode(g.def, g.x, g.y, g.owner, null, 'grenade'));
     this.effects.update(dt, this.map);
     this.shake.time = Math.max(0, this.shake.time - dt);
 
@@ -821,7 +921,7 @@ export class Game {
    * Esplosione "def" (granata, razzo, mezzo distrutto) in (x, y) causata da "owner": effetti, scossa della
    * camera, danni. exclude = mezzo da non danneggiare (quello che sta esplodendo).
    */
-  explode(def, x, y, owner = null, exclude = null) {
+  explode(def, x, y, owner = null, exclude = null, cause = 'explosion') {
     if (def.explosion) this.effects.explosion(def.explosion, x, y, this.map);
     if (def.shake) {
       this.shake.amount = def.shake.amount ?? 3;
@@ -837,7 +937,7 @@ export class Game {
       const d = Math.hypot(p.x - x, p.y - y);
       if (p.dead || p.vehicle || d >= radius || !this._lineOfSight(x, y, p.x, p.y)) continue;
       // unit: null = l'IA non "vede" chi l'ha lanciata; by = a chi vanno uccisione e assist
-      p.damage(Math.round((def.damage ?? 80) * falloff(d)), { unit: null, x, y, by: owner });
+      p.damage(Math.round((def.damage ?? 80) * falloff(d)), { unit: null, x, y, by: owner, cause });
     }
     // mezzi: distanza dal bordo dello scafo, danno × vehicleFactor (granate: ridotto, razzi: pieno)
     const vf = def.vehicleFactor ?? 1;
@@ -867,6 +967,7 @@ export class Game {
   /** Il giocatore è appena morto: cadavere a terra, ticket in meno, conto alla rovescia per il rientro. */
   _onPlayerDeath() {
     const p = this.player;
+    this._medalsOnDeath(p);
     this.scores.onDeath(p, this.ctf);
     this._addCorpse(p);
     this.ctf.onDeath(p.team);
@@ -1110,6 +1211,11 @@ export class Game {
     this.pickupOffer = null;
     this.vehicleOffer = null;
     this.scores.endMatch(w);
+    // medaglie di fine partita: primo in classifica, vittoria senza mai morire
+    if (!this.attract) {
+      if (this.scores.ranking()[0] === this.playerRecord) this._medalTrigger('end', 'mvp');
+      if (outcome === 'victory' && this.playerRecord.deaths === 0) this._medalTrigger('end', 'untouchable');
+    }
   }
 
   _updateMatchEnd(dt) {
@@ -1205,7 +1311,7 @@ export class Game {
     // team/owner: i colpi non feriscono la propria squadra; il bersaglio sa da dove arrivano (IA)
     this.bullets.push({
       x: m.x, y: m.y, dx, dy, angle: a, speed: w.bulletSpeed || 300, range, sprite,
-      damage: w.damage ?? 0, team: shooter.team, owner: shooter.owner ?? shooter, fromVehicle: shooter.fromVehicle ?? null,
+      damage: w.damage ?? 0, team: shooter.team, owner: shooter.owner ?? shooter, fromVehicle: shooter.fromVehicle ?? null, weapon: w.id,
       fromAir,
     });
   }
@@ -1217,7 +1323,7 @@ export class Game {
     const a = shooter.angle + (Math.random() - 0.5) * ((w.spreadDeg || 0) * Math.PI) / 180;
     const m = shooter.muzzle;
     if (!shooter.fromVehicle?.airborne && this.map.blocksShotAt(m.x, m.y)) {
-      this.explode(def, m.x, m.y, owner);
+      this.explode(def, m.x, m.y, owner, null, 'rocket');
       return;
     }
     const range = this._shotRange(shooter, w, m, Math.cos(a), Math.sin(a));
@@ -1244,7 +1350,7 @@ export class Game {
 
   _hitUnit(b, u) {
     const o = b.owner;
-    u.damage(b.damage, o ? { unit: o, x: o.x, y: o.y } : null);
+    u.damage(b.damage, o ? { unit: o, x: o.x, y: o.y, cause: 'bullet', weapon: b.weapon } : null);
     this.effects.impact(this.combat.hitImpact || 'flesh', b.x, b.y, b.x, b.y, b.dx, b.dy);
   }
 

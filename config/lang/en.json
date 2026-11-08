@@ -8,6 +8,7 @@
     "objective": "Capture the flags by staying close to them. Every death and every flag held by the enemy costs tickets: the team that runs out loses."
   },
   "menu": {
+    "medals": "Medals",
     "tagline": "Top-down capture the flag",
     "newGame": "New game",
     "soldier": "Soldier",
@@ -111,6 +112,7 @@
     "message": "Rotate your device to landscape"
   },
   "matchEnd": {
+    "medals": "Medals",
     "victory": "VICTORY",
     "defeat": "DEFEAT",
     "draw": "DRAW",
@@ -121,6 +123,7 @@
     "menu": "Main menu"
   },
   "hud": {
+    "medal": "MEDAL",
     "reloading": "RELOADING",
     "reloadPrompt": "RELOAD! [{key}]",
     "reloadPromptTouch": "RELOAD!",
@@ -191,6 +194,7 @@
     ]
   },
   "career": {
+    "unlocked": "Unlocked: {list}",
     "xp": "{xp} XP",
     "progress": "{xp} / {next} XP",
     "next": "Next: {rank}",
@@ -258,6 +262,7 @@
     "range": "RNG {v} KM"
   },
   "soldier": {
+    "locked": "Unlocks at rank: {rank}",
     "title": "Soldier",
     "name": "Call sign",
     "namePlaceholder": "Your name in the scoreboard",
@@ -304,6 +309,25 @@
       "auto": "Full auto",
       "semi": "Semi-automatic"
     }
+  },
+  "medalBook": { "title": "Medals", "summary": "{owned} of {total} medals earned" },
+  "medals": {
+    "firstBlood": { "name": "First blood", "desc": "Get the first kill of the match." },
+    "doubleKill": { "name": "Double kill", "desc": "Two kills within a few seconds." },
+    "tripleKill": { "name": "Triple kill", "desc": "Three kills within a few seconds of each other." },
+    "rampage": { "name": "Rampage", "desc": "Five kills in a quick chain." },
+    "streak5": { "name": "Killing spree", "desc": "Five kills without dying." },
+    "streak10": { "name": "Unstoppable", "desc": "Ten kills without dying." },
+    "grenadier": { "name": "Grenadier", "desc": "Kill an enemy with a grenade." },
+    "bazooka": { "name": "Bazooka", "desc": "Kill an enemy soldier with a rocket." },
+    "tankBuster": { "name": "Tank buster", "desc": "Destroy an enemy vehicle." },
+    "roadkill": { "name": "Roadkill", "desc": "Run over an enemy with a vehicle." },
+    "longShot": { "name": "Long shot", "desc": "Kill an enemy from very far away." },
+    "revenge": { "name": "Revenge", "desc": "Kill the soldier who last killed you." },
+    "guardian": { "name": "Guardian", "desc": "Defend your flags: three defense kills in a match." },
+    "flagRunner": { "name": "Flag runner", "desc": "Take part in three flag captures in a match." },
+    "mvp": { "name": "MVP", "desc": "Finish the match first in the scoreboard." },
+    "untouchable": { "name": "Untouchable", "desc": "Win a match without ever dying." }
   },
   "editor": {
     "title": "Map editor",

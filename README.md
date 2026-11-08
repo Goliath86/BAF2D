@@ -33,7 +33,7 @@ I tasti si possono cambiare da **Opzioni → Comandi** (due tasti per azione; sa
 
 ## Menu
 
-- **Principale** (pannello a sinistra): *Nuova partita*, *Soldato*, *Opzioni*, *Editor di mappe*; a destra una scena animata
+- **Principale** (pannello a sinistra): *Nuova partita*, *Soldato*, *Medaglie*, *Opzioni*, *Editor di mappe*; a destra una scena animata
   a pixel: la camera termica di un drone che sorvola di notte una città in guerra, con mezzi e pattuglie sulle
   strade, scontri a fuoco, esplosioni che abbagliano il sensore, incendi, un elicottero che lancia i flare e l'HUD
   con il bersaglio agganciato (`config/menu_scene.json`, `js/menu_scene.js`, disegni in `js/menu_art.js`).
@@ -49,6 +49,12 @@ I tasti si possono cambiare da **Opzioni → Comandi** (due tasti per azione; sa
   colore, copricapo, occhiali, barba e colore, carnagione, guanti, anfibi, cuffie, shemagh, ginocchiere; pulsante
   *Casuale*. Tutto salvato in localStorage; opzioni e colori in `config/soldier.json`, disegno in
   `js/soldier_art.js`. Per ora solo arma e nome hanno effetto in partita.
+  Molte scelte si sbloccano salendo di grado (`unlocks` in `config/soldier.json`): quelle bloccate si vedono in
+  anteprima col lucchetto e il grado richiesto; a fine partita compare l'elenco di quanto sbloccato.
+- **Medaglie**: 16 imprese in partita (primo sangue, doppia/tripla uccisione, serie senza morire, granatiere,
+  bazooka, cacciatore di carri, investito, tiro lungo, vendetta, guardiano, portabandiera, migliore in campo,
+  intoccabile) con fascia sull'HUD, suono e punti bonus; a fine partita le medaglie prese, nel menu il medagliere
+  con quante volte è stata ottenuta ognuna (`config/medals.json`, `js/game/medals.js`, salvate in localStorage).
 - **Opzioni**: lingua, volume, comandi da tastiera (su touch: riepilogo dei comandi).
 - **Pausa** (Esc / P / pulsante touch): riprendi, opzioni, torna al menu principale.
 - **Fine partita**: rivincita o menu principale.

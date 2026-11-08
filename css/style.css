@@ -924,6 +924,38 @@ button {
   text-transform: uppercase;
 }
 
+/* valore non ancora sbloccato dal grado: lucchetto a pixel e grado richiesto sotto la riga */
+.pick-lock {
+  grid-column: 1 / -1;
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #e0705a;
+  text-align: right;
+}
+
+.pick-lock:empty {
+  display: none;
+}
+
+.pick-row.locked .step-value {
+  color: var(--menu-dim);
+}
+
+.pick-row.locked .step-value::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 9px;
+  margin-right: 6px;
+  vertical-align: -1px;
+  background:
+    linear-gradient(#e0705a, #e0705a) 0 4px / 8px 5px no-repeat,
+    linear-gradient(#e0705a, #e0705a) 1px 0 / 2px 5px no-repeat,
+    linear-gradient(#e0705a, #e0705a) 5px 0 / 2px 5px no-repeat,
+    linear-gradient(#e0705a, #e0705a) 1px 0 / 6px 2px no-repeat;
+}
+
 /* caratteristiche dell'arma scelta: barre a blocchi */
 .soldier-stats {
   margin: 4px 0 8px;
@@ -1005,6 +1037,117 @@ button {
 
 .soldier-tape:empty {
   visibility: hidden;
+}
+
+/* ---------- Medaglie ---------- */
+
+.menu-screen[data-screen="medals"] .menu-actions {
+  border-top: 2px solid var(--menu-line);
+}
+
+.medal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.medal-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 2px solid var(--menu-line);
+  background: rgba(255, 211, 107, 0.05);
+}
+
+.medal-card.missing {
+  background: transparent;
+  border-style: dashed;
+}
+
+.medal-card.missing .medal-icon {
+  filter: grayscale(1) brightness(0.45);
+}
+
+.medal-card.missing .medal-name {
+  color: var(--menu-dim);
+}
+
+.medal-icon {
+  position: static; /* la regola generale "canvas" è per i canvas di gioco */
+  display: block;
+  image-rendering: pixelated;
+}
+
+.medal-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.medal-name {
+  font-size: 14px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--menu-gold);
+}
+
+.medal-count {
+  margin-left: 8px;
+  color: var(--menu-text);
+}
+
+.medal-desc {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--menu-dim);
+}
+
+.medal-points {
+  font-size: 11px;
+  color: var(--menu-accent);
+}
+
+/* fine partita: medaglie prese in fila */
+.medal-strip {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 6px 14px;
+  margin-top: 8px;
+}
+
+.medal-strip:empty {
+  display: none;
+}
+
+.medal-strip-title {
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--menu-dim);
+}
+
+.medal-strip-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--menu-gold);
+}
+
+.career-unlocks {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #8fe08a;
 }
 
 /* ---------- Opzioni ---------- */
