@@ -50,6 +50,8 @@ js/main.js            bootstrap: game.json -> Settings -> i18n -> assets/livelli
 js/menu.js            Menu (DOM): principale/nuova partita/opzioni/pausa/fine partita, scena animata dietro
 js/menu_scene.js      MenuScene: scena del menu principale a pixel (canvas #menu-scene, config/menu_scene.json):
                       tramonto nel deserto, soldato di fronte, bandiera a brandelli, carro in fiamme, nuvole, elicottero
+js/menu_art.js        disegni della scena: primitive a pixel, buildSoldier (primo piano ~185 px, parti con
+                      contorno interno, maschere ombra/luce, mimetica), drawTank, drawApache, makeCloud
 js/settings.js        Settings: impostazioni del giocatore in localStorage (lang, volume, keys, newGame)
 js/engine/
   loader.js           loadJSON / loadImage / loadArrayBuffer (errori = LocalizedError)
@@ -190,8 +192,11 @@ tools/check_level.mjs controllo livelli: celle irraggiungibili e vicoli ciechi (
   config) o altro = partita dimostrativa (attract). Con la scena `Menu.showMain` chiama `game.unload()` (niente
   mappa né update) e `_updateScene()` la accende solo con `mode === 'menu'` e menu visibile (spenta in partita e
   in pausa); `setViewLeft(larghezza pannello)` la centra nella parte scoperta (non col pannello largo).
-  Tutto procedurale in `menu_scene.js`: primitive a pixel (`poly`, `line`, `disc`...), `camouflage()` (sostituisce
-  il colore base con macchie), `finish()` (tinta, luce dal lato del sole, contorno 1 px); sprite con margine `M`.
+  Tutto procedurale in `menu_art.js`: primitive a pixel (`poly`, `line`, `limb`, `disc`...), `camouflage()` /
+  `recolor()` (sostituiscono un colore esatto con un motivo: mimetica, quadretti della kefiah), `part()` (livello
+  con contorno interno), maschere ombra/luce (`applyMasks`, il soldato è ombreggiato per luce da sinistra),
+  `finish()` (tinta, luce dal lato del sole, contorno 1 px); sprite con margine. Posizioni in `menu_scene.json`
+  come frazione della parte visibile (`at`); il soldato tiene sempre l'elmetto nello schermo (`feetY`).
 - Editor di mappe: salva livelli nel formato del gioco (`name`/`description` stringhe nel livello; il menu usa
   `levels.<id>.*` del file lingua se c'è, altrimenti quelli: `Menu._levelText`). Prova: main.js legge
   `?test=1` (`readTestLevel`), mette la mappa in testa a `levels` con `test: true` (id `editor.testLevelId`) e
