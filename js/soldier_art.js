@@ -564,7 +564,8 @@ export function drawSoldier(look, cfg, weapon = 'rifle') {
     const pk = cv.poly([[x0, 58], [x0 + 8, 58], [x0 + 8, 70], [x0 + 0.5, 70]]);
     cv.part(cv.and(pk, x0 < 64 ? shoulderL : shoulderR), cloth, { light: { cyl: 0.6, vert: 0.6, bias: b } });
     const patch = cv.rect(x0 + 2, 60, x0 + 7, 64);
-    cv.part(patch, (x, y, t) => ramp(x0 < 64 ? '#3b4048' : '#5a4e3a')[t], { light: { cyl: 0.5, vert: 0.5 }, shadow: false });
+    const patchR = ramp(x0 < 64 ? '#3b4048' : '#5a4e3a'); // scala calcolata una volta, non per pixel
+    cv.part(patch, (x, y, t) => patchR[t], { light: { cyl: 0.5, vert: 0.5 }, shadow: false });
   }
   cv.fold(shoulderL, 33, 78, 40, 80);
   cv.fold(shoulderR, 95, 79, 88, 81);
@@ -715,7 +716,8 @@ function drawVest(cv, style, vestCol, cloth, { polyR, metalR, rubberR }) {
     cv.part(panel, vestCol, { light: { cyl: 0.6, vert: 0.4, bias: -0.15 }, tone: (x, y) => (hash2(x, y, 3) < 0.25 ? -0.7 : 0) });
     pouch(55, 53, 18, 9, false, 0.1);
     const patch = cv.rect(59, 70, 70, 77);
-    cv.part(patch, (x, y, t) => ramp('#454a3c')[t], { light: { cyl: 0.4, vert: 0.4 }, shadow: false });
+    const patchR = ramp('#454a3c');
+    cv.part(patch, (x, y, t) => patchR[t], { light: { cyl: 0.4, vert: 0.4 }, shadow: false });
     cv.line(60, 73, 68, 73, ramp('#7d8466')[4]);
     return;
   }
@@ -723,7 +725,8 @@ function drawVest(cv, style, vestCol, cloth, { polyR, metalR, rubberR }) {
   if (style === 'standard') {
     pouch(54, 52, 20, 12, false, 0.1);
     const patch = cv.rect(57, 54, 71, 58);
-    cv.part(patch, (x, y, t) => ramp('#43483a')[t], { light: { cyl: 0.4, vert: 0.4 }, shadow: false });
+    const patchR = ramp('#43483a');
+    cv.part(patch, (x, y, t) => patchR[t], { light: { cyl: 0.4, vert: 0.4 }, shadow: false });
     for (let k = 0; k < 3; k++) pouch(50.5 + k * 9.5, 72, 8, 19, true, 0.05 * (1 - k));
     // radio sul fianco
     const radio = cv.poly([[84, 62], [91, 62], [91, 84], [84, 84]]);
@@ -737,7 +740,8 @@ function drawVest(cv, style, vestCol, cloth, { polyR, metalR, rubberR }) {
   grenade(59, 58);
   grenade(68, 58);
   pouch(74.5, 52, 9, 11, false, -0.05);
-  cv.part(cv.rect(76, 54, 83, 57), (x, y, t) => ramp('#8b2a24')[t], { light: { cyl: 0.5, vert: 0.4, bias: 0.3 }, shadow: false });
+  const medR = ramp('#8b2a24');
+  cv.part(cv.rect(76, 54, 83, 57), (x, y, t) => medR[t],{ light: { cyl: 0.5, vert: 0.4, bias: 0.3 }, shadow: false });
   cv.set(79, 55, [230, 220, 210]);
   cv.set(78, 55, [230, 220, 210]);
   cv.set(80, 55, [230, 220, 210]);
@@ -874,6 +878,23 @@ function drawHead(cv, look, { skinR, beardR, cloth, polyR, metalR, rubberR, mats
     cv.part(cv.rect(58, 37, 61, 40), (x, y, t) => rubberR[t], { light: { cyl: 0.6, vert: 0.5, bias: 0.5 } });
   }
 
+  // maschera (goggles): alzata sull'elmetto (y0 = 14) oppure, con cappellino o boonie, indossata sugli occhi
+  const goggles = (y0, strap) => {
+    if (look.eyewear !== 'goggles') return;
+    cv.part(strap, (x, y, t) => rubberR[t], { light: { cyl: 1, vert: 0 }, shadow: false });
+    const frame = cv.poly([[53, y0], [75, y0], [74, y0 + 7], [66, y0 + 7], [64, y0 + 5.5], [62, y0 + 7], [54, y0 + 7]]);
+    cv.part(frame, (x, y, t) => rubberR[t], { light: { cyl: 0.8, vert: 0.8, bias: 0.3 }, shadow: 'deep' });
+    const lensR = ramp(mats.lens || '#16191d');
+    for (const a of [55, 66]) {
+      const l = cv.rect(a, y0 + 1, a + 7, y0 + 6);
+      cv.part(l, (x, y, t) => lensR[t], { light: { cyl: 0.4, vert: 1.4, bias: 0.4 }, shadow: false, outline: false });
+      cv.set(a + 1, y0 + 2, [160, 180, 200]);
+      cv.set(a + 2, y0 + 2, [120, 140, 160]);
+    }
+  };
+  // elastico sugli occhi: attorno alla testa, visibile ai lati del volto
+  const eyeStrap = (y0) => cv.or(cv.rect(50, y0 + 2, 54, y0 + 4), cv.rect(74, y0 + 2, 78, y0 + 4));
+
   // copricapo
   const hg = look.headgear;
   if (hg === 'boonie') {
@@ -883,6 +904,7 @@ function drawHead(cv, look, { skinR, beardR, cloth, polyR, metalR, rubberR, mats
     const brim = cv.minus(cv.ell(64, 23.5, 21, 4.6), cv.rect(0, 0, 128, 20));
     cv.part(brim, cloth, { light: { cyl: 0.8, vert: 1.2, bias: 0 }, shadow: 'deep' });
     for (let x = 46; x < 82; x += 3) cv.tint(x, 25, 0.82);
+    goggles(26, eyeStrap(26));
     return;
   }
   if (hg === 'cap') {
@@ -893,7 +915,9 @@ function drawHead(cv, look, { skinR, beardR, cloth, polyR, metalR, rubberR, mats
     const visor = cv.poly([[52, 22.5], [76, 22.5], [74, 27], [54, 27]]);
     cv.part(visor, cloth, { light: { cyl: 0.8, vert: 1.4, bias: -0.1 }, shadow: 'deep' });
     // toppa col velcro
-    cv.part(cv.rect(59, 14, 69, 19), (x, y, t) => ramp('#3e4235')[t], { light: { cyl: 0.4, vert: 0.4 }, shadow: false });
+    const velcro = ramp('#3e4235');
+    cv.part(cv.rect(59, 14, 69, 19), (x, y, t) => velcro[t], { light: { cyl: 0.4, vert: 0.4 }, shadow: false });
+    goggles(26, eyeStrap(26));
     return;
   }
   // elmetto balistico con la copertura mimetica, binari laterali, attacco per il visore, elastici
@@ -904,7 +928,8 @@ function drawHead(cv, look, { skinR, beardR, cloth, polyR, metalR, rubberR, mats
     cv.part(cv.rect(x0, 15, x0 + 3, 23), (x, y, t) => polyR[t], { light: { cyl: 0.8, vert: 0.5, bias: 0.2 } });
     for (let y = 16; y < 23; y += 2) cv.set(x0 + 1, y, polyR[1]);
   }
-  cv.part(cv.rect(58, 10, 70, 14), (x, y, t) => ramp('#3f4336')[t], { light: { cyl: 0.5, vert: 0.4 }, shadow: false, tone: (x, y) => (hash2(x, y, 4) < 0.3 ? -0.7 : 0) });
+  const coverR = ramp('#3f4336');
+  cv.part(cv.rect(58, 10, 70, 14), (x, y, t) => coverR[t],{ light: { cyl: 0.5, vert: 0.4 }, shadow: false, tone: (x, y) => (hash2(x, y, 4) < 0.3 ? -0.7 : 0) });
   for (const y of [15, 21]) cv.fold(dome, 51, y + 2, 77, y + 2, 0.7);
   const shroud = cv.poly([[60, 16], [68, 16], [69, 22], [59, 22]]);
   cv.part(shroud, (x, y, t) => metalR[t], { light: { cyl: 0.9, vert: 0.7, bias: 0.2 }, shadow: 'deep' });
@@ -914,26 +939,15 @@ function drawHead(cv, look, { skinR, beardR, cloth, polyR, metalR, rubberR, mats
     // visore notturno ribaltato in su sul supporto
     const arm = cv.rect(62, 8, 66, 17);
     cv.part(arm, (x, y, t) => metalR[t], { light: { cyl: 0.8, vert: 0.4, bias: 0.1 } });
+    const glassR = ramp(mats.glass || '#253a2c');
     for (const cx of [59, 69]) {
       const tube = cv.ell(cx, 7, 4.3, 4.3);
       cv.part(tube, (x, y, t) => rubberR[t], { light: { cyl: 1, vert: 0.8, bias: 0.4 }, shadow: 'deep' });
       const lens = cv.ell(cx, 7, 2.2, 2.2);
-      cv.part(lens, (x, y, t) => ramp(mats.glass || '#253a2c')[t], { light: { cyl: 1, vert: 1, bias: 0.3 }, shadow: false, outline: false });
+      cv.part(lens, (x, y, t) => glassR[t],{ light: { cyl: 1, vert: 1, bias: 0.3 }, shadow: false, outline: false });
       cv.set(cx - 1, 6, [140, 220, 160]);
     }
   }
-  if (look.eyewear === 'goggles') {
-    // maschera alzata sull'elmetto, elastico attorno
-    const strap = cv.and(dome, cv.rect(0, 17, 128, 19));
-    cv.part(strap, (x, y, t) => rubberR[t], { light: { cyl: 1, vert: 0 }, shadow: false });
-    const frame = cv.poly([[53, 14], [75, 14], [74, 21], [66, 21], [64, 19.5], [62, 21], [54, 21]]);
-    cv.part(frame, (x, y, t) => rubberR[t], { light: { cyl: 0.8, vert: 0.8, bias: 0.3 }, shadow: 'deep' });
-    const lensR = ramp(mats.lens || '#16191d');
-    for (const a of [55, 66]) {
-      const l = cv.rect(a, 15, a + 7, 20);
-      cv.part(l, (x, y, t) => lensR[t], { light: { cyl: 0.4, vert: 1.4, bias: 0.4 }, shadow: false, outline: false });
-      cv.set(a + 1, 16, [160, 180, 200]);
-      cv.set(a + 2, 16, [120, 140, 160]);
-    }
-  }
+  // maschera alzata sull'elmetto, elastico attorno
+  goggles(14, cv.and(dome, cv.rect(0, 17, 128, 19)));
 }

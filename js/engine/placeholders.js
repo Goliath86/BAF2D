@@ -41,6 +41,11 @@ function ellipse(g, cx, cy, rx, ry, color) {
 /** Linea di Bresenham con pennello quadrato di lato "size". */
 function line(g, x0, y0, x1, y1, color, size = 1) {
   g.fillStyle = color;
+  // Bresenham vuole interi: con coordinate frazionarie "x0 === x1" non diventerebbe mai vero (ciclo infinito)
+  x0 = Math.round(x0);
+  y0 = Math.round(y0);
+  x1 = Math.round(x1);
+  y1 = Math.round(y1);
   const dx = Math.abs(x1 - x0);
   const dy = -Math.abs(y1 - y0);
   const sx = x0 < x1 ? 1 : -1;
@@ -341,25 +346,6 @@ const SPRITE_SHAPES = {
     };
     leg(cy - 4, offL, liftL); // gamba sinistra (in alto, guardando a destra)
     leg(cy + 1, offR, liftR); // gamba destra
-  },
-
-  player(g, w, h, p, frame) {
-    const cx = w / 2;
-    const cy = h / 2;
-    // piedi (animazione camminata: frame 1 e 2 alternano il piede avanti)
-    const step = frame === 1 ? 2 : frame === 2 ? -2 : 0;
-    rect(g, cx - 2 + step, cy - 6, 4, 3, p.outline);
-    rect(g, cx - 1 + step, cy - 5, 2, 1, p.feet);
-    rect(g, cx - 2 - step, cy + 3, 4, 3, p.outline);
-    rect(g, cx - 1 - step, cy + 4, 2, 1, p.feet);
-    // corpo
-    disc(g, cx, cy, 5.5, p.outline);
-    disc(g, cx, cy, 4.5, p.body);
-    // arma
-    rect(g, cx + 1, cy - 2, w - cx - 1, 4, p.outline);
-    rect(g, cx + 2, cy - 1, w - cx - 3, 2, p.gun);
-    // testa
-    disc(g, cx - 0.5, cy, 2.5, p.head);
   },
 
   /**
@@ -1010,6 +996,10 @@ export function createSpritePlaceholder(def) {
   for (let i = 0; i < frames; i++) {
     g.save();
     g.translate(i * fw, 0);
+    // ritaglio al riquadro del frame (come per i tile): un disegno che sborda non sporca il frame accanto
+    g.beginPath();
+    g.rect(0, 0, fw, fh);
+    g.clip();
     painter(g, fw, fh, p, i);
     g.restore();
     if (p.autoOutline) addOutline(g, i * fw, fw, fh, p.autoOutline);
