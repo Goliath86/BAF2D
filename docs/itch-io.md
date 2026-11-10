@@ -1,4 +1,4 @@
-# BAF2D — itch.io page (v1.1.0)
+# BAF2D — itch.io page (v1.1.2)
 
 Copy each block into the matching field of the itch.io "Edit game" page.
 
@@ -15,7 +15,7 @@ Top-down pixel-art capture the flag: squad AI, vehicles and helicopters, medals,
 ## Classification / Kind of project
 
 - Classification: **Games**
-- Kind of project: **HTML** (upload `dist/BAF2D-1.1.0-html5.zip`, tick "This file will be played in the browser")
+- Kind of project: **HTML** (upload `dist/BAF2D-1.1.2-html5.zip`, tick "This file will be played in the browser")
 - Release status: **Released**
 
 ## Embed options (Uploads → HTML)
@@ -147,6 +147,22 @@ Source code licensed under the GNU GPL v3.</p>
   13. `apache_rocket.png` — Enemy gunship over the desert: a rocket launcher is your best friend.
 - Not in the list: `leaderboard.png` (superseded by `match_end.png`) and `editor.png` (superseded by
   `map_editor.png`).
+
+## Release notes (devlog) — v1.1.2
+
+Title: **BAF2D 1.1.2 — Bug fixes and performance**
+
+**Fixes**
+- Bot vehicles spread across the flags properly: an empty vehicle no longer keeps a flag "reserved".
+- Goggles now show on your soldier's portrait when worn with a cap or boonie hat.
+- Grenade scorch marks no longer bleed into the wrong shape.
+- Main menu: burning city blocks no longer stack up duplicate fires and smoke.
+- Map editor: typing a map name or description is now a single undo step.
+- Debug keys are disabled in normal play.
+
+**Performance**
+- Smoother play on slower devices: faster AI pathfinding, particles, HUD and map rendering, and a lighter main menu
+  scene. The map editor's check runs about twice as fast.
 
 ## Release notes (devlog) — v1.1.0
 

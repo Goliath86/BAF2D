@@ -3,6 +3,27 @@
 All notable changes to BAF2D. Versions follow [semantic versioning](https://semver.org/); the current version is
 in `config/game.json` (`version`) and shown in the bottom-right corner of the menu.
 
+## [1.1.2] — 2026-11-10
+
+### Fixed
+- A bot loadout naming a weapon that doesn't exist no longer crashes the match (a warning is logged instead).
+- An empty vehicle no longer "reserves" the flag its AI had picked, so bot vehicles spread across the flags properly;
+  defending bot vehicles no longer recompute their objective every frame.
+- Debug keys F4–F9 only work with `?debug=1` in the URL (or `"debug": true` in `config/game.json`).
+- Soldier portrait: goggles were missing when worn with a cap or boonie hat; they are now worn over the eyes (with
+  the helmet they stay pushed up as before).
+- Grenade scorch marks no longer bleed into the neighbouring sprite variant.
+- Main menu scene: fires on city blocks spanning several chunks were drawn 2–4 times (extra light and smoke); explosion
+  smoke and flare trails now respect the smoke limit.
+- Map editor: typing a name or description is a single undo step instead of one per letter; weapons and vehicles
+  placed in the editor use the same defaults as in the game, and pickups show the same weapon name as the HUD.
+
+### Changed
+- Performance: shared audio noise buffer, faster pathfinding and reachability for the AI, cached weapon and medal
+  lists, faster particle cleanup, fewer text measurements in the HUD, faster map rendering and menu scene drawing.
+- The map check (editor and level tools) is about twice as fast, with identical results.
+- The map editor palette updates the highlighted entry instead of rebuilding itself on every pick.
+
 ## [1.1.0] — 2026-11-08
 
 ### Added
