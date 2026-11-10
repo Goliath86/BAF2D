@@ -38,11 +38,9 @@ export function makeCanvas(w, h, readable = false) {
   return { c, g };
 }
 
-/** Grigio di un valore di calore 0..1 (per disegnare sul canvas del calore). */
-export const heat = (v) => {
-  const k = Math.round(clamp(v, 0, 1) * 255);
-  return `rgb(${k},${k},${k})`;
-};
+/** Grigio di un valore di calore 0..1 (per disegnare sul canvas del calore); stringhe pronte per i 256 livelli. */
+const HEAT = Array.from({ length: 256 }, (_, k) => `rgb(${k},${k},${k})`);
+export const heat = (v) => HEAT[Math.round(clamp(v, 0, 1) * 255)];
 
 // ---------- Primitive a pixel (canvas) ----------
 
@@ -371,7 +369,10 @@ export function paintChunk(city, x0, y0, size, cfg) {
     img.data[i * 4 + 3] = 255;
   }
   g.putImageData(img, 0, 0);
-  return { canvas: c, fires };
+  // un isolato a cavallo di più pezzi viene ridisegnato in ognuno: ogni fuoco resta solo al pezzo che lo contiene
+  // (altrimenti lo stesso incendio comparirebbe 2-4 volte, più luminoso e con il doppio del fumo)
+  const own = fires.filter((f) => f.x >= x0 && f.x < x0 + size && f.y >= y0 && f.y < y0 + size);
+  return { canvas: c, fires: own };
 }
 
 /** Cratere: fondo freddo, bordo di terra smossa più caldo, schizzi intorno. */
@@ -899,8 +900,10 @@ export function heatCanvas(spr, k = 1) {
 }
 
 /** Elicottero d'attacco dall'alto (rivolto a destra): coda, fusoliera, abitacolo in tandem, turbine roventi, alette
- * con i lanciarazzi, sensore sul muso. */
+ * con i lanciarazzi, sensore sul muso. Calcolato una volta sola. */
+let HELI = null;
 export function heliHeat() {
+  if (HELI) return HELI;
   const w = 40;
   const h = 19;
   const a = new Float32Array(w * h).fill(NaN);
@@ -944,7 +947,8 @@ export function heliHeat() {
     set(27, y, 0.38);
   }
   for (const y of [0, 1, h - 2, h - 1]) for (let x = 24; x < 30; x++) set(x, y, x === 29 ? 0.3 : 0.34);
-  return { w, h, a, rotor: [26, cy], tail: [2, cy + 2] };
+  HELI = { w, h, a, rotor: [26, cy], tail: [2, cy + 2] };
+  return HELI;
 }
 
 // ---------- Carattere a pixel 3x5 dell'HUD ----------
@@ -971,7 +975,7 @@ for (const [ch, s] of Object.entries(GLYPHS)) FONT[ch] = s.replace(/ /g, '');
 
 /** Testo in maiuscolo col carattere 3x5 (accenti tolti); restituisce la larghezza in pixel. */
 export function drawText(g, x, y, text, color) {
-  const s = String(text).normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
+  const s = String(text).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
   g.fillStyle = color;
   let cx = Math.round(x);
   for (const ch of s) {

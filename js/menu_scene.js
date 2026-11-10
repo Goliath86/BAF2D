@@ -644,7 +644,8 @@ export class MenuScene {
       const v = rnd(30, 110) * (R / 8);
       this.sparks.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, age: 0, life: rnd(0.4, 1.3) });
     }
-    for (let i = 0; i < 4 + R * 0.6; i++) {
+    const maxSmoke = this.cfg.fires?.smoke?.max ?? 500;
+    for (let i = 0; i < 4 + R * 0.6 && this.smoke.length < maxSmoke; i++) {
       const a = Math.random() * TAU;
       const v = rnd(4, 14);
       this.smoke.push({ x: x + Math.cos(a) * R * 0.4, y: y + Math.sin(a) * R * 0.4, vx: Math.cos(a) * v, vy: Math.sin(a) * v, age: 0, life: rnd(4, 8), r0: R * 0.4, r1: R * rnd(1, 1.8), h0: 0.5 });
@@ -740,6 +741,8 @@ export class MenuScene {
       f.tt += dt;
       while (f.tt > 0.04) {
         f.tt -= 0.04;
+        // scia dei flare: anche lei entro il tetto del fumo (una salva ne farebbe centinaia)
+        if (this.smoke.length >= (sm.max ?? 500)) continue;
         this.smoke.push({ x: f.x, y: f.y, vx: rnd(-1, 1), vy: rnd(-1, 1), age: 0, life: rnd(1.5, 2.6), r0: 0.6, r1: 2.5, h0: 0.45, thin: true });
       }
     }
@@ -1206,7 +1209,8 @@ export class MenuScene {
     const lat = lat0 - this.cy * 1.1e-5;
     const lon = lon0 + this.cx * 1.3e-5;
     T(L, h - 13, `${Math.abs(lat).toFixed(4)}${lat >= 0 ? 'N' : 'S'} ${Math.abs(lon).toFixed(4)}${lon >= 0 ? 'E' : 'W'}`);
-    T(L, h - 6, `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`);
+    const now = new Date();
+    T(L, h - 6, `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`);
     const alt = Math.round((hc.altitude ?? 3800) + Math.sin(this.t * 0.05) * 25);
     T(Rt, h - 13, this._t('alt', { v: alt }, 'ALT {v} M'), 'right');
     T(Rt, h - 6, this._t('range', { v: (alt / 1000 / Math.sin(1.08)).toFixed(2) }, 'RNG {v} KM'), 'right');

@@ -35,33 +35,59 @@ export function checkGrid(walk, { maxScale = 3, depth = 4 } = {}) {
       return true;
     };
     const fc = componentsOf(W, H, fat);
-    const inMain = (x, y) => fat(x, y) && fc.label[y * W + x] === fc.largest;
+    // zona principale a questa scala, calcolata una volta (fat() costa s×s letture a ogni chiamata)
+    const main = new Uint8Array(W * H);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (fc.label[y * W + x] === fc.largest && fat(x, y)) main[y * W + x] = 1;
+    const inMain = (x, y) => x >= 0 && y >= 0 && x < W && y < H && main[y * W + x] === 1;
+    // una parte con più di metà della zona è per forza la più grande (non è una tasca): la sua visita si
+    // ferma lì invece di attraversare tutta la mappa per ogni articolazione
+    const half = fc.largestSize / 2;
+    const seen = new Int32Array(W * H); // id della visita che ha raggiunto la cella (0 = nessuna)
+    let run = 0;
     for (const ap of articulationPoints(W, H, inMain)) {
       const ax = ap % W;
       const ay = Math.floor(ap / W);
       // componenti senza l'articolazione: tutte tranne la più grande sono "tasche"
       const pockets = [];
-      const seen = new Uint8Array(W * H);
-      seen[ap] = 1;
+      const first = run + 1; // id delle visite di questa articolazione: first..run
+      seen[ap] = ++run; // l'articolazione conta come già visitata (varco chiuso)
+      let bigId = 0; // visita interrotta perché troppo grande
       for (const [dx, dy] of DIRS) {
         const sx = ax + dx;
         const sy = ay + dy;
-        if (!inMain(sx, sy) || seen[sy * W + sx]) continue;
+        if (!inMain(sx, sy) || seen[sy * W + sx] >= first) continue;
+        const id = ++run;
         const cells = [];
+        // coda in ampiezza con un indice di lettura (shift() su code lunghe costa O(n) a ogni passo)
         const q = [[sx, sy, 0]];
-        seen[sy * W + sx] = 1;
+        seen[sy * W + sx] = id;
         let far = 0;
-        while (q.length) {
-          const [x, y, d] = q.shift();
+        let big = false;
+        for (let head = 0; head < q.length && !big; head++) {
+          const [x, y, d] = q[head];
           cells.push(y * W + x);
           far = Math.max(far, d);
+          if (cells.length > half) big = true;
           for (const [ex, ey] of DIRS) {
             const nx = x + ex;
             const ny = y + ey;
-            if (!inMain(nx, ny) || seen[ny * W + nx]) continue;
-            seen[ny * W + nx] = 1;
+            if (!inMain(nx, ny)) continue;
+            const o = seen[ny * W + nx];
+            if (bigId && o === bigId) big = true; // tocca la parte grande già trovata: è la stessa
+            if (o >= first) continue;
+            seen[ny * W + nx] = id;
             q.push([nx, ny, d + 1]);
           }
+        }
+        if (big) {
+          if (!bigId) {
+            bigId = id;
+            pockets.push({ cells: { length: Infinity }, far: 0 });
+          } else {
+            // stessa parte grande raggiunta da un altro lato: le sue celle prendono l'id della prima visita
+            for (let k = 0; k < q.length; k++) seen[q[k][1] * W + q[k][0]] = bigId;
+          }
+          continue;
         }
         pockets.push({ cells, far });
       }

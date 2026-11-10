@@ -55,8 +55,16 @@ export class EditorMap {
     return this.tilesetDefs[tileset]?.tiles || [];
   }
 
+  /** Definizione del tile per nome (indice per tileset: il controllo la chiede per ogni cella). */
   tileDef(name, tileset = this.meta.tileset) {
-    return this.tileDefs(tileset).find((t) => t.name === name) || null;
+    this._byName ||= new Map();
+    let idx = this._byName.get(tileset);
+    if (!idx) {
+      idx = new Map();
+      for (const t of this.tileDefs(tileset)) if (!idx.has(t.name)) idx.set(t.name, t); // come find(): vince il primo
+      this._byName.set(tileset, idx);
+    }
+    return idx.get(name) || null;
   }
 
   /** Nome del tile da un riferimento della legend (nome o id numerico); null se non esiste. */

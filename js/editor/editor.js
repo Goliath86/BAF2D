@@ -56,6 +56,14 @@ function lineCells(a, b) {
 class Editor {
   constructor(env) {
     Object.assign(this, env);
+    // armi e mezzi con i "defaults" del loro file già applicati (come in gioco: Weapons / VehicleTypes)
+    const withDefaults = (cfg, key) => {
+      const d = cfg?.defaults || {};
+      return { ...cfg, [key]: Object.fromEntries(Object.entries(cfg?.[key] || {}).map(([id, v]) => [id, { ...d, ...v, id }])) };
+    };
+    this.weaponsCfg = withDefaults(env.weaponsCfg, 'weapons');
+    this.vehiclesCfg = withDefaults(env.vehiclesCfg, 'vehicles');
+    env = { ...env, weaponsCfg: this.weaponsCfg, vehiclesCfg: this.vehiclesCfg };
     this.cfg = env.config.editor || {};
     this.teams = Object.keys(env.config.teams || {});
     this.map = new EditorMap({ tilesetDefs: env.assetsCfg.tilesets || {}, teams: this.teams });
@@ -174,6 +182,8 @@ class Editor {
     // proprietà della mappa
     $('map-name').addEventListener('input', (e) => this._setMeta('name', e.target.value));
     $('map-desc').addEventListener('input', (e) => this._setMeta('description', e.target.value));
+    // uscendo dal campo la digitazione successiva è un nuovo passo di "annulla"
+    for (const id of ['map-name', 'map-desc']) $(id).addEventListener('blur', () => (this._typingKey = null));
     $('map-fill').addEventListener('change', (e) => this._setMeta('fill', e.target.value, true));
     $('map-weather').addEventListener('change', (e) => this._setMeta('weather', e.target.value || null, true));
     $('map-bg').addEventListener('change', (e) => this._setMeta('background', e.target.value, true));
@@ -323,7 +333,10 @@ class Editor {
         return o.id ? this.t('editor.objects.flagId', { id: o.id }) : this.t('editor.objects.flag');
       case 'pickup': {
         const p = this.config.pickups?.types?.[o.type];
-        if (p?.weapon) return this.label(`weapons.${p.weapon}`, p.weapon);
+        if (p?.weapon) {
+          const w = this.weaponsCfg.weapons?.[p.weapon];
+          return this.label(w?.name || `weapons.${p.weapon}`, p.weapon); // stesso nome dell'HUD in gioco
+        }
         if (p?.grenades) return this.t('editor.objects.grenades', { count: p.grenades });
         return o.type;
       }
@@ -397,6 +410,7 @@ class Editor {
 
   /** Dopo un cambio che tocca tutta la mappa (nuova, caricata, ridimensionata, annulla/ripeti). */
   _afterMapChange(full) {
+    this._typingKey = null;
     if (full) this.view.setMap(this.map, this.tileset);
     this._renderMeta();
     this._renderPalette();
@@ -407,10 +421,20 @@ class Editor {
 
   _setMeta(key, value, render = false) {
     if (this.map.meta[key] === value) return;
+    // nome e descrizione: tutta la digitazione nello stesso campo è un solo passo di "annulla"
+    // (altrimenti ogni lettera fotograferebbe la mappa e riempirebbe la cronologia)
+    const text = key === 'name' || key === 'description';
+    if (text && this._typingKey === key) {
+      this.map.meta[key] = value;
+      this.dirty = true;
+      this._scheduleSave();
+      return;
+    }
     this._begin();
     this.map.meta[key] = value;
     this._changed = true;
     this._commit();
+    if (text) this._typingKey = key; // azzerato dalla prossima modifica di altro tipo (_commit, _afterMapChange)
     if (key === 'background') this.view.invalidate();
     if (render) this._renderMeta();
   }
@@ -490,6 +514,7 @@ class Editor {
     }
     this._snap = null;
     this._changed = false;
+    this._typingKey = null;
   }
 
   _undo() {
@@ -1005,7 +1030,6 @@ class Editor {
       }
     };
     let sp = null;
-    let angle = 0;
     if (o.kind === 'spawn') {
       g.strokeStyle = cfg.teams?.[o.team]?.color || '#fff';
       g.lineWidth = 2;
@@ -1035,7 +1059,7 @@ class Editor {
       if (sp) {
         const k = Math.min(2, (size - 2) / Math.max(sp.fw, sp.fh));
         g.setTransform(k, 0, 0, k, size / 2, size / 2);
-        drawSprite(g, sp, 0, 0, 0, angle);
+        drawSprite(g, sp, 0, 0, 0, 0);
         if (tur) drawSprite(g, tur, 0, (v.turretPivot || [0, 0])[0], (v.turretPivot || [0, 0])[1], 0);
         return c;
       }
@@ -1043,14 +1067,15 @@ class Editor {
     if (sp) {
       const k = Math.min(2, (size - 2) / Math.max(sp.fw, sp.fh));
       g.setTransform(k, 0, 0, k, size / 2, size / 2);
-      drawSprite(g, sp, 0, 0, 0, angle);
+      drawSprite(g, sp, 0, 0, 0, 0);
     }
     return c;
   }
 
-  _paletteButton(icon, title, selected, onClick) {
+  _paletteButton(icon, title, selected, onClick, key) {
     const b = el('button', 'ed-swatch');
     b.type = 'button';
+    b.dataset.sel = key; // per evidenziare la scelta senza ricostruire la tavolozza (_markSelection)
     b.title = title;
     b.setAttribute('aria-label', title);
     b.setAttribute('aria-pressed', String(selected));
@@ -1075,7 +1100,7 @@ class Editor {
         let title = this.brushLabel(b);
         if (def?.solid) title += ` · ${this.t(def.shootThrough ? 'editor.palette.shootThrough' : 'editor.palette.solid')}`;
         const sel = this.current?.type === 'tile' && this.current.brush === b;
-        grid.append(this._paletteButton(this._tileIcon(b), title, sel, () => this._selectTile(b)));
+        grid.append(this._paletteButton(this._tileIcon(b), title, sel, () => this._selectTile(b), `tile:${b}`));
       }
       box.append(grid);
     };
@@ -1104,7 +1129,7 @@ class Editor {
       const grid = el('div', 'ed-grid');
       for (const o of list) {
         const sel = this.current?.type === 'object' && objectKey(this.current.obj) === objectKey(o);
-        grid.append(this._paletteButton(this._objectIcon(o), this.objectLabel(o), sel, () => this._selectObject(o)));
+        grid.append(this._paletteButton(this._objectIcon(o), this.objectLabel(o), sel, () => this._selectObject(o), `obj:${objectKey(o)}`));
       }
       obox.append(grid);
     }
@@ -1116,7 +1141,7 @@ class Editor {
     this.current = { type: 'tile', brush: b };
     if (this.tool === 'erase') this._setTool('pencil');
     this._setTabSilently('tiles');
-    this._renderPalette();
+    this._markSelection(`tile:${b}`);
     this._updateHover();
   }
 
@@ -1124,8 +1149,23 @@ class Editor {
     this.current = { type: 'object', obj: o };
     if (this.tool === 'erase') this._setTool('pencil');
     this._setTabSilently('objects');
-    this._renderPalette();
+    this._markSelection(`obj:${objectKey(o)}`);
     this._updateHover();
+  }
+
+  /**
+   * Evidenzia la scelta nella tavolozza già costruita (niente icone ridisegnate a ogni clic); se il pulsante non
+   * c'è (pennello nuovo, non ancora nella tavolozza) la ricostruisce.
+   */
+  _markSelection(key) {
+    const buttons = document.querySelectorAll('#palette-tiles .ed-swatch, #palette-objects .ed-swatch');
+    if (![...buttons].some((b) => b.dataset.sel === key)) {
+      this._renderPalette();
+      return;
+    }
+    for (const b of buttons) b.setAttribute('aria-pressed', String(b.dataset.sel === key));
+    this._setTab(this.tab);
+    this._renderCurrent();
   }
 
   _setTabSilently(tab) {
@@ -1374,7 +1414,7 @@ class Editor {
     if (this.fileName) return this.fileName;
     const slug = (this.map.meta.name || '')
       .normalize('NFD')
-      .replace(/[̀-ͯ]/g, '')
+      .replace(/[\u0300-\u036f]/g, '')
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '_')
       .replace(/^_+|_+$/g, '');
