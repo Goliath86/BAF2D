@@ -15,6 +15,7 @@ import { Weather } from './weather.js';
 import { Vehicle } from './vehicles.js';
 import { VehicleBrain } from './vehicle_ai.js';
 import { Rockets } from './rockets.js';
+import { Destruction } from './destruction.js';
 import { keyName } from '../engine/input.js';
 
 const STEP = 1 / 60; // update a timestep fisso
@@ -153,6 +154,12 @@ export class Game {
 
   /** Stato di una nuova partita: ticket e bandiere iniziali, giocatore alla base, niente proiettili/effetti. */
   _reset() {
+    // mappa intatta a ogni partita (i tile distrutti tornano alla rivincita)
+    this.map.reset();
+    this.nav.refresh();
+    const dc = this.config.destruction || {};
+    this.destruction = new Destruction({ ...dc, enabled: dc.enabled !== false && this.level.destructible !== false }, this.map, this.nav,
+      (tx, ty, material, x, y) => this._onTileBreak(tx, ty, material, x, y));
     this.ctf.reset();
     this.squads = {};
     for (const t of this.ctf.teamIds) this.squads[t] = new Squad(t);
@@ -445,6 +452,11 @@ export class Game {
   }
 
   _updateBots(dt) {
+    // tile distrutti: chi si riparava lì dietro cerca un altro riparo
+    const broken = this.destruction?.takeChanged();
+    if (broken?.length) {
+      for (const s of Object.values(this.squads)) for (const b of s.brains) b.onMapChanged?.(broken, this.map.size);
+    }
     // piano di squadra: coppie/terzetti distribuiti sulle bandiere (letto da BotBrain._chooseObjective)
     // e piano anticarro (chi va a prendere un lanciarazzi, chi va a caccia dei mezzi nemici)
     for (const s of Object.values(this.squads)) {
@@ -873,6 +885,7 @@ export class Game {
       this.explode(r.def, x, y, r.owner, null, 'rocket');
     });
     this.grenades.update(dt, this.map, (g) => this.explode(g.def, g.x, g.y, g.owner, null, 'grenade'));
+    this.destruction?.flush(); // tile distrutti in questo tick: griglia dei percorsi aggiornata
     this.effects.update(dt, this.map);
     this.shake.time = Math.max(0, this.shake.time - dt);
 
@@ -963,10 +976,17 @@ export class Game {
     // danno ai soldati a piedi (giocatore e bot, di qualunque squadra): decresce con la distanza
     // fino a minDamageFactor sul bordo, i muri riparano; chi è a bordo di un mezzo è protetto
     const radius = def.blastRadius ?? 40;
+    // tile distruttibili (muri, casse, sacchi...): danno × tileFactor del tipo di esplosione (razzi: più alto);
+    // le linee di vista per i soldati qui sotto usano ancora la mappa di prima del crollo (il muro ha riparato)
+    const blocked = new Set();
+    for (const p of this.units) {
+      if (!p.dead && !p.vehicle && Math.hypot(p.x - x, p.y - y) < radius && !this._lineOfSight(x, y, p.x, p.y)) blocked.add(p);
+    }
+    this.destruction?.explosion(x, y, radius, def.damage ?? 80, def.minDamageFactor ?? 0.2, def.tileFactor ?? 1);
     const falloff = (d) => 1 - (d / radius) * (1 - (def.minDamageFactor ?? 0.2));
     for (const p of this.units) {
       const d = Math.hypot(p.x - x, p.y - y);
-      if (p.dead || p.vehicle || d >= radius || !this._lineOfSight(x, y, p.x, p.y)) continue;
+      if (p.dead || p.vehicle || d >= radius || blocked.has(p)) continue;
       // unit: null = l'IA non "vede" chi l'ha lanciata; by = a chi vanno uccisione e assist
       p.damage(Math.round((def.damage ?? 80) * falloff(d)), { unit: null, x, y, by: owner, cause });
     }
@@ -980,6 +1000,26 @@ export class Game {
       if (v.airborne && d > 4) continue;
       if (d >= radius || (d > 4 && !this._lineOfSight(x, y, v.x, v.y))) continue;
       v.damage(Math.round((def.damage ?? 80) * falloff(d) * vf), owner);
+    }
+  }
+
+  /**
+   * Un tile è stato distrutto: effetto e suono del materiale (effects.json -> breaks), via i buchi dei proiettili
+   * rimasti su quel tile, piccola scossa se vicino alla visuale (muri).
+   */
+  _onTileBreak(tx, ty, material, x, y) {
+    const s = this.map.size;
+    this.effects.removeDecalsIn(tx * s, ty * s, s, s);
+    const def = this.effectsCfg.breaks?.[material];
+    if (def) this.effects.breakTile(def, x, y);
+    if (def?.shake && !this.attract) {
+      const c = this.camera;
+      const near = x > c.x - 40 && y > c.y - 40 && x < c.x + this.display.width + 40 && y < c.y + this.display.height + 40;
+      if (near && this.shake.time <= 0) {
+        this.shake.amount = def.shake.amount ?? 1;
+        this.shake.duration = def.shake.time ?? 0.2;
+        this.shake.time = this.shake.duration;
+      }
     }
   }
 
@@ -1439,6 +1479,8 @@ export class Game {
         } else if (!b.fromAir && map.blocksShotAt(b.x, b.y)) {
           const n = this._surfaceNormal(px, py, b.x, b.y, b.dx, b.dy);
           this._wallImpact(b.x, b.y, px, py, n.x, n.y);
+          // il colpo rovina il tile (casse, staccionate, sacchi...: dipende dal materiale)
+          this.destruction?.bullet(Math.floor(b.x / map.size), Math.floor(b.y / map.size), b.damage);
           done = true;
         } else if (b.range <= 1e-6) {
           // a fine corsa conta anche un soldato appena oltre (mirino/punto mirato sul suo corpo)

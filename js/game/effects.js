@@ -75,6 +75,24 @@ export class Effects {
   }
 
   /**
+   * Tile distrutto (def = effects.json -> breaks.<materiale>): emettitori a 360° (polvere, schegge), detriti
+   * (tipi di "casings" lanciati attorno) e suono, al centro del tile (x, y).
+   */
+  breakTile(def, x, y) {
+    for (const em of def.emitters || []) this.emit(em, x, y, 0, 0);
+    for (const deb of def.debris || []) {
+      const n = Math.round(range(deb.count, 4));
+      for (let i = 0; i < n; i++) this.casing(deb.type, x, y, Math.random() * Math.PI * 2);
+    }
+    if (def.sound) this.audio.play(def.sound, { x, y });
+  }
+
+  /** Toglie i decal (buchi dei proiettili) che cadono nel rettangolo (x, y, w, h): es. un muro appena crollato. */
+  removeDecalsIn(x, y, w, h) {
+    this.decals = this.decals.filter((d) => d.x < x || d.y < y || d.x >= x + w || d.y >= y + h);
+  }
+
+  /**
    * Effetto di volata di tipo "type" (chiave di muzzles) nel punto (x, y), sparando verso "angle":
    * vampata (sprite ruotato, dura pochi centesimi di secondo) con alone di luce ed emettitori
    * di particelle (fumo, scintille) diretti lungo la canna.

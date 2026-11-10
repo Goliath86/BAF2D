@@ -70,25 +70,44 @@ export class Nav {
     this.size = map.size;
     const n = this.cols * this.rows;
     this.walk = new Uint8Array(n);
+    this.clear = new Uint8Array(n);
+    this.refresh();
+    this._minClear = 1; // spazio minimo richiesto durante una ricerca (findPath con minClear)
+    // buffer riutilizzati da A* e BFS
+    this._g = new Float32Array(n);
+    this._from = new Int32Array(n);
+    this._stamp = new Uint32Array(n);
+    this._closed = new Uint32Array(n);
+    this._run = 0;
+  }
+
+  /** Ricalcola tile percorribili e spazio libero dalla mappa (all'inizio e quando un tile viene distrutto). */
+  refresh() {
+    const map = this.map;
+    const n = this.cols * this.rows;
     for (let ty = 0; ty < this.rows; ty++) {
       for (let tx = 0; tx < this.cols; tx++) this.walk[ty * this.cols + tx] = map.isSolidTile(tx, ty) ? 0 : 1;
     }
     // spazio libero: distanza (in tile, Chebyshev) dal tile solido più vicino o dal bordo;
     // 0 = solido, 1 = confina con un solido, 2 = c'è almeno un tile libero tutto attorno (mezzi), ...
-    this.clear = new Uint8Array(n);
-    const queue = [];
+    // visita in ampiezza: prima i solidi (0), poi i bordi (1), così ogni tile entra in coda una volta sola
+    const queue = (this._queue ||= new Int32Array(n * 2));
+    let len = 0;
     for (let i = 0; i < n; i++) {
       const tx = i % this.cols;
       const ty = Math.floor(i / this.cols);
       const border = tx === 0 || ty === 0 || tx === this.cols - 1 || ty === this.rows - 1;
-      if (!this.walk[i]) this.clear[i] = 0;
-      else if (border) {
-        this.clear[i] = 1;
-        queue.push(i);
-      } else this.clear[i] = 255;
+      if (!this.walk[i]) {
+        this.clear[i] = 0;
+        queue[len++] = i;
+      } else this.clear[i] = border ? 1 : 255;
     }
-    for (let i = 0; i < n; i++) if (!this.walk[i]) queue.push(i);
-    for (let q = 0; q < queue.length; q++) {
+    for (let i = 0; i < n; i++) {
+      const tx = i % this.cols;
+      const ty = Math.floor(i / this.cols);
+      if (this.walk[i] && (tx === 0 || ty === 0 || tx === this.cols - 1 || ty === this.rows - 1)) queue[len++] = i;
+    }
+    for (let q = 0; q < len; q++) {
       const i = queue[q];
       const tx = i % this.cols;
       const ty = Math.floor(i / this.cols);
@@ -99,17 +118,10 @@ export class Nav {
         const j = ny * this.cols + nx;
         if (this.clear[j] > this.clear[i] + 1) {
           this.clear[j] = this.clear[i] + 1;
-          queue.push(j);
+          queue[len++] = j;
         }
       }
     }
-    this._minClear = 1; // spazio minimo richiesto durante una ricerca (findPath con minClear)
-    // buffer riutilizzati da A* e BFS
-    this._g = new Float32Array(n);
-    this._from = new Int32Array(n);
-    this._stamp = new Uint32Array(n);
-    this._closed = new Uint32Array(n);
-    this._run = 0;
   }
 
   index(tx, ty) {

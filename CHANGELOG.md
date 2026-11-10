@@ -3,6 +3,18 @@
 All notable changes to BAF2D. Versions follow [semantic versioning](https://semver.org/); the current version is
 in `config/game.json` (`version`) and shown in the bottom-right corner of the menu.
 
+## [Unreleased]
+
+### Added
+- **Destructible maps**: crates, fences, hay bales, hedges, sandbags and walls can be destroyed. Damage shows as
+  growing cracks; when a tile gives way it breaks apart in a burst of dust and debris and leaves the floor (or a
+  pile of rubble) behind, opening new lines of fire and new paths.
+  - Bullets splinter wood, shred hay and hedges and slowly rip sandbags apart.
+  - Grenades blow apart light cover; rockets and tank shells breach brick, adobe and stone walls.
+  - Tanks drive straight through fences, hedges, crates and sandbags; jeeps through fences and crates.
+  - Bots look for new cover when theirs is blown away.
+  - Maps are restored to their original state for the rematch; the outer edge of every map can't be destroyed.
+
 ## [1.2.0] — 2026-11-10
 
 ### Added

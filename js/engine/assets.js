@@ -101,6 +101,12 @@ export class Assets {
         index: t.index ?? t.id,
         // tipo di impatto in effects.json (default: "wall" se solido, "ground" altrimenti)
         impact: t.impact || (t.solid ? 'wall' : 'ground'),
+        // distruzione (game.json -> destruction.materials): materiale e tile che resta al suo posto
+        material: t.material || null,
+        destroysTo: t.destroysTo || null,
+        // colori di crepe e macerie (se il materiale non li fissa): dal tile o dal suo placeholder
+        crackColor: t.crack || t.placeholder?.crack || t.placeholder?.dark || t.placeholder?.gap || t.placeholder?.outline || null,
+        debrisColors: t.debris || t.placeholder?.colors || [t.placeholder?.color, t.placeholder?.light, t.placeholder?.dark].filter(Boolean),
       };
       byId.set(t.id, tile);
       if (t.name) byName.set(t.name, tile);

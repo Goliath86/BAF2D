@@ -193,8 +193,8 @@
   },
 
   "rockets": {
-    "rpg": { "speed": 230, "directDamage": 160, "damage": 55, "blastRadius": 30, "vehicleFactor": 1.5 },
-    "pod": { "speed": 270, "directDamage": 120, "damage": 60, "blastRadius": 30 }
+    "rpg": { "speed": 230, "directDamage": 160, "damage": 55, "blastRadius": 30, "vehicleFactor": 1.5, "tileFactor": 3 },
+    "pod": { "speed": 270, "directDamage": 120, "damage": 60, "blastRadius": 30, "tileFactor": 3 }
   },
 
   "grenadeDefaults": {

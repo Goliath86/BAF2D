@@ -193,6 +193,101 @@
       "life": 15,
       "fade": 2
     },
+    "debris_wood": {
+      "sprite": "debris_wood",
+      "ejectDeg": 0,
+      "spreadDeg": 0,
+      "speed": [30, 100],
+      "inherit": 0,
+      "height": 6,
+      "lift": [30, 80],
+      "gravity": 380,
+      "bounce": 0.25,
+      "minBounce": 15,
+      "friction": 0.5,
+      "groundDrag": 9,
+      "wallBounce": 0.3,
+      "spinDeg": [360, 1080],
+      "shadow": "#101216",
+      "life": [4, 7],
+      "fade": 2
+    },
+    "debris_brick": {
+      "sprite": "debris_brick",
+      "ejectDeg": 0,
+      "spreadDeg": 0,
+      "speed": [30, 110],
+      "inherit": 0,
+      "height": 6,
+      "lift": [40, 100],
+      "gravity": 380,
+      "bounce": 0.25,
+      "minBounce": 15,
+      "friction": 0.5,
+      "groundDrag": 9,
+      "wallBounce": 0.3,
+      "spinDeg": [360, 1080],
+      "shadow": "#101216",
+      "life": [4, 7],
+      "fade": 2
+    },
+    "debris_leaf": {
+      "sprite": "debris_leaf",
+      "ejectDeg": 0,
+      "spreadDeg": 0,
+      "speed": [20, 70],
+      "inherit": 0,
+      "height": 6,
+      "lift": [20, 60],
+      "gravity": 380,
+      "bounce": 0.25,
+      "minBounce": 15,
+      "friction": 0.5,
+      "groundDrag": 9,
+      "wallBounce": 0.3,
+      "spinDeg": [360, 1080],
+      "shadow": "#101216",
+      "life": [4, 7],
+      "fade": 2
+    },
+    "debris_sand": {
+      "sprite": "debris_sand",
+      "ejectDeg": 0,
+      "spreadDeg": 0,
+      "speed": [20, 80],
+      "inherit": 0,
+      "height": 6,
+      "lift": [20, 70],
+      "gravity": 380,
+      "bounce": 0.25,
+      "minBounce": 15,
+      "friction": 0.5,
+      "groundDrag": 9,
+      "wallBounce": 0.3,
+      "spinDeg": [360, 1080],
+      "shadow": "#101216",
+      "life": [4, 7],
+      "fade": 2
+    },
+    "debris_straw": {
+      "sprite": "debris_straw",
+      "ejectDeg": 0,
+      "spreadDeg": 0,
+      "speed": [20, 70],
+      "inherit": 0,
+      "height": 6,
+      "lift": [20, 60],
+      "gravity": 380,
+      "bounce": 0.25,
+      "minBounce": 15,
+      "friction": 0.5,
+      "groundDrag": 9,
+      "wallBounce": 0.3,
+      "spinDeg": [360, 1080],
+      "shadow": "#101216",
+      "life": [4, 7],
+      "fade": 2
+    },
     "debris_stone": {
       "sprite": "debris_stone",
       "ejectDeg": 0,
@@ -370,6 +465,66 @@
       "interval": 0.25,
       "emitters": [
         { "count": 1, "colors": ["#6a625a", "#7a726a", "#5a544e"], "speed": [2, 8], "life": [1, 1.8], "size": [2, 7], "drag": 1.5, "rise": [6, 12], "alpha": 0.4, "round": true }
+      ]
+    }
+  },
+
+  "breaks": {
+    "wood": {
+      "sound": "break_wood",
+      "debris": [{ "type": "debris_wood", "count": [5, 8] }],
+      "emitters": [
+        { "count": [8, 12], "colors": ["#b07a40", "#8a5a2b", "#4f3216"], "speed": [40, 120], "life": [0.2, 0.5], "size": [1, 2], "drag": 5, "streak": 0.012 },
+        { "count": [4, 6], "colors": ["#8a8278", "#9a9288", "#7a7268"], "speed": [8, 25], "life": [0.6, 1.2], "size": [4, 8], "drag": 2.5, "rise": [4, 8], "alpha": 0.4, "round": true }
+      ]
+    },
+    "straw": {
+      "sound": "break_foliage",
+      "debris": [{ "type": "debris_straw", "count": [6, 10] }],
+      "emitters": [
+        { "count": [12, 18], "colors": ["#dcc060", "#f0dc88", "#b49a46"], "speed": [20, 80], "life": [0.4, 0.9], "size": [1, 1], "drag": 3, "rise": [2, 6] },
+        { "count": [3, 5], "colors": ["#c8b88a", "#b4a478"], "speed": [6, 20], "life": [0.8, 1.4], "size": [4, 8], "drag": 2, "rise": [4, 8], "alpha": 0.35, "round": true }
+      ]
+    },
+    "foliage": {
+      "sound": "break_foliage",
+      "debris": [{ "type": "debris_leaf", "count": [6, 10] }],
+      "emitters": [
+        { "count": [14, 20], "colors": ["#3a6a2a", "#56883a", "#1e3a16", "#7aac4c"], "speed": [20, 80], "life": [0.5, 1.1], "size": [1, 2], "drag": 3, "rise": [2, 5] },
+        { "count": [3, 4], "colors": ["#7a8a6a", "#6a7a5a"], "speed": [6, 18], "life": [0.6, 1.2], "size": [4, 7], "drag": 2, "rise": [3, 6], "alpha": 0.3, "round": true }
+      ]
+    },
+    "sandbag": {
+      "sound": "break_sandbag",
+      "debris": [{ "type": "debris_sand", "count": [6, 9] }],
+      "emitters": [
+        { "count": [10, 16], "colors": ["#d4c898", "#c0b080", "#a69466"], "speed": [30, 100], "life": [0.3, 0.7], "size": [1, 2], "drag": 4 },
+        { "count": [6, 9], "colors": ["#c8b890", "#b8a882", "#d6caa4"], "speed": [10, 35], "life": [1, 1.8], "size": [5, 11], "drag": 2, "rise": [4, 9], "alpha": 0.45, "round": true }
+      ]
+    },
+    "masonry": {
+      "sound": "break_masonry",
+      "shake": { "amount": 2, "time": 0.25 },
+      "debris": [{ "type": "debris_brick", "count": [7, 11] }, { "type": "debris_stone", "count": [3, 5] }],
+      "emitters": [
+        { "count": [10, 14], "colors": ["#8a7a6a", "#6a5a4a", "#a89880"], "speed": [50, 140], "life": [0.2, 0.5], "size": [1, 2], "drag": 4, "streak": 0.01 },
+        { "count": [10, 14], "colors": ["#9a9288", "#8a8278", "#aaa298", "#7a7268"], "speed": [10, 40], "life": [1.4, 2.6], "size": [6, 14], "drag": 1.8, "rise": [5, 11], "alpha": 0.5, "round": true }
+      ]
+    },
+    "stone": {
+      "sound": "break_masonry",
+      "shake": { "amount": 2, "time": 0.25 },
+      "debris": [{ "type": "debris_stone", "count": [8, 12] }],
+      "emitters": [
+        { "count": [10, 14], "colors": ["#9a9a90", "#7a7a70", "#c4c4b8"], "speed": [50, 140], "life": [0.2, 0.5], "size": [1, 2], "drag": 4, "streak": 0.01 },
+        { "count": [8, 12], "colors": ["#9a9288", "#8a8278", "#aaa298"], "speed": [10, 40], "life": [1.2, 2.2], "size": [6, 12], "drag": 1.8, "rise": [5, 10], "alpha": 0.45, "round": true }
+      ]
+    },
+    "rubble": {
+      "sound": "break_masonry",
+      "debris": [{ "type": "debris_stone", "count": [5, 8] }, { "type": "debris_brick", "count": [3, 5] }],
+      "emitters": [
+        { "count": [8, 12], "colors": ["#9a9288", "#8a8278", "#aaa298"], "speed": [10, 40], "life": [1.2, 2.2], "size": [6, 12], "drag": 1.8, "rise": [5, 10], "alpha": 0.45, "round": true }
       ]
     }
   },

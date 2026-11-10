@@ -367,6 +367,22 @@
     "autoReload": false
   },
 
+  "destruction": {
+    "enabled": true,
+    "stages": 3,
+    "bulletFactor": 1,
+    "explosionFactor": 1,
+    "materials": {
+      "wood": { "hp": 50, "bullet": 1, "explosion": 1.5, "leaves": "floor", "crack": "#2a1a0c", "debris": ["#8a5a2b", "#b07a40", "#4f3216", "#6a4422"] },
+      "straw": { "hp": 60, "bullet": 0.5, "explosion": 2, "leaves": "floor", "debris": "tile" },
+      "foliage": { "hp": 80, "bullet": 0.3, "explosion": 1.2, "leaves": "floor", "debris": "tile" },
+      "sandbag": { "hp": 140, "bullet": 0.1, "explosion": 1.4, "leaves": "floor", "debris": "tile" },
+      "masonry": { "hp": 220, "bullet": 0, "explosion": 1, "leaves": "rubble_floor", "debris": "tile" },
+      "stone": { "hp": 300, "bullet": 0, "explosion": 1, "leaves": "rubble_floor", "debris": "tile" },
+      "rubble": { "hp": 120, "bullet": 0, "explosion": 1.2, "leaves": "rubble_floor", "debris": "tile" }
+    }
+  },
+
   "combat": {
     "hitImpact": "flesh",
     "hitPadding": 1,

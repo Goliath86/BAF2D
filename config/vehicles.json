@@ -47,6 +47,7 @@
       "turretTurnRate": 6,
       "engineSound": "engine_jeep",
       "health": 260,
+      "crush": ["wood", "straw"],
       "bulletFactor": 0.15,
       "respawn": 25,
       "weapons": ["vehicle_mg"]
@@ -66,6 +67,7 @@
       "turretTurnRate": 2.6,
       "engineSound": "engine_tank",
       "health": 650,
+      "crush": ["wood", "straw", "foliage", "sandbag"],
       "respawn": 45,
       "shadow": [4, 5],
       "muzzles": { "vehicle_mg": 21 },

@@ -216,7 +216,7 @@ export class Vehicle {
     if (this.destroyed) {
       this.wreckAge += dt;
       this.speed *= Math.exp(-6 * dt);
-      this._move(dt, game.map);
+      this._move(dt, game.map, game);
       this._smoke(dt, game, d.wreckSmoke || 'wreck');
       if (this.wreckAge >= (d.wreckTime ?? 20)) this.removed = true;
       return;
@@ -225,11 +225,11 @@ export class Vehicle {
       this.throttle = 0;
       this.idle += dt;
       this.speed *= Math.exp(-(d.idleBrake ?? 4) * dt);
-      this._move(dt, game.map);
+      this._move(dt, game.map, game);
     } else {
       this.idle = 0;
       this._drive(dt, ctrl);
-      this._move(dt, game.map);
+      this._move(dt, game.map, game);
       const aim = ctrl.aim(this);
       if (aim !== null && aim !== undefined) {
         const maxTurn = (d.turretTurnRate ?? 4) * dt;
@@ -393,18 +393,38 @@ export class Vehicle {
     this.speed += Math.max(-a, Math.min(a, target - this.speed));
   }
 
-  _move(dt, map) {
+  _move(dt, map, game = null) {
+    const d = this.def;
     const dx = Math.cos(this.angle) * this.speed * dt;
     const dy = Math.sin(this.angle) * this.speed * dt;
     const p = map.moveAndCollide(this.x, this.y, this.hw, this.hh, dx, dy);
     const want = Math.hypot(dx, dy);
     const got = Math.hypot(p.x - this.x, p.y - this.y);
-    // urto contro un muro: perde velocità
-    if (want > 0.01 && got < want * 0.5) this.speed *= 0.5;
+    if (want > 0.01 && got < want * 0.5) {
+      // contro un tile che si lascia schiacciare (def.crush = materiali: staccionate, siepi...): lo sfonda e
+      // rallenta un po'; contro un muro vero perde metà della velocità
+      if (d.crush?.length && game?.destruction && this._crush(map, game.destruction, dx, dy)) this.speed *= d.crushSlow ?? 0.75;
+      else this.speed *= 0.5;
+    }
     this.vx = (p.x - this.x) / dt;
     this.vy = (p.y - this.y) / dt;
     this.x = p.x;
     this.y = p.y;
+  }
+
+  /** Sfonda i tile schiacciabili (def.crush) che lo scafo spostato di (dx, dy) andrebbe a toccare. true = almeno uno. */
+  _crush(map, destruction, dx, dy) {
+    const s = map.size;
+    const ahead = 2; // px oltre il punto voluto: il tile contro cui preme
+    const x = this.x + dx + Math.sign(dx) * ahead;
+    const y = this.y + dy + Math.sign(dy) * ahead;
+    let any = false;
+    for (let ty = Math.floor((y - this.hh) / s); ty <= Math.floor((y + this.hh - 1e-6) / s); ty++) {
+      for (let tx = Math.floor((x - this.hw) / s); tx <= Math.floor((x + this.hw - 1e-6) / s); tx++) {
+        if (map.isSolidTile(tx, ty) && destruction.crush(tx, ty, this.def.crush)) any = true;
+      }
+    }
+    return any;
   }
 
   _weapons(dt, game, ctrl) {

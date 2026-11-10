@@ -339,6 +339,19 @@ tools/check_level.mjs controllo livelli: celle irraggiungibili e vicoli ciechi (
 - Movimento touch analogico: lunghezza vettore stick SX (dopo deadzone, elevata a `moveCurve`) × `speed`.
 - `Animator.update(dt)` accetta dt negativo (animazione all'indietro).
 - Spritesheet a griglia, frame numerati da sinistra a destra / dall'alto in basso; `origin` = punto di ancoraggio.
+- Distruzione (`js/game/destruction.js`, `game.json -> destruction`): tile con `"material"` (assets.json) =
+  voce di `destruction.materials` { hp, bullet, explosion, leaves, crack, debris } (wood, straw, foliage, sandbag,
+  masonry, stone, rubble; `debris: "tile"` = colori del tile, crepe dal `dark`/`gap` del placeholder). Danni:
+  proiettili in `_updateBullets` (`destruction.bullet`, × `material.bullet`; i tile `shootThrough` come le staccionate
+  non vengono colpiti), esplosioni in `Game.explode` (`destruction.explosion`, × `tileFactor` del tipo: razzi 3,
+  linea di vista sui tile calcolata prima dei crolli), mezzi con `crush` (vehicles.json, lista di materiali) in
+  `Vehicle._move` -> `_crush`. Stadi di crepe (`stages`) -> `map.setCrack`; a zero `map.setTile(tx, ty, id, debris)`
+  col tile `leaves` (nome, o `"floor"` = pavimento più comune attorno; override per tile `destroysTo`), effetto
+  `effects.json -> breaks.<materiale>` (`Effects.breakTile`, `removeDecalsIn`), `nav.refresh()` una volta per
+  tick (`destruction.flush()` in `Game.update`), `BotBrain.onMapChanged` (riparo vicino al crollo = da rifare).
+  Bordo della mappa mai distruttibile; `level.destructible: false` la disattiva. `TileMap.reset()` in `Game._reset`
+  (mappa intatta alla rivincita: `original`, `cracks`, `debris`); `TileMap._renderRegion` ridisegna solo le celle
+  toccate (tile, macerie, bordi, ombre anche dai vicini, crepe) con clip.
 - Tile: `id`, `name`, `solid`, `index` opzionale (posizione nello sheet). Fuori mappa = solido.
   `shootThrough` = solido per il movimento ma non per colpi/vista: per proiettili, linee di vista (IA, bandiere,
   esplosioni), granate, bossoli e particelle usare `map.blocksShotAt/blocksShotTile`, per il movimento

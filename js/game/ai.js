@@ -889,6 +889,17 @@ export class BotBrain {
     }
   }
 
+  /**
+   * Tile distrutti (cells = [{ tx, ty }]): un riparo scelto lì vicino potrebbe non riparare più. In combattimento
+   * si cerca un altro riparo (cover = null: _combat lo ricalcola), il riparo da un mezzo si ricalcola subito.
+   */
+  onMapChanged(cells, size) {
+    const near = (p) => p && cells.some(({ tx, ty }) => Math.hypot((tx + 0.5) * size - p.x, (ty + 0.5) * size - p.y) < size * 1.6);
+    if (near(this.cover)) this.cover = null;
+    if (near(this.peek)) this.peek = null;
+    if (this.hide && near(this.hide.point)) this.hide = null;
+  }
+
   _goCover() {
     this.phase = 'cover';
     this.phaseTimer = rand(this.cfg.coverTime, 1.2);
