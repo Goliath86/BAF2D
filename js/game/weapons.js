@@ -10,11 +10,12 @@ export class Weapons {
     for (const [id, def] of Object.entries(cfg.weapons || {})) {
       this.defs.set(id, Object.freeze({ ...defaults, ...def, id }));
     }
+    this._ids = Object.freeze([...this.defs.keys()]);
   }
 
-  /** Elenco degli id, nell'ordine del file. */
+  /** Elenco degli id, nell'ordine del file (array condiviso, sola lettura). */
   get ids() {
-    return [...this.defs.keys()];
+    return this._ids;
   }
 
   has(id) {

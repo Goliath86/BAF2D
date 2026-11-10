@@ -204,8 +204,10 @@ export class Effects {
     const spread = (hasNormal ? em.spreadDeg ?? 120 : 360) * DEG;
     const count = Math.round(range(em.count, 1));
     const size = em.size || [1, 1];
+    // oltre il massimo spariscono le più vecchie (tutte insieme, non una alla volta)
+    const over = this.particles.length + count - this.maxParticles;
+    if (over > 0) this.particles.splice(0, Math.min(over, this.particles.length));
     for (let i = 0; i < count; i++) {
-      if (this.particles.length >= this.maxParticles) this.particles.shift();
       const a = base + (Math.random() - 0.5) * spread;
       const sp = range(em.speed, 20);
       const life = range(em.life, 0.3);

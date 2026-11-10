@@ -349,7 +349,12 @@ export class Hud {
     ui.fillText(str, Math.round((x + 1) * u), Math.round((y + 1) * u));
     ui.fillStyle = color;
     ui.fillText(str, Math.round(x * u), Math.round(y * u));
-    return ui.measureText(str).width / u; // larghezza in pixel di gioco
+  }
+
+  /** Come _text, ma restituisce la larghezza del testo in pixel di gioco (per affiancare altro). */
+  _textW(ui, u, str, x, y, size, color, align = 'left') {
+    this._text(ui, u, str, x, y, size, color, align);
+    return ui.measureText(str).width / u;
   }
 
   _drawHealth(ui, u, player) {
@@ -427,7 +432,7 @@ export class Hud {
       const empty = g.ammo === 0 && !g.reloading;
       const ammoColor = g.reloading ? wc.reloadColor || '#ffd36b' : empty ? wc.emptyColor || '#f43' : wc.ammoColor || '#ffd36b';
       const txt = g.reloading ? this.i18n.t('hud.reloading') : `${g.ammo}/${g.magazine}`;
-      const w = this._text(ui, u, txt, right, y, size, ammoColor, 'right');
+      const w = this._textW(ui, u, txt, right, y, size, ammoColor, 'right');
       this._text(ui, u, g.name, right - w - 4, y, size, this.cfg.text || '#fff', 'right');
       y += size + 1;
       if (g.reloading) {
@@ -460,8 +465,8 @@ export class Hud {
     const ammoColor = empty ? wc.emptyColor || '#f43' : wc.ammoColor || '#ffd36b';
     // munizioni contate (lanciarazzi): "+N" di scorta invece della capienza del caricatore
     const magText = w.reserve !== undefined ? ` +${player.reserve[w.id] ?? 0}` : `/${w.magazine}`;
-    const magW = this._text(ui, u, magText, right, y + ammoSize - size, size, this.cfg.text || '#fff', 'right');
-    const ammoW = this._text(ui, u, String(player.ammo), right - magW - 1, y, ammoSize, ammoColor, 'right');
+    const magW = this._textW(ui, u, magText, right, y + ammoSize - size, size, this.cfg.text || '#fff', 'right');
+    const ammoW = this._textW(ui, u, String(player.ammo), right - magW - 1, y, ammoSize, ammoColor, 'right');
     const icon = w.pickupSprite && this.assets.sprites.get(w.pickupSprite);
     if (icon) {
       const s = wc.iconScale ?? 2;

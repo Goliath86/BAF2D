@@ -67,7 +67,10 @@ export class VehicleBrain {
 
     // movimento verso l'obiettivo
     this.objTimer -= dt;
-    if (this.objTimer <= 0 || !this.objective || !this._needsCapture(this.objective.flag)) {
+    // nuova scelta ogni objectiveInterval s, o subito se la bandiera che stava catturando è stata presa
+    // (in difesa la bandiera è già nostra: si resta col timer)
+    const o = this.objective;
+    if (this.objTimer <= 0 || !o || (o.capture && !this._needsCapture(o.flag))) {
       this._chooseObjective(game);
       this.objTimer = rand(c.objectiveInterval, 2);
     }
@@ -203,7 +206,7 @@ export class VehicleBrain {
       let s = dist(f, v);
       // un altro mezzo della squadra ci sta già andando: due mezzi nella stessa area si ostacolano
       // (in difesa ancora di più: meglio presidiare un'altra bandiera)
-      const mates = game.vehicles.filter((o) => o !== v && !o.destroyed && o.team === v.team && o.brainObjective === f).length;
+      const mates = game.vehicles.filter((o) => o !== v && !o.destroyed && o.driver && o.team === v.team && o.brainObjective === f).length;
       s += mates * (this._needsCapture(f) ? c.crowdPenalty ?? 600 : c.defendCrowdPenalty ?? 2000);
       if (!this._needsCapture(f) && f.contested) s -= c.contestedBonus ?? 400;
       if (f === this.objective?.flag) s -= 60;
@@ -216,6 +219,7 @@ export class VehicleBrain {
       this.objective = { flag: best, point: this._zonePoint(best, game) };
       this.path = null;
     }
+    this.objective.capture = this._needsCapture(best);
     v.brainObjective = best;
     v.brainPoint = this.objective.point;
   }

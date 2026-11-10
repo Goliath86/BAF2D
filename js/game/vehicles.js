@@ -99,6 +99,10 @@ export class Vehicle {
     this.rotorSpeed = 0;
     this.landing = false;
     this.landBlocked = false;
+    this.throttle = 0; // acceleratore 0..1 (regime del motore)
+    // IA di guida: bandiera e punto scelti (letti dalle IA degli altri mezzi), azzerati quando il pilota scende
+    this.brainObjective = null;
+    this.brainPoint = null;
     this.guns = (def.weapons || []).map((id) => {
       const w = weapons.get(id);
       return { w, ammo: w.magazine, cooldown: 0, reload: null, side: 1 };
@@ -150,6 +154,9 @@ export class Vehicle {
   exit() {
     const u = this.driver;
     this.driver = null;
+    // un mezzo vuoto non "occupa" più la bandiera scelta dalla sua IA
+    this.brainObjective = null;
+    this.brainPoint = null;
     if (u) u.vehicle = null;
     return u;
   }

@@ -34,6 +34,7 @@ export class Player {
     // Punteggi: danni ricevuti per soldato (assist), chi ha dato il colpo mortale, record in classifica
     this.damageLog = new Map();
     this.killer = null;
+    this.killCause = null; // come è morto (medaglie), vedi damage()
     this.combatant = null;
     // Soldati dell'IA: gittata dei colpi = distanza dal punto mirato (null = regole del giocatore umano)
     this.aimDistance = null;

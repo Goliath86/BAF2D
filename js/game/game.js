@@ -30,7 +30,7 @@ function rand(v, def = 0) {
 
 export class Game {
   /** La partita vera e propria si prepara con setup() (mappa, squadra, numero di bot). */
-  constructor({ config, assets, audio, display, input, effectsCfg, weapons, grenadeTypes, i18n, career, vehicleTypes, rocketTypes, medals = null }) {
+  constructor({ config, assets, audio, display, input, effectsCfg, weapons, grenadeTypes, i18n, career, vehicleTypes, rocketTypes, medals = null, debugTools = false }) {
     this.config = config;
     this.i18n = i18n; // per i testi di HUD/menu: this.i18n.t('chiave')
     this.assets = assets;
@@ -43,6 +43,8 @@ export class Game {
     this.attract = false; // partita dimostrativa dietro al menu: anche il "giocatore" è un bot, niente HUD
     this.viewOffsetX = 0; // px di gioco: sposta la visuale (il menu laterale copre la parte sinistra)
     this.debug = !!config.debug;
+    // tasti di debug F4..F9 (arma, vita, granate, squadra, punti di carriera): solo con ?debug=1 o game.json -> debug
+    this.debugTools = !!debugTools || !!config.debug;
     this.background = config.display?.background || '#000';
 
     this.map = null;
@@ -370,7 +372,11 @@ export class Game {
   _spawnBots() {
     this.bots.length = 0;
     const teams = this.botCounts || {};
-    const weapons = (this.botsCfg.weapons || [this.config.player.weapon]).filter((id) => String(id).split('+').every((w) => this.weapons.get(w)));
+    const weapons = (this.botsCfg.weapons || [this.config.player.weapon]).filter((id) => {
+      const ok = String(id).split('+').every((w) => this.weapons.has(w));
+      if (!ok) console.warn(`bots.weapons: unknown weapon in "${id}"`);
+      return ok;
+    });
     for (const [team, count] of Object.entries(teams)) {
       if (!this.squads[team]) {
         console.warn(`bots.teams: unknown team "${team}"`);
@@ -396,7 +402,7 @@ export class Game {
     const unit = new Player(cfg, pos.x, pos.y, this.assets, this.weapons, this.grenadeTypes, slot.team);
     unit.isBot = true;
     unit.combatant = slot.record;
-    if (special && this.weapons.ids.includes(special)) unit.giveSpecial(special);
+    if (special && this.weapons.has(special)) unit.giveSpecial(special);
     // guarda verso il centro della mappa
     unit.angle = Math.atan2(this.map.pixelHeight / 2 - pos.y, this.map.pixelWidth / 2 - pos.x);
     unit.legsAngle = unit.angle;
@@ -742,10 +748,6 @@ export class Game {
     if (this.engines.size) this._silenceEngines();
   }
 
-  get isMatchOver() {
-    return this.ended !== null;
-  }
-
   /** La schermata di fine partita è visibile da almeno restartDelay secondi. */
   get canRestart() {
     const e = this.ended;
@@ -800,12 +802,14 @@ export class Game {
   update(dt) {
     const { input, display } = this;
     if (input.wasPressed('debug')) this.debug = !this.debug;
-    if (input.wasPressed('debugNextWeapon')) this._cycleWeapon();
-    if (input.wasPressed('debugHurt')) this.player.damage(this.config.debugDamage ?? 10);
-    if (input.wasPressed('debugHeal')) this.player.heal(this.config.debugDamage ?? 10);
-    if (input.wasPressed('debugGrenade')) this.player.addGrenades(1);
-    if (input.wasPressed('debugTeam')) this._cycleTeam();
-    if (input.wasPressed('debugScore')) this.scores.award(this.playerRecord, 'debug');
+    if (this.debugTools) {
+      if (input.wasPressed('debugNextWeapon')) this._cycleWeapon();
+      if (input.wasPressed('debugHurt')) this.player.damage(this.config.debugDamage ?? 10);
+      if (input.wasPressed('debugHeal')) this.player.heal(this.config.debugDamage ?? 10);
+      if (input.wasPressed('debugGrenade')) this.player.addGrenades(1);
+      if (input.wasPressed('debugTeam')) this._cycleTeam();
+      if (input.wasPressed('debugScore')) this.scores.award(this.playerRecord, 'debug');
+    }
 
     this.time += dt;
     if (!this.ended) {
@@ -930,7 +934,6 @@ export class Game {
     }
     // danno ai soldati a piedi (giocatore e bot, di qualunque squadra): decresce con la distanza
     // fino a minDamageFactor sul bordo, i muri riparano; chi è a bordo di un mezzo è protetto
-    if (def.hurtsPlayer === false) return;
     const radius = def.blastRadius ?? 40;
     const falloff = (d) => 1 - (d / radius) * (1 - (def.minDamageFactor ?? 0.2));
     for (const p of this.units) {

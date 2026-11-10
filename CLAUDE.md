@@ -365,6 +365,8 @@ tools/check_level.mjs controllo livelli: celle irraggiungibili e vicoli ciechi (
   (`ejectDeg`/`spreadDeg` 0). Disegno: palle di fuoco sopra le particelle (il fumo non copre il nucleo).
 - Suoni: `placeholder` può essere una lista di strati (ognuno con `volume` relativo).
 - `input.endFrame()` va chiamato a fine di ogni tick di update (azzera i `wasPressed`).
+- Tasti di debug F4..F9 (arma, vita, granate, squadra, punti di carriera) attivi solo con `?debug=1` nell'URL o
+  `game.json -> debug: true` (`game.debugTools`, passato da main.js); F3 (overlay) funziona sempre.
 - Su touch in portrait il gioco è in pausa e compare l'overlay "ruota il dispositivo" (CSS + `Game.paused`).
 - Si avvia dal pulsante "Inizia" (evento `click`, dopo il rilascio: non spara); i pulsanti sopra al gioco
   (pausa, fine partita) fermano il `pointerdown` per non sparare/aprire stick. Fullscreen + lock landscape solo su

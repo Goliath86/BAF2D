@@ -127,13 +127,6 @@ class Canvas {
     return m;
   }
 
-  /** Pixel già dipinti (alpha > 0). */
-  painted() {
-    const m = this.mask();
-    for (let i = 0; i < m.length; i++) m[i] = this.data[i * 4 + 3] > 0 ? 1 : 0;
-    return m;
-  }
-
   set(x, y, c, a = 255) {
     if (x < 0 || y < 0 || x >= this.w || y >= this.h) return;
     const i = (y * this.w + x) * 4;
@@ -163,10 +156,6 @@ class Canvas {
     this.data[i] *= k;
     this.data[i + 1] *= k;
     this.data[i + 2] *= k < 1 ? k + (1 - k) * 0.25 : k;
-  }
-
-  tintMask(m, k) {
-    for (let i = 0; i < m.length; i++) if (m[i]) this.tint(i % this.w, Math.floor(i / this.w), k);
   }
 
   /** Righe e colonne occupate dalla maschera: estremi per l'ombreggiatura cilindrica. */

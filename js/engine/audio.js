@@ -210,12 +210,8 @@ export class AudioManager {
         g.connect(throb);
         let src;
         if (layer.wave === 'noise') {
-          const len = ctx.sampleRate; // 1 s di rumore ripetuto
-          const buf = ctx.createBuffer(1, len, ctx.sampleRate);
-          const data = buf.getChannelData(0);
-          for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
           src = ctx.createBufferSource();
-          src.buffer = buf;
+          src.buffer = this._noise(); // rumore condiviso, ripetuto
           src.loop = true;
         } else {
           src = ctx.createOscillator();
@@ -281,12 +277,15 @@ export class AudioManager {
 
     let src;
     if (p.wave === 'noise') {
-      const len = Math.ceil(ctx.sampleRate * dur);
-      const buf = ctx.createBuffer(1, len, ctx.sampleRate);
-      const data = buf.getChannelData(0);
-      for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+      // rumore: un tratto a caso del buffer condiviso (in loop se il suono è più lungo)
+      const buf = this._noise();
       src = ctx.createBufferSource();
       src.buffer = buf;
+      src.loop = dur > buf.duration;
+      src.connect(g);
+      src.start(t, Math.random() * Math.max(0, buf.duration - dur));
+      src.stop(t + dur + 0.02);
+      return src;
     } else {
       src = ctx.createOscillator();
       src.type = p.wave || 'square';
@@ -297,5 +296,17 @@ export class AudioManager {
     src.start(t);
     src.stop(t + dur + 0.02);
     return src;
+  }
+
+  /** Buffer di rumore bianco (2 s) creato una volta sola e condiviso da tutti i suoni sintetizzati. */
+  _noise() {
+    if (!this._noiseBuf) {
+      const ctx = this.ctx;
+      const len = ctx.sampleRate * 2;
+      this._noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
+      const data = this._noiseBuf.getChannelData(0);
+      for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+    }
+    return this._noiseBuf;
   }
 }

@@ -135,6 +135,9 @@ export class TileMap {
    */
   _drawEdges(g) {
     const s = this.size;
+    // distanza intera del pixel (px, py) da un punto (cx, cy): arco degli angoli esterni / interni
+    const arc = (px, py, cx, cy, R) => Math.max(0, Math.floor(R - Math.hypot(px + 0.5 - cx, py + 0.5 - cy)));
+    const fromCorner = (px, py, cx, cy) => Math.floor(Math.hypot(px + 0.5 - cx, py + 0.5 - cy));
     for (let y = 0; y < this.rows; y++) {
       for (let x = 0; x < this.cols; x++) {
         const tile = this.tileAt(x, y);
@@ -157,6 +160,7 @@ export class TileMap {
         const w = e.width ?? 2;
         const cols = e.colors || ['#000'];
         const dither = e.dither ?? 1;
+        const R = e.round ? (e.round === true ? 6 : e.round) : 0;
         const ox = x * s;
         const oy = y * s;
         for (let py = 0; py < s; py++) {
@@ -168,20 +172,17 @@ export class TileMap {
             if (sides.l) d = Math.min(d, px);
             if (sides.r) d = Math.min(d, s - 1 - px);
             // angoli esterni arrotondati: nel quadrato d'angolo la distanza dal bordo segue un arco di raggio R
-            if (e.round) {
-              const R = e.round === true ? 6 : e.round;
-              const arc = (cx, cy) => Math.max(0, Math.floor(R - Math.hypot(px + 0.5 - cx, py + 0.5 - cy)));
-              if (sides.t && sides.l && px < R && py < R) d = arc(R, R);
-              else if (sides.t && sides.r && px >= s - R && py < R) d = arc(s - R, R);
-              else if (sides.b && sides.l && px < R && py >= s - R) d = arc(R, s - R);
-              else if (sides.b && sides.r && px >= s - R && py >= s - R) d = arc(s - R, s - R);
+            if (R) {
+              if (sides.t && sides.l && px < R && py < R) d = arc(px, py, R, R, R);
+              else if (sides.t && sides.r && px >= s - R && py < R) d = arc(px, py, s - R, R, R);
+              else if (sides.b && sides.l && px < R && py >= s - R) d = arc(px, py, R, s - R, R);
+              else if (sides.b && sides.r && px >= s - R && py >= s - R) d = arc(px, py, s - R, s - R, R);
             }
             // angoli interni: fascia a quarto di cerchio attorno allo spigolo
-            const fromCorner = (cx, cy) => Math.floor(Math.hypot(px + 0.5 - cx, py + 0.5 - cy));
-            if (diag.tl) d = Math.min(d, fromCorner(0, 0));
-            if (diag.tr) d = Math.min(d, fromCorner(s, 0));
-            if (diag.bl) d = Math.min(d, fromCorner(0, s));
-            if (diag.br) d = Math.min(d, fromCorner(s, s));
+            if (diag.tl) d = Math.min(d, fromCorner(px, py, 0, 0));
+            if (diag.tr) d = Math.min(d, fromCorner(px, py, s, 0));
+            if (diag.bl) d = Math.min(d, fromCorner(px, py, 0, s));
+            if (diag.br) d = Math.min(d, fromCorner(px, py, s, s));
             const rnd = cellRandom(ox + px, oy + py, 11);
             if (d < w) {
               if (rnd < dither * (1 - d / w) + (dither >= 1 ? 1 : 0)) {

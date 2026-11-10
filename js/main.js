@@ -116,7 +116,7 @@ async function boot() {
     // gradi (game.json -> ranks) e punti di carriera del giocatore salvati tra una partita e l'altra
     const career = new Career(settings, new Ranks(config.ranks));
     const medals = new Medals(medalsCfg, settings);
-    const game = new Game({ config, assets, audio, display, input, effectsCfg, weapons, grenadeTypes, i18n, career, vehicleTypes, rocketTypes, medals });
+    const game = new Game({ config, assets, audio, display, input, effectsCfg, weapons, grenadeTypes, i18n, career, vehicleTypes, rocketTypes, medals, debugTools: urlDebug });
     game.setAutoReload(settings.get('autoReload', game.autoReload)); // opzione "ricarica automatica"
 
     const menu = new Menu({

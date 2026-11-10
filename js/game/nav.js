@@ -209,8 +209,8 @@ export class Nav {
         heap.push(j, d);
       });
     }
-    const dists = new Map(list.map((i) => [i, g[i]]));
-    return { list, dist: (i) => dists.get(i) ?? Infinity };
+    // distanze lette dai buffer: valide finché non parte un'altra ricerca (reach/findPath)
+    return { list, dist: (i) => (closed[i] === run && this._run === run ? g[i] : Infinity) };
   }
 
   /**
@@ -218,7 +218,8 @@ export class Nav {
    * il passaggio è libero per un soldato di semi-dimensioni hw). [] se già arrivati, null se irraggiungibile.
    */
   findPath(x0, y0, x1, y1, hw = 5, maxNodes = Math.max(4000, this.cols * this.rows), minClear = 1) {
-    const start = this.nearestWalkable(x0, y0, 2, minClear) >= 0 ? this.nearestWalkable(x0, y0, 2, minClear) : this.nearestWalkable(x0, y0, 2);
+    let start = this.nearestWalkable(x0, y0, 2, minClear);
+    if (start < 0) start = this.nearestWalkable(x0, y0, 2);
     const goal = this.nearestWalkable(x1, y1, 4, minClear);
     if (start < 0 || goal < 0) return null;
     this._minClear = minClear;

@@ -8,13 +8,15 @@ export class Medals {
     this.settings = settings;
     this.key = cfg.storageKey || 'medals';
     this.defs = new Map((cfg.list || []).map((d) => [d.id, d]));
+    this._list = Object.freeze([...this.defs.values()]);
     const saved = settings?.get(this.key, {});
     this.collection = saved && typeof saved === 'object' ? { ...saved } : {};
     this.icons = new Map();
   }
 
+  /** Definizioni nell'ordine del file (array condiviso, sola lettura). */
   get list() {
-    return [...this.defs.values()];
+    return this._list;
   }
 
   get(id) {
