@@ -6,6 +6,18 @@ in `config/game.json` (`version`) and shown in the bottom-right corner of the me
 ## [Unreleased]
 
 ### Added
+- **Deploy screen**: when you die a tactical map opens over the battle: pick where to respawn (your base, a flag you
+  hold that isn't under attack, or a squadmate who isn't in a firefight) and press *Deploy* (or 1–9 / Enter, or tap
+  twice on the map). It also tells you who killed you and with what.
+- **Your squad**: three bot teammates follow you in formation and fight alongside you, marked in green. Press **T**
+  (or the flag button on mobile) with the crosshair on a flag to send them to attack or defend it; press again to
+  have them follow you. You can respawn on them.
+- **Minimap** under the weapon panel (flags, teammates, your squad, enemies your team has spotted, vehicles) and a
+  **kill feed** (who killed whom, and with what).
+- **Sprint** (Shift, or push the left stick all the way on mobile): faster, but you can't shoot and it drains your
+  stamina. Bots sprint too.
+- **Suppression**: bullets whizzing past you darken the edges of the screen and throw your aim off; suppressed bots
+  dive for cover.
 - **Destructible maps**: crates, fences, hay bales, hedges, sandbags and walls can be destroyed. Damage shows as
   growing cracks; when a tile gives way it breaks apart in a burst of dust and debris and leaves the floor (or a
   pile of rubble) behind, opening new lines of fire and new paths.

@@ -89,6 +89,8 @@
       "grenade": "Grenade",
       "pickup": "Pick up / vehicle",
       "switchWeapon": "Switch weapon",
+      "sprint": "Sprint",
+      "squadOrder": "Squad order",
       "pause": "Pause"
     }
   },
@@ -128,6 +130,34 @@
     "drawTimeSubtitle": "Time's up: the teams are tied",
     "rematch": "Rematch",
     "menu": "Main menu"
+  },
+  "deploy": {
+    "title": "Deploy",
+    "killedBy": "Killed by {name}{how}",
+    "wait": "You can deploy in {seconds} s",
+    "waiting": "Deploying in {seconds}…",
+    "ready": "Choose where to deploy",
+    "go": "Deploy",
+    "base": "Base",
+    "baseShort": "HQ",
+    "flag": "Flag {flag}",
+    "contested": "contested",
+    "enemiesNear": "enemies nearby",
+    "mateDead": "dead",
+    "mateInVehicle": "in a vehicle",
+    "mateFighting": "in combat"
+  },
+  "squad": {
+    "follow": "Squad: follow me",
+    "attack": "Squad: attack {flag}",
+    "defend": "Squad: defend {flag}"
+  },
+  "killfeed": {
+    "grenade": "Grenade",
+    "rocket": "Rocket",
+    "runover": "Run over",
+    "vehicle": "Vehicle destroyed",
+    "explosion": "Explosion"
   },
   "hud": {
     "medal": "MEDAL",

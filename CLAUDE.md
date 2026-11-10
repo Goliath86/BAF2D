@@ -178,6 +178,28 @@ tools/check_level.mjs controllo livelli: celle irraggiungibili e vicoli ciechi (
   `this.respawn`; dopo `death.respawnDelay` un nuovo Player rientra con `ctf.spawnPoint(team, puntoMorte)` (bandiera
   posseduta non contesa più vicina o base). HUD: ticket + bandiere in alto al centro, stato cattura, messaggi, scritta
   di rientro.
+- Schermata di rientro (`js/deploy.js`, `#overlay-deploy`): alla morte del giocatore umano `Game._onPlayerDeath`
+  crea `respawn = { ..., killer, how, choice, confirmed }` e chiama `onDeployOpen`; Menu (`_syncDeploy`: aperta solo
+  con `mode === 'playing'` e giocatore morto, input del gioco spento, chiusa in pausa e riaperta alla ripresa)
+  mostra `game.deployOptions()` (base, bandiere possedute non contese e senza nemici entro `spawnSafeRadius`,
+  compagni di squadra vivi a piedi e non in combattimento) su una mappa tattica. `chooseDeploy(id, confirm)`;
+  `_updateRespawn` aspetta la conferma (anche finito `respawnDelay`), poi `_deployPoint` (fallback
+  `_defaultDeploy` = bandiera più vicina al punto della morte). Senza `onDeployOpen` (dimostrativa) rientro automatico.
+- Squadra del giocatore (`game.json -> squad`, `size` lui compreso): `slot.playerSquad` / `unit.playerSquad` sui primi
+  compagni bot. `game.squadOrder` = `{ type: 'follow' }` | `{ type: 'flag', flag }` (azione `squadOrder`, T / pulsante
+  touch: su desktop la bandiera sotto il mirino, su touch la più vicina; stessa bandiera = seguitemi) ->
+  `Squad.plan` fa un gruppo fisso (`playerSquad`, `follow` = giocatore o `flag`), `squad.replan()`;
+  `BotBrain._followTick` = formazione dietro al giocatore (`bots.ai.squadFollow`), chi segue non sale sui mezzi.
+  Segni verdi sopra i compagni (`_drawSquadMarks`).
+- HUD del fronte: minimappa (`hud.minimap`, sotto l'arma: mappa con i crolli, bandiere, compagni, squadra, nemici
+  della lavagna di squadra entro `enemyMemory` s, mezzi, ordine), riga dell'ordine, elenco delle uccisioni
+  (`Game.killFeed` da `_feedDeath` accanto a `scores.onDeath`, testo da `_killHow`; `hud.killFeed`, compatto su touch),
+  barra del fiato, vignetta della soppressione (`hud.suppression`).
+- Corsa: `player.sprint` { factor, drain, recover, minRestart } (anche i bot), `ctrl.sprint` (Maiusc, su touch stick
+  sinistro oltre `input.touch.sprintThreshold`; bot: `_wantSprint` senza bersaglio e meta oltre `sprintMinDist`),
+  correndo non si spara. Soppressione: `Game._suppress` (colpo nemico entro `combat.suppression.radius` px, una volta
+  per colpo) -> `unit.suppress(amount, hold)`, cala di `player.suppressionDecay`/s; allarga la rosa di
+  `combat.suppression.spreadDeg`; i bot allo scoperto oltre `suppressCover` vanno al riparo.
 - Tempo limite: `ctf.timeLimit` (s, 0 = nessuno; default di game.json, override `game.setup({ timeLimit })` dal
   menu, stepper `timeLimit` in minuti in `menu.timeLimit`, salvato in Settings `newGame`). `ctf.timeLeft` (null senza
   limite) -> HUD mm:ss sotto le bandiere (`hud.ctf.timer*`); allo scadere `_timeUp`: vince chi ha più ticket, poi più

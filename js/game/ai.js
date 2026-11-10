@@ -170,10 +170,23 @@ export class Squad {
     const breakDist = cfg.groupBreak ?? 360;
     const pairRadius = cfg.pairRadius ?? 500;
 
-    // 1. gruppi precedenti: restano insieme i membri vivi vicini al primo (i cervelli cambiano al rientro)
-    const free = new Set(active);
+    // 0. squadra del giocatore (unit.playerSquad): un gruppo fisso che segue i suoi ordini (game.squadOrder):
+    //    "follow" = lo segue (se è vivo), "flag" = bandiera indicata; senza ordine valido si pianifica come gli altri
+    const mine = active.filter((b) => b.unit.playerSquad);
+    const free = new Set(active.filter((b) => !b.unit.playerSquad));
     const groups = [];
+    let squadGroup = null;
+    if (mine.length) {
+      const order = game.squadOrder || { type: 'follow' };
+      const leader = game.player;
+      squadGroup = { members: mine, flag: null, bias: this.squadBias || (this.squadBias = {}), playerSquad: true, follow: null };
+      if (order.type === 'flag' && flags.includes(order.flag)) squadGroup.flag = order.flag;
+      else if (order.type === 'follow' && leader && !leader.dead) squadGroup.follow = leader;
+    }
+
+    // 1. gruppi precedenti: restano insieme i membri vivi vicini al primo (i cervelli cambiano al rientro)
     for (const old of this.groups || []) {
+      if (old.playerSquad) continue;
       const members = [];
       for (const oid of old.ids) {
         const b = active.find((x) => id(x) === oid && free.has(x));
@@ -243,6 +256,10 @@ export class Squad {
       return s + (load.get(f) || 0) * (cfg.spreadPenalty ?? 800);
     };
     const pool = [...capture, ...defend];
+    // la squadra del giocatore con un ordine conta già sulla sua bandiera (o segue il giocatore: nessuna)
+    if (squadGroup && (squadGroup.flag || squadGroup.follow)) {
+      if (squadGroup.flag) load.set(squadGroup.flag, Math.min(1, squadGroup.members.length / 2));
+    } else if (squadGroup) groups.push(squadGroup);
     const todo = groups.map((g) => ({ g, c: centroid(g) }));
     while (todo.length && pool.length) {
       let bi = -1;
@@ -258,8 +275,15 @@ export class Squad {
       g.flag = bf;
       load.set(bf, (load.get(bf) || 0) + Math.min(1, g.members.length / 2));
     }
+    if (squadGroup && !groups.includes(squadGroup)) groups.push(squadGroup);
     for (const g of groups) g.ids = g.members.map(id);
     this.groups = groups;
+  }
+
+  /** Rifà il piano al prossimo tick (es. nuovo ordine del giocatore alla sua squadra). */
+  replan() {
+    this.planTimer = 0;
+    this.planKey = null;
   }
 
   /** Compagno di gruppo da aspettare: vivo, a piedi, lontano più di leash ma entro range. */
@@ -387,6 +411,12 @@ export class BotBrain {
 
     this._perceive(dt, game);
     this._onHurt(game);
+    // sotto il fuoco (colpi che passano vicino): allo scoperto va a ripararsi (al massimo ogni suppressCoverCooldown s)
+    if (u.suppression >= (c.suppressCover ?? 0.5) && this.target && this.phase === 'expose' && this.role === 'fix'
+      && this.time >= (this.suppressCoverAt ?? 0)) {
+      this._goCover();
+      this.suppressCoverAt = this.time + (c.suppressCoverCooldown ?? 4);
+    }
 
     this.enemyArmor = game.vehicles.some((v) => !v.destroyed && v.occupied && v.team !== u.team);
     this._weapons = game.weapons;
@@ -395,7 +425,8 @@ export class BotBrain {
     else if (this._vehicleDanger(dt, game)) this._goTo(this.hide.point, game);
     else if (this._weaponTick(dt, game)) {
       // sta andando a prendere un'arma (mira e fuoco continuano sotto)
-    } else if (!this.target && this._boardTick(dt, game)) {
+    } else if (!this.target && !this.squad.groupOf(this)?.follow && this._boardTick(dt, game)) {
+      // (chi segue il giocatore resta con lui invece di salire sui mezzi)
       // sta andando verso un mezzo libero
     } else if (this.target) this._combat(dt, game);
     else this._objectiveTick(dt, game);
@@ -452,9 +483,21 @@ export class BotBrain {
       reload: !plan && !switchWeapon && this._wantReload(wantFire),
       grenade,
       switchWeapon,
+      sprint: this._wantSprint(move),
       repeat: true,
       faceMove: false,
     };
+  }
+
+  /**
+   * Corre per spostarsi lontano: senza un bersaglio (o in fuga da granate e mezzi), con la meta oltre
+   * sprintMinDist px e senza un lancio in preparazione.
+   */
+  _wantSprint(move) {
+    const c = this.cfg;
+    if (c.sprint === false || this.throwPlan || Math.hypot(move.x, move.y) < 0.5 || !this.dest) return false;
+    if (this.target && !this.evade && !this.hide) return false;
+    return dist(this.dest, this.unit) > (c.sprintMinDist ?? 90);
   }
 
   // ---------- Percezione ----------
@@ -676,6 +719,12 @@ export class BotBrain {
   }
 
   _objectiveTick(dt, game) {
+    // squadra del giocatore con l'ordine "seguitemi": in formazione attorno a lui
+    const grp = this.squad.groupOf(this);
+    if (grp?.follow && !grp.follow.dead) {
+      this._followTick(dt, game, grp);
+      return;
+    }
     this.objTimer -= dt;
     if (this.objTimer <= 0 || !this.objective) {
       this._chooseObjective(game);
@@ -708,6 +757,35 @@ export class BotBrain {
         if (o.flag) o.point = this._zonePoint(o.flag, game) || o.point;
       }
     }
+  }
+
+  /**
+   * Segue il capo (grp.follow): ogni membro ha un posto in formazione dietro di lui (ventaglio di
+   * squadFollow.spreadDeg a squadFollow.distance px), ricalcolato quando il capo si sposta; vicino al posto si ferma.
+   */
+  _followTick(dt, game, grp) {
+    const c = this.cfg.squadFollow || {};
+    const leader = grp.follow;
+    const u = this.unit;
+    const i = grp.members.indexOf(this);
+    const n = grp.members.length;
+    const spread = (c.spreadDeg ?? 110) * DEG;
+    const back = (leader.legsAngle ?? leader.angle) + Math.PI;
+    const a = n > 1 ? back - spread / 2 + (spread * i) / (n - 1) : back;
+    const d = c.distance ?? 30;
+    let px = leader.x + Math.cos(a) * d;
+    let py = leader.y + Math.sin(a) * d;
+    // posto in un muro: il tile libero più vicino (o accanto al capo)
+    const idx = game.nav.nearestWalkable(px, py, 2);
+    if (idx >= 0) ({ x: px, y: py } = game.nav.center(idx));
+    else ({ x: px, y: py } = leader);
+    this.objective = null;
+    const far = dist(u, leader) > (c.catchUp ?? 90);
+    if (dist(u, { x: px, y: py }) <= (far ? 4 : c.slack ?? 14)) {
+      this._stop();
+      return;
+    }
+    this._goTo({ x: px, y: py }, game);
   }
 
   _chooseObjective(game) {

@@ -120,6 +120,15 @@ export class Game {
     this.rockets = new Rockets(assets, this.effects, effectsCfg);
     this.engines = new Map(); // mezzo -> suono continuo del motore (audio.loop)
 
+    // squadra del giocatore (game.json -> squad): compagni bot che seguono i suoi ordini; ordine attuale
+    this.squadCfg = config.squad || {};
+    this.squadOrder = { type: 'follow' };
+    // elenco delle uccisioni (HUD): { killer, kTeam, victim, vTeam, how, mine, age }
+    this.killFeed = [];
+    // schermata di rientro (DOM, menu.js): aperta/chiusa con questi callback quando il giocatore muore/rientra
+    this.onDeployOpen = null;
+    this.onDeployClose = null;
+
     this._fps = { value: 0, frames: 0, time: 0 };
   }
 
@@ -178,8 +187,11 @@ export class Game {
     this.rockets.clear();
     this._silenceEngines();
     this._resetVehicles();
-    this.respawn = null; // { time, delay, x, y } mentre il giocatore è morto
+    if (this.respawn) this.onDeployClose?.();
+    this.respawn = null; // { time, delay, x, y, choice, confirmed } mentre il giocatore è morto
     this.ended = null; // { time, shown, outcome } a partita finita
+    this.squadOrder = { type: 'follow' };
+    this.killFeed = [];
     this._spawnBots();
     this._snapCamera();
   }
@@ -354,6 +366,7 @@ export class Game {
     this.player = new Player(cfg, x, y, this.assets, this.weapons, this.grenadeTypes, this.playerTeam);
     this.player.combatant = this.playerRecord;
     this.player.autoReloadEmpty = this.autoReload && !this.attract;
+    this.squads[this.playerTeam]?.replan(); // la squadra segue il nuovo soldato del giocatore
     if (!this.attract) return;
     // partita dimostrativa: il giocatore è guidato da un BotBrain come gli altri soldati
     this.player.isBot = true;
@@ -395,6 +408,8 @@ export class Game {
       }
       for (let i = 0; i < count; i++) {
         const slot = { team, weapon: weapons[i % weapons.length] || this.config.player.weapon, unit: null, brain: null, respawn: null };
+        // i primi compagni del giocatore umano formano la sua squadra (squad.size, lui compreso)
+        slot.playerSquad = !this.attract && team === this.playerTeam && i < (this.squadCfg.size ?? 4) - 1;
         slot.record = this.scores.add({ name: this._nextBotName(), team, rank: this._botRank() });
         this.bots.push(slot);
         this._spawnBot(slot, null);
@@ -415,6 +430,7 @@ export class Game {
     const unit = new Player(cfg, pos.x, pos.y, this.assets, this.weapons, this.grenadeTypes, slot.team);
     unit.isBot = true;
     unit.combatant = slot.record;
+    unit.playerSquad = !!slot.playerSquad;
     const extra = special && this.weapons.has(special) ? special : this._antiArmorFor(slot);
     if (extra) unit.giveSpecial(extra);
     // guarda verso il centro della mappa
@@ -483,6 +499,7 @@ export class Game {
         // appena morto: punti, cadavere, ticket in meno, conto alla rovescia
         this._medalsOnDeath(b.unit);
         this.scores.onDeath(b.unit, this.ctf);
+        this._feedDeath(b.unit);
         this._addCorpse(b.unit);
         this.ctf.onDeath(b.team);
         b.respawn = { time: 0, delay: this.botsCfg.respawnDelay ?? this.deathCfg.respawnDelay ?? 5, x: b.unit.x, y: b.unit.y };
@@ -496,8 +513,13 @@ export class Game {
   /** Comandi del giocatore umano per Player.update (tastiera/mouse o stick touch). */
   _humanControl() {
     const { input, camera } = this;
+    const move = input.getMove();
+    // corsa: tasto (Maiusc) o, su touch, stick sinistro spinto fino in fondo (input.touch.sprintThreshold)
+    const sprint = input.isDown('sprint')
+      || (input.mode === 'touch' && Math.hypot(move.x, move.y) >= (this.config.input?.touch?.sprintThreshold ?? 0.97));
     return {
-      move: input.getMove(),
+      move,
+      sprint,
       aim: (u) => input.getAim(u.x - Math.round(camera.x), u.y - Math.round(camera.y)),
       firing: input.isFiring(),
       reload: input.wasPressed('reload'),
@@ -856,6 +878,8 @@ export class Game {
       this._updatePlayer(dt);
       this._updateBots(dt);
       this._updateVehicles(dt);
+      // ordine alla squadra (T / pulsante touch)
+      if (!this.attract && !this.player.dead && this.input.wasPressed('squadOrder')) this._issueOrder();
       if (this.player.dead && !this.respawn) this._onPlayerDeath();
       this._updatePickups(dt);
       if (this.respawn) this._updateRespawn(dt);
@@ -870,6 +894,9 @@ export class Game {
     const corpseTime = this.deathCfg.corpseTime ?? 12;
     for (const c of this.corpses) c.time += dt;
     if (corpseTime > 0) this.corpses = this.corpses.filter((c) => c.time < corpseTime);
+    const feedLife = this.hud.cfg.killFeed?.life ?? 6;
+    for (const k of this.killFeed) k.age += dt;
+    if (this.killFeed.length && this.killFeed[0].age >= feedLife) this.killFeed = this.killFeed.filter((k) => k.age < feedLife);
     this.hud.update(dt, this.player);
     if (this.ended) {
       // a partita finita i mezzi si fermano per inerzia
@@ -1040,9 +1067,188 @@ export class Game {
     const p = this.player;
     this._medalsOnDeath(p);
     this.scores.onDeath(p, this.ctf);
+    this._feedDeath(p);
     this._addCorpse(p);
     this.ctf.onDeath(p.team);
-    this.respawn = { time: 0, delay: this.deathCfg.respawnDelay ?? 5, x: p.x, y: p.y };
+    this.squads[this.playerTeam]?.replan(); // senza capo la squadra torna al piano di squadra
+    const k = p.killer && p.killer !== p ? p.killer : null;
+    this.respawn = {
+      time: 0, delay: this.deathCfg.respawnDelay ?? 5, x: p.x, y: p.y,
+      killer: k?.combatant?.name ?? null, how: this._killHow(p),
+      choice: null, confirmed: false,
+    };
+    this.respawn.choice = this._defaultDeploy();
+    // schermata di rientro (giocatore umano): scelta del punto; senza schermata si rientra da soli
+    if (!this.attract) this.onDeployOpen?.();
+  }
+
+  // ---------- Schermata di rientro ----------
+
+  /**
+   * Punti di rientro per il giocatore: base, bandiere possedute (non contese e senza nemici entro
+   * ctf.spawnSafeRadius), compagni di squadra vivi a piedi e non in combattimento.
+   * [{ id, kind: 'base'|'flag'|'mate', label, x, y, ok, reason }] (reason = chiave i18n se non disponibile).
+   */
+  deployOptions() {
+    const team = this.playerTeam;
+    const ctf = this.ctf;
+    const enemies = this._enemiesOf(team);
+    const R = ctf.cfg.spawnSafeRadius ?? 0;
+    const out = [];
+    const base = ctf.bases[team];
+    if (base) out.push({ id: 'base', kind: 'base', label: this.i18n.t('deploy.base'), x: base.x, y: base.y, ok: true });
+    for (const f of ctf.flags) {
+      if (f.owner !== team) continue;
+      let reason = null;
+      if (Object.keys(f.present).some((t) => t !== team)) reason = 'deploy.contested';
+      else if (R > 0 && enemies.some((e) => Math.hypot(e.x - f.x, e.y - f.y) < R)) reason = 'deploy.enemiesNear';
+      out.push({ id: `flag:${f.id}`, kind: 'flag', label: this.i18n.t('deploy.flag', { flag: f.id }), x: f.x, y: f.y, ok: !reason, reason, flag: f });
+    }
+    for (const b of this.bots) {
+      if (!b.playerSquad) continue;
+      const u = b.unit;
+      let reason = null;
+      if (!u || u.dead) reason = 'deploy.mateDead';
+      else if (u.vehicle) reason = 'deploy.mateInVehicle';
+      else if ((b.brain?.target && b.brain.visible) || (u.suppression ?? 0) > 0.3) reason = 'deploy.mateFighting';
+      out.push({ id: `mate:${b.record.id}`, kind: 'mate', label: b.record.name, x: u?.x ?? 0, y: u?.y ?? 0, ok: !reason, reason, unit: u });
+    }
+    return out;
+  }
+
+  /** Punto di rientro predefinito: la bandiera disponibile più vicina al punto della morte, o la base. */
+  _defaultDeploy() {
+    const r = this.respawn;
+    let best = 'base';
+    let bestD = Infinity;
+    for (const o of this.deployOptions()) {
+      if (!o.ok || o.kind === 'mate') continue;
+      const d = r ? Math.hypot(o.x - r.x, o.y - r.y) : 0;
+      if (d < bestD) {
+        bestD = d;
+        best = o.id;
+      }
+    }
+    return best;
+  }
+
+  /** Scelta dalla schermata di rientro: punto "id" (confirm = rientra appena possibile). */
+  chooseDeploy(id, confirm = false) {
+    const r = this.respawn;
+    if (!r) return;
+    r.choice = id;
+    if (confirm) r.confirmed = true;
+  }
+
+  /** Secondi al rientro (0 = si può già rientrare), null se il giocatore è vivo. */
+  get deployWait() {
+    const r = this.respawn;
+    return r ? Math.max(0, r.delay - r.time) : null;
+  }
+
+  /** Posizione di rientro per l'opzione "id" (se ancora disponibile), altrimenti null. */
+  _deployPoint(id) {
+    const o = this.deployOptions().find((x) => x.id === id && x.ok);
+    if (!o) return null;
+    const p = this.player;
+    if (o.kind === 'base') return { x: o.x, y: o.y };
+    if (o.kind === 'flag') return this.ctf._freePoint(o.flag, o.flag.spawnDistance, p.hw, p.hh);
+    return this.ctf._freePoint(o.unit, this.squadCfg.spawnDistance || [10, 20], p.hw, p.hh);
+  }
+
+  // ---------- Squadra del giocatore ----------
+
+  /**
+   * Ordine alla squadra (azione squadOrder): su desktop la bandiera sotto il mirino, su touch la più vicina al
+   * giocatore; ripetuto sulla stessa bandiera (o senza bandiera) = "seguitemi".
+   */
+  _issueOrder() {
+    if (!this.bots.some((b) => b.playerSquad)) return;
+    const { input, player } = this;
+    let target = null;
+    if (input.mode === 'desktop' && input.mouse.seen) {
+      const mx = input.mouseGame.x + Math.round(this.camera.x);
+      const my = input.mouseGame.y + Math.round(this.camera.y);
+      let bestD = Infinity;
+      for (const f of this.ctf.flags) {
+        const d = Math.hypot(f.x - mx, f.y - my);
+        if (d < f.radius + (this.squadCfg.orderPick ?? 24) && d < bestD) {
+          bestD = d;
+          target = f;
+        }
+      }
+    } else {
+      let bestD = Infinity;
+      for (const f of this.ctf.flags) {
+        const d = Math.hypot(f.x - player.x, f.y - player.y);
+        if (d < bestD) {
+          bestD = d;
+          target = f;
+        }
+      }
+    }
+    const o = this.squadOrder;
+    if (target && !(o.type === 'flag' && o.flag === target)) this.squadOrder = { type: 'flag', flag: target };
+    else this.squadOrder = { type: 'follow' };
+    this.squads[this.playerTeam]?.replan();
+    this.hud.notify(this._orderText(), this.squadCfg.color);
+    if (this.squadCfg.orderSound) this.audio.play(this.squadCfg.orderSound);
+  }
+
+  /** Testo dell'ordine attuale: "Squadra: seguitemi" / "attaccate B" / "difendete B". */
+  _orderText() {
+    const o = this.squadOrder;
+    if (o.type !== 'flag') return this.i18n.t('squad.follow');
+    const key = o.flag.owner === this.playerTeam && o.flag.progress >= 1 ? 'squad.defend' : 'squad.attack';
+    return this.i18n.t(key, { flag: o.flag.id });
+  }
+
+  // ---------- Elenco delle uccisioni ----------
+
+  /** Il soldato "victim" è morto: riga dell'elenco (chi, con cosa, chi). */
+  _feedDeath(victim) {
+    if (this.attract) return;
+    const k = victim.killer && victim.killer !== victim ? victim.killer : null;
+    const fc = this.hud?.cfg?.killFeed || {};
+    this.killFeed.push({
+      killer: k?.combatant?.name ?? null,
+      kTeam: k?.team ?? null,
+      victim: victim.combatant?.name ?? '?',
+      vTeam: victim.team,
+      how: this._killHow(victim),
+      mine: victim === this.player || k === this.player,
+      age: 0,
+    });
+    while (this.killFeed.length > (fc.max ?? 5)) this.killFeed.shift();
+  }
+
+  /** Come è morto "victim" (testo breve): arma, granata, razzo, mezzo, investito... */
+  _killHow(victim) {
+    const c = victim.killCause || {};
+    const k = victim.killer;
+    const t = (key) => this.i18n.t(key);
+    const wname = (id) => {
+      const w = id && this.weapons.has(id) ? this.weapons.get(id) : null;
+      return w ? t(w.name || w.id) : '';
+    };
+    switch (c.cause) {
+      case 'bullet': {
+        const w = c.weapon && this.weapons.has(c.weapon) ? this.weapons.get(c.weapon) : null;
+        // armi del mezzo: il nome del mezzo
+        if (w?.vehicleOnly && k?.vehicle) return t(k.vehicle.def.name || 'killfeed.vehicle');
+        return wname(c.weapon);
+      }
+      case 'grenade':
+        return t('killfeed.grenade');
+      case 'rocket':
+        return k?.vehicle ? t(k.vehicle.def.name || 'killfeed.rocket') : t('killfeed.rocket');
+      case 'runover':
+        return t('killfeed.runover');
+      case 'vehicle':
+        return t('killfeed.vehicle');
+      default:
+        return c.cause ? t('killfeed.explosion') : '';
+    }
   }
 
   _addCorpse(p) {
@@ -1060,11 +1266,16 @@ export class Game {
     const r = this.respawn;
     r.time += dt;
     if (r.time < r.delay) return;
-    // rientro alla bandiera della squadra più vicina al punto della morte, o alla base
+    // con la schermata di rientro (giocatore umano) si aspetta la conferma; senza (dimostrativa) si rientra da soli
+    const ui = !this.attract && this.onDeployOpen;
+    if (ui && !r.confirmed) return;
+    // punto scelto (se nel frattempo non è più disponibile: il predefinito), altrimenti la regola di sempre
     const p = this.player;
-    const pos = this.ctf.spawnPoint(this.playerTeam, r, p.hw, p.hh, { enemies: this._enemiesOf(this.playerTeam) });
+    const pos = (ui && (this._deployPoint(r.choice) || this._deployPoint(this._defaultDeploy())))
+      || this.ctf.spawnPoint(this.playerTeam, r, p.hw, p.hh, { enemies: this._enemiesOf(this.playerTeam) });
     this._spawnPlayer(pos.x, pos.y);
     this.respawn = null;
+    this.onDeployClose?.();
     if (this.deathCfg.respawnSound) this.audio.play(this.deathCfg.respawnSound);
     this._snapCamera();
   }
@@ -1283,6 +1494,7 @@ export class Game {
     const w = this.ctf.result.winner;
     const outcome = w === null ? 'draw' : w === this.playerTeam ? 'victory' : 'defeat';
     this.ended = { time: 0, shown: false, outcome };
+    if (this.respawn) this.onDeployClose?.();
     this.respawn = null;
     this.pickupOffer = null;
     this.vehicleOffer = null;
@@ -1367,7 +1579,9 @@ export class Game {
   }
 
   _spawnBullet(shooter, w) {
-    const spread = ((w.spreadDeg || 0) * Math.PI) / 180;
+    // sotto il fuoco nemico (soppressione) la rosa si allarga di combat.suppression.spreadDeg
+    const sup = (shooter.suppression || 0) * (this.combat.suppression?.spreadDeg ?? 0);
+    const spread = (((w.spreadDeg || 0) + sup) * Math.PI) / 180;
     const a = shooter.angle + (Math.random() - 0.5) * spread;
     const dx = Math.cos(a);
     const dy = Math.sin(a);
@@ -1451,10 +1665,34 @@ export class Game {
     return Math.max(0, t);
   }
 
+  /**
+   * Soppressione: il colpo b, passato da (x0, y0) a (b.x, b.y) in questo tick, sfiora i soldati nemici entro
+   * combat.suppression.radius px (ognuno una volta sola per colpo).
+   */
+  _suppress(b, x0, y0) {
+    const sc = this.combat.suppression;
+    if (!sc || b.fromAir) return;
+    const R = sc.radius ?? 14;
+    const dx = b.x - x0;
+    const dy = b.y - y0;
+    const len2 = dx * dx + dy * dy || 1;
+    for (const u of this.units) {
+      if (u.dead || u.vehicle || u.team === b.team || u === b.owner) continue;
+      if (Math.abs(u.x - b.x) > R + 40 || Math.abs(u.y - b.y) > R + 40) continue;
+      const t = Math.max(0, Math.min(1, ((u.x - x0) * dx + (u.y - y0) * dy) / len2));
+      if (Math.hypot(u.x - (x0 + dx * t), u.y - (y0 + dy * t)) > R) continue;
+      if (b.near?.has(u)) continue;
+      (b.near ||= new Set()).add(u);
+      u.suppress(sc.amount ?? 0.2, sc.hold ?? 0.4);
+    }
+  }
+
   _updateBullets(dt) {
     const map = this.map;
     for (let i = this.bullets.length - 1; i >= 0; i--) {
       const b = this.bullets[i];
+      const bx0 = b.x;
+      const by0 = b.y;
       let travel = b.speed * dt;
       let done = false;
       while (travel > 0 && !done) {
@@ -1488,6 +1726,7 @@ export class Game {
           done = true;
         }
       }
+      this._suppress(b, bx0, by0);
       if (done) this.bullets.splice(i, 1);
     }
   }
@@ -1594,6 +1833,7 @@ export class Game {
       if (o.draw) o.draw(ctx);
       else this.ctf.drawFlag(ctx, o);
     }
+    if (!this.attract) this._drawSquadMarks(ctx);
     if (this.debug) this._drawBotDebug(ctx);
     this.effects.drawCasings(ctx, true); // bossoli in volo
     this.grenades.draw(ctx, true); // granate in volo
@@ -1641,6 +1881,7 @@ export class Game {
           // compare solo sopra un'arma raccoglibile o vicino a un mezzo libero
           pickup: { hidden: !this.pickupOffer && !this.vehicleOffer, icon: this.vehicleOffer ? 'enter' : 'pickup' },
           switchWeapon: { hidden: !p.holster }, // solo con due armi
+          squadOrder: { hidden: !this.bots.some((b) => b.playerSquad) },
         });
       }
     }
@@ -1651,7 +1892,7 @@ export class Game {
         ctf: this.ctf,
         team: this.playerTeam,
         zone: this.ended ? null : this.ctf.zoneStatus(this.player),
-        respawnIn: r ? Math.max(0, r.delay - r.time) : null,
+        respawnIn: r && !this.onDeployOpen ? Math.max(0, r.delay - r.time) : null, // con la schermata di rientro: lì
         rank: {
           insignia: this.ranks.insignia(pr.index),
           name: this.i18n.t(`ranks.${pr.rank.id}.short`),
@@ -1663,9 +1904,78 @@ export class Game {
         reloadPrompt: playing ? this._reloadPrompt() : null,
         vehicle: this.player.vehicle ? this._vehicleHud(this.player.vehicle) : null,
         holster: this._holsterHud(),
+        minimap: this._minimapHud(),
+        killFeed: this.killFeed,
+        compactFeed: input.mode === 'touch', // su touch: senza l'arma (non arriva ai pulsanti)
+        squad: this.bots.some((b) => b.playerSquad) ? this._squadHud() : null,
+        stamina: this.player.cfg.sprint && !this.player.vehicle && this.player.stamina < 1 ? this.player.stamina : null,
+        suppression: playing ? this.player.suppression : 0,
       });
     }
     if (this.debug) this._drawDebug(ui);
+  }
+
+  /** Segno sopra la testa dei compagni di squadra (colore squad.color), anche quando sono a bordo di un mezzo. */
+  _drawSquadMarks(ctx) {
+    const color = this.squadCfg.color || '#7cf07c';
+    ctx.fillStyle = color;
+    for (const b of this.bots) {
+      const u = b.unit;
+      if (!b.playerSquad || !u || u.dead) continue;
+      const x = Math.round(u.x);
+      const y = Math.round(u.y) - (u.vehicle ? 16 : 10);
+      // triangolino verso il basso, 5x3 px, con ombra
+      ctx.globalAlpha = 0.5;
+      ctx.fillStyle = '#000';
+      ctx.fillRect(x - 1, y + 1, 5, 1);
+      ctx.fillRect(x, y + 2, 3, 1);
+      ctx.fillRect(x + 1, y + 3, 1, 1);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = color;
+      ctx.fillRect(x - 2, y, 5, 1);
+      ctx.fillRect(x - 1, y + 1, 3, 1);
+      ctx.fillRect(x, y + 2, 1, 1);
+    }
+  }
+
+  /** Dati della minimappa: mappa, bandiere, giocatore, compagni (squadra a parte), nemici avvistati, mezzi. */
+  _minimapHud() {
+    const team = this.playerTeam;
+    const sq = this.squads[team];
+    const mm = this.hud.cfg.minimap || {};
+    const memory = mm.enemyMemory ?? 3;
+    const enemies = [];
+    if (sq) {
+      for (const [e, k] of sq.contacts) {
+        if (e.dead || e.destroyed || this.time - k.time > memory) continue;
+        enemies.push({ x: k.x, y: k.y, vehicle: !!e.isVehicle });
+      }
+    }
+    const allies = [];
+    const squad = [];
+    for (const b of this.bots) {
+      const u = b.unit;
+      if (!u || u.dead || u.team !== team) continue;
+      (b.playerSquad ? squad : allies).push({ x: u.x, y: u.y });
+    }
+    const p = this.player;
+    return {
+      map: this.map,
+      ctf: this.ctf,
+      team,
+      player: p.dead ? null : { x: p.x, y: p.y, angle: p.vehicle ? p.vehicle.angle : p.angle },
+      allies,
+      squad,
+      enemies,
+      vehicles: this.vehicles.filter((v) => !v.destroyed && (v.team === team || !v.occupied)).map((v) => ({ x: v.x, y: v.y, team: v.occupied ? v.team : null })),
+      order: this.squadOrder.type === 'flag' ? this.squadOrder.flag : null,
+    };
+  }
+
+  /** Riga della squadra nell'HUD: ordine attuale (+ tasto su desktop). */
+  _squadHud() {
+    const key = this.input.mode === 'touch' ? null : keyName(this.input.bindings.squadOrder?.[0], this.i18n);
+    return { text: this._orderText(), key };
   }
 
   /** Arma nella fondina per l'HUD: "[Q] Lanciarazzi" (su touch senza tasto), o null. */

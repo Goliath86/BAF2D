@@ -89,6 +89,8 @@
       "grenade": "Granata",
       "pickup": "Raccogli / mezzo",
       "switchWeapon": "Cambia arma",
+      "sprint": "Corsa",
+      "squadOrder": "Ordine alla squadra",
       "pause": "Pausa"
     }
   },
@@ -128,6 +130,34 @@
     "drawTimeSubtitle": "Tempo scaduto: squadre in parità",
     "rematch": "Rivincita",
     "menu": "Menu principale"
+  },
+  "deploy": {
+    "title": "Rientro",
+    "killedBy": "Ucciso da {name}{how}",
+    "wait": "Rientro possibile tra {seconds} s",
+    "waiting": "Rientro tra {seconds}…",
+    "ready": "Scegli dove rientrare",
+    "go": "Rientra",
+    "base": "Base",
+    "baseShort": "QG",
+    "flag": "Bandiera {flag}",
+    "contested": "contesa",
+    "enemiesNear": "nemici vicini",
+    "mateDead": "morto",
+    "mateInVehicle": "su un mezzo",
+    "mateFighting": "in combattimento"
+  },
+  "squad": {
+    "follow": "Squadra: seguitemi",
+    "attack": "Squadra: attaccate {flag}",
+    "defend": "Squadra: difendete {flag}"
+  },
+  "killfeed": {
+    "grenade": "Granata",
+    "rocket": "Razzo",
+    "runover": "Investito",
+    "vehicle": "Mezzo distrutto",
+    "explosion": "Esplosione"
   },
   "hud": {
     "medal": "MEDAGLIA",

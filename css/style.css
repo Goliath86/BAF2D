@@ -195,6 +195,178 @@ body.match-over #overlay-matchend {
   text-align: center;
 }
 
+/* ---------- Schermata di rientro (js/deploy.js) ---------- */
+
+#overlay-deploy {
+  background: rgba(5, 5, 10, 0.45);
+  padding: 10px;
+  cursor: default;
+  animation: fade-in 0.3s ease-out;
+}
+
+.deploy-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(1100px, 100%);
+  max-height: 100%;
+  padding: 14px 18px;
+  background: rgba(9, 9, 16, 0.95);
+  border: 4px solid #23233a;
+  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.6);
+  text-align: left;
+}
+
+.deploy-head {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.deploy-title {
+  color: var(--menu-gold, #ffd36b);
+  font-size: 22px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  text-shadow: 2px 2px 0 #000;
+}
+
+.deploy-killed {
+  color: #e8463a;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.deploy-body {
+  display: flex;
+  gap: 14px;
+  height: min(72vh, 620px);
+  min-height: 0;
+}
+
+.deploy-map-box {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.deploy-map {
+  position: static;
+  display: block;
+  max-width: 100%;
+  border: 2px solid #23233a;
+  background: #000;
+  cursor: pointer;
+}
+
+.deploy-side {
+  width: 250px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+.deploy-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+  scrollbar-width: thin;
+}
+
+.deploy-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 2px solid #23233a;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--menu-text, #e8e8f0);
+  font: bold 14px "Courier New", monospace;
+  text-align: left;
+  cursor: pointer;
+}
+
+.deploy-option .deploy-key {
+  color: var(--menu-dim, #9a9ab0);
+  min-width: 1.2em;
+}
+
+.deploy-option .deploy-mark {
+  width: 10px;
+  height: 10px;
+  flex: none;
+  box-shadow: 1px 1px 0 #000;
+}
+
+.deploy-option .deploy-reason {
+  margin-left: auto;
+  color: var(--menu-dim, #9a9ab0);
+  font-size: 11px;
+  font-weight: normal;
+}
+
+.deploy-option[aria-pressed="true"] {
+  border-color: var(--menu-gold, #ffd36b);
+  background: rgba(255, 211, 107, 0.12);
+}
+
+.deploy-option:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.deploy-timer {
+  color: var(--menu-dim, #9a9ab0);
+  font-size: 13px;
+  min-height: 1.2em;
+}
+
+.deploy-go {
+  width: 100%;
+  text-align: center;
+}
+
+/* telefono in orizzontale: tutto più compatto */
+@media (max-height: 480px) {
+  #overlay-deploy {
+    padding: 4px;
+  }
+
+  .deploy-panel {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+
+  .deploy-title {
+    font-size: 16px;
+  }
+
+  .deploy-killed {
+    font-size: 12px;
+  }
+
+  .deploy-body {
+    height: calc(100vh - 64px);
+  }
+
+  .deploy-side {
+    width: 200px;
+  }
+
+  .deploy-option {
+    padding: 5px 8px;
+    font-size: 12px;
+  }
+}
+
 /* ---------- Classifica e grado ---------- */
 
 /* insegne dei gradi: canvas a pixel di gioco ingranditi (la regola generale "canvas" è per il gioco) */

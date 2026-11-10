@@ -49,6 +49,13 @@ export class Player {
     this.moving = false;
     this.vx = 0; // velocità effettiva (px/s), ereditata in parte dai bossoli espulsi
     this.vy = 0;
+    // corsa (cfg.sprint = { factor, drain, recover, minRestart }): fiato 0..1, a zero si riprende solo da minRestart
+    this.stamina = 1;
+    this.sprinting = false;
+    this.winded = false;
+    // soppressione 0..1: colpi che passano vicino (Game._suppress); allarga la rosa dei colpi, i bot si riparano
+    this.suppression = 0;
+    this.suppressHold = 0;
     this.casingTimer = null; // secondi all'espulsione ritardata del bossolo (es. pompa)
 
     // Busto: lo sprite dipende dall'arma impugnata (vedi equip)
@@ -313,7 +320,10 @@ export class Player {
       move.y *= f;
     }
     const mag = Math.min(1, Math.hypot(move.x, move.y));
-    const p = map.moveAndCollide(this.x, this.y, this.hw, this.hh, move.x * this.speed * dt, move.y * this.speed * dt);
+    const speedFactor = this._updateSprint(dt, ctrl, mag);
+    this._updateSuppression(dt);
+    const speed = this.speed * speedFactor;
+    const p = map.moveAndCollide(this.x, this.y, this.hw, this.hh, move.x * speed * dt, move.y * speed * dt);
     this.vx = (p.x - this.x) / dt;
     this.vy = (p.y - this.y) / dt;
     this.x = p.x;
@@ -346,7 +356,8 @@ export class Player {
     // Durante la ricarica non si spara; a caricatore vuoto il grilletto fa "click"
     // (e, se l'arma ha autoReload, parte la ricarica). autoReloadEmpty (opzione del giocatore umano):
     // la ricarica parte da sola appena il caricatore si svuota, senza premere nulla.
-    const firing = !!ctrl.firing;
+    // correndo non si spara (premere il grilletto interrompe la corsa dal tick successivo)
+    const firing = !!ctrl.firing && !this.sprinting;
     const pressed = firing && !this.triggerHeld;
     const auto = w.auto || !!ctrl.repeat;
     if (this.reload) {
@@ -390,6 +401,40 @@ export class Player {
     }
   }
 
+  /**
+   * Corsa (ctrl.sprint): solo muovendosi, senza ricaricare né sparare; consuma il fiato in sprint.drain s e lo
+   * recupera in sprint.recover s; finito il fiato si torna a correre solo da sprint.minRestart.
+   * Restituisce il moltiplicatore della velocità.
+   */
+  _updateSprint(dt, ctrl, mag) {
+    const sc = this.cfg.sprint;
+    if (!sc) return 1;
+    if (this.winded && this.stamina >= (sc.minRestart ?? 0.3)) this.winded = false;
+    this.sprinting = !!ctrl.sprint && mag > 0.3 && !this.reload && !ctrl.firing && !this.winded && this.stamina > 0;
+    if (this.sprinting) {
+      this.stamina = Math.max(0, this.stamina - dt / (sc.drain ?? 5));
+      if (this.stamina <= 0) this.winded = true;
+      return sc.factor ?? 1.4;
+    }
+    this.stamina = Math.min(1, this.stamina + dt / (sc.recover ?? 6));
+    return 1;
+  }
+
+  /** Colpo nemico passato vicino: soppressione + amount (fino a 1), resta per hold s poi cala di decay al secondo. */
+  suppress(amount, hold = 0.4) {
+    if (this.dead) return;
+    this.suppression = Math.min(1, this.suppression + amount);
+    this.suppressHold = Math.max(this.suppressHold, hold);
+  }
+
+  _updateSuppression(dt) {
+    if (this.suppressHold > 0) {
+      this.suppressHold -= dt;
+      return;
+    }
+    this.suppression = Math.max(0, this.suppression - dt * (this.cfg.suppressionDecay ?? 0.6));
+  }
+
   _updateLegs(dt, move, mag) {
     let target = this.angle;
     let dir = 1;
@@ -407,7 +452,9 @@ export class Player {
 
     if (this.moving) {
       this.legsAnim.play('walk');
-      this.legsAnim.update(dt * Math.max(0.35, mag) * dir);
+      // di corsa il passo è più rapido, come la velocità
+      const run = this.sprinting ? this.cfg.sprint?.factor ?? 1.4 : 1;
+      this.legsAnim.update(dt * Math.max(0.35, mag) * dir * run);
     } else {
       this.legsAnim.play('idle');
       this.legsAnim.update(dt);

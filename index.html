@@ -156,6 +156,24 @@
   <!-- pausa su touch (su desktop: Esc / P) -->
   <button type="button" id="pause-button" class="pause-button hidden" data-i18n-title="menu.pause"></button>
 
+  <!-- schermata di rientro (js/deploy.js): mappa tattica, punti di rientro (base, bandiere, compagni), conferma -->
+  <div id="overlay-deploy" class="overlay deploy hidden">
+    <div class="panel deploy-panel">
+      <div class="deploy-head">
+        <h2 class="deploy-title" data-i18n="deploy.title"></h2>
+        <p id="deploy-killed" class="deploy-killed"></p>
+      </div>
+      <div class="deploy-body">
+        <div class="deploy-map-box"><canvas id="deploy-map" class="deploy-map"></canvas></div>
+        <div class="deploy-side">
+          <div id="deploy-list" class="deploy-list"></div>
+          <p id="deploy-timer" class="deploy-timer"></p>
+          <button type="button" id="deploy-go" class="menu-item primary deploy-go"></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- titolo e sottotitolo in base all'esito (matchEnd.victory/defeat/draw), classifica e carriera: menu.js -->
   <div id="overlay-matchend" class="overlay hidden">
     <div class="panel matchend-panel">

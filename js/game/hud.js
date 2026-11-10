@@ -90,7 +90,15 @@ export class Hud {
     const u = display.cssPerPixel;
     ui.save();
     ui.imageSmoothingEnabled = false;
+    if (mode?.suppression > 0.01) this._drawSuppression(ui, display, mode.suppression);
     this._drawHealth(ui, u, player);
+    if (mode?.stamina !== null && mode?.stamina !== undefined) this._drawStamina(ui, u, mode.stamina);
+    if (mode?.minimap) {
+      const W = Math.floor(display.cssWidth / u);
+      let y = this._drawMinimap(ui, u, W, mode.minimap);
+      if (mode.squad) y = this._drawSquadLine(ui, u, W, y, mode.squad);
+      if (mode.killFeed?.length) this._drawKillFeed(ui, u, W, y + 2, mode.killFeed, mode.minimap.ctf.teams, mode.compactFeed);
+    }
     this._drawGrenades(ui, u, player);
     if (mode?.rank && this.rc.show !== false) this._drawRank(ui, u, mode.rank);
     if (mode?.screen) this._drawPopups(ui, u, mode.screen);
@@ -112,6 +120,132 @@ export class Hud {
     }
     if (this.promotions.length) this._drawPromotion(ui, u, Math.floor(display.cssWidth / u), Math.floor(display.cssHeight / u));
     ui.restore();
+  }
+
+  // ---------- Fronte: minimappa, squadra, elenco delle uccisioni, fiato, soppressione ----------
+
+  /**
+   * Minimappa in alto a destra sotto l'arma (hud.minimap: top, width, alpha...): la mappa (con i crolli),
+   * bandiere col colore del proprietario, compagni, squadra, nemici avvistati dalla squadra, mezzi, giocatore.
+   * Restituisce la y (pixel di gioco) sotto la minimappa.
+   */
+  _drawMinimap(ui, u, W, d) {
+    const mc = this.cfg.minimap || {};
+    const m = this.cfg.margin ?? 5;
+    const map = d.map;
+    const w = mc.width ?? 72;
+    const h = Math.round((w * map.pixelHeight) / map.pixelWidth);
+    const x0 = W - m - w;
+    const y0 = mc.top ?? 52;
+    const k = w / map.pixelWidth; // pixel di gioco della minimappa per pixel del mondo
+    const shadow = this.cfg.shadow || '#000';
+    this._px(ui, u, x0 - 1, y0 - 1, w + 2, h + 2, mc.border || '#000');
+    ui.save();
+    ui.globalAlpha = mc.alpha ?? 0.85;
+    ui.imageSmoothingEnabled = true; // rimpicciolita: meglio sfumata che a scatti
+    ui.drawImage(map.canvas, 0, 0, map.pixelWidth, map.pixelHeight, x0 * u, y0 * u, w * u, h * u);
+    ui.restore();
+    ui.imageSmoothingEnabled = false;
+    const P = (wx, wy) => [Math.round(x0 + wx * k), Math.round(y0 + wy * k)];
+    const dot = (wx, wy, color, s = 2) => {
+      const [x, y] = P(wx, wy);
+      this._px(ui, u, x - (s >> 1), y - (s >> 1), s, s, color);
+    };
+    const teams = d.ctf.teams;
+    // bandiere: quadratino del colore del proprietario (bianco = neutrale), lampeggia se contesa; ordine = cornice
+    for (const f of d.ctf.flags) {
+      const [x, y] = P(f.x, f.y);
+      const blink = f.contested && Math.floor(this.time * 4) % 2 === 0;
+      const c = blink ? '#ffffff' : f.owner ? teams[f.owner].color : mc.neutral || '#e8e8e8';
+      if (d.order === f) this._px(ui, u, x - 3, y - 3, 7, 7, this.cfg.squadColor || mc.squad || '#7cf07c');
+      this._px(ui, u, x - 2, y - 2, 5, 5, shadow);
+      this._px(ui, u, x - 2, y - 2, 4, 4, c);
+    }
+    for (const v of d.vehicles) dot(v.x, v.y, v.team ? teams[v.team]?.dark || '#888' : mc.emptyVehicle || '#9a9a9a', 3);
+    for (const a of d.allies) dot(a.x, a.y, teams[d.team]?.color || '#4af');
+    for (const e of d.enemies) dot(e.x, e.y, mc.enemy || '#ff4a3a', e.vehicle ? 3 : 2);
+    for (const s of d.squad) dot(s.x, s.y, mc.squad || '#7cf07c');
+    if (d.player) {
+      // giocatore: punto bianco con un pixel nella direzione della mira
+      const [x, y] = P(d.player.x, d.player.y);
+      this._px(ui, u, x - 1, y - 1, 3, 3, shadow);
+      this._px(ui, u, x - 1, y - 1, 2, 2, mc.player || '#ffffff');
+      this._px(ui, u, Math.round(x + Math.cos(d.player.angle) * 2), Math.round(y + Math.sin(d.player.angle) * 2), 1, 1, mc.player || '#ffffff');
+    }
+    return y0 + h + 3;
+  }
+
+  /** Sotto la minimappa: ordine attuale alla squadra ("SQUADRA: SEGUITEMI [T]"). */
+  _drawSquadLine(ui, u, W, y, s) {
+    const m = this.cfg.margin ?? 5;
+    const size = this.cfg.squadFontSize ?? 6;
+    const text = s.key ? `${s.text} [${s.key}]` : s.text;
+    this._text(ui, u, text, W - m, y, size, this.cfg.minimap?.squad || '#7cf07c', 'right');
+    return y + size + 2;
+  }
+
+  /**
+   * Elenco delle uccisioni (hud.killFeed: fontSize, life, fade, max): "Uccisore [arma] Vittima" allineato a destra,
+   * nomi nel colore della squadra, le righe che riguardano il giocatore evidenziate; le vecchie svaniscono.
+   */
+  _drawKillFeed(ui, u, W, y, list, teams = {}, compact = false) {
+    const fc = this.cfg.killFeed || {};
+    const m = this.cfg.margin ?? 5;
+    const size = fc.fontSize ?? 6;
+    const life = fc.life ?? 6;
+    const fade = fc.fade ?? 1;
+    for (let i = list.length - 1; i >= 0; i--) {
+      const k = list[i];
+      const a = Math.max(0, Math.min(1, (life - k.age) / fade));
+      if (a <= 0) continue;
+      ui.globalAlpha = a;
+      if (k.mine) {
+        ui.font = `bold ${Math.round(size * u)}px ${this.cfg.font || 'monospace'}`;
+        const kw = this._killWidth(ui, u, k, compact);
+        this._px(ui, u, W - m - 2 - kw, y - 1, kw + 4, size + 2, fc.mineBack || 'rgba(255,211,107,0.22)');
+      }
+      let x = W - m;
+      x -= this._textW(ui, u, k.victim, x, y, size, teams[k.vTeam]?.light || '#fff', 'right') + 3;
+      const how = compact ? (k.killer ? '›' : '') : k.how ? `[${k.how}]` : '';
+      if (how) x -= this._textW(ui, u, how, x, y, size, fc.weaponColor || '#c8c8d0', 'right') + 3;
+      if (k.killer) this._text(ui, u, k.killer, x, y, size, teams[k.kTeam]?.light || '#fff', 'right');
+      y += size + 2;
+    }
+    ui.globalAlpha = 1;
+  }
+
+  /** Larghezza (pixel di gioco) di una riga dell'elenco delle uccisioni (font già impostato). */
+  _killWidth(ui, u, k, compact = false) {
+    const how = compact ? (k.killer ? '›' : null) : k.how ? `[${k.how}]` : null;
+    const parts = [k.victim, how, k.killer].filter(Boolean);
+    return parts.reduce((s, p) => s + ui.measureText(p).width / u, 0) + (parts.length - 1) * 3;
+  }
+
+  /** Fiato della corsa: barra sottile sotto quella della vita (solo quando non è pieno). */
+  _drawStamina(ui, u, stamina) {
+    const sc = this.cfg.stamina || {};
+    const m = this.cfg.margin ?? 5;
+    const bw = this.hc.width ?? 60;
+    const bx = m + 9;
+    const by = m + (this.hc.height ?? 5) + 1;
+    const low = stamina < (sc.low ?? 0.25);
+    this._px(ui, u, bx, by, bw, 1, sc.back || 'rgba(0,0,0,0.6)');
+    this._px(ui, u, bx, by, Math.round(bw * stamina), 1, low ? sc.lowColor || '#ff9a3a' : sc.color || '#8ad4ff');
+  }
+
+  /** Soppressione: bordi dello schermo che si scuriscono sotto il fuoco (hud.suppression: color, maxAlpha, inner). */
+  _drawSuppression(ui, display, s) {
+    const sc = this.cfg.suppression || {};
+    const w = display.cssWidth;
+    const h = display.cssHeight;
+    const r = Math.hypot(w, h) / 2;
+    const g = ui.createRadialGradient(w / 2, h / 2, r * (sc.inner ?? 0.45), w / 2, h / 2, r);
+    const a = Math.min(1, s) * (sc.maxAlpha ?? 0.5);
+    const c = sc.color || '0,0,0';
+    g.addColorStop(0, `rgba(${c},0)`);
+    g.addColorStop(1, `rgba(${c},${a.toFixed(3)})`);
+    ui.fillStyle = g;
+    ui.fillRect(0, 0, w, h);
   }
 
   /** "RICARICA!" lampeggiante al centro, sotto il giocatore (game.json -> hud.reloadPrompt). */

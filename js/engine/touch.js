@@ -356,6 +356,25 @@ export class TouchSticks {
       ctx.stroke();
     }
 
+    if (icon === 'order') {
+      // bandierina su un'asta (ordine alla squadra)
+      const s = r * 0.42;
+      const lw = Math.max(2, r * 0.09);
+      ctx.lineWidth = lw;
+      ctx.strokeStyle = accent;
+      ctx.beginPath();
+      ctx.moveTo(x - s * 0.6, y + s);
+      ctx.lineTo(x - s * 0.6, y - s);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x - s * 0.6, y - s);
+      ctx.lineTo(x + s * 0.9, y - s * 0.55);
+      ctx.lineTo(x - s * 0.6, y - s * 0.1);
+      ctx.closePath();
+      ctx.fillStyle = accent;
+      ctx.fill();
+    }
+
     if (st.badge) {
       // numero piccolo in basso a destra (es. granate rimaste)
       const bx = x + r * 0.62;

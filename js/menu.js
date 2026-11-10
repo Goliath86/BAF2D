@@ -7,6 +7,7 @@ import { TileMap } from './engine/tilemap.js';
 import { keyName } from './engine/input.js';
 import { MenuScene } from './menu_scene.js';
 import { drawSoldier, PORTRAIT } from './soldier_art.js';
+import { DeployScreen } from './deploy.js';
 
 // scelte del soldato nell'ordine della schermata (il nome è a parte)
 const SOLDIER_FIELDS = ['weapon', 'camo', 'vest', 'vestColor', 'headgear', 'eyewear', 'beard', 'beardColor', 'skin', 'gloves', 'boots', 'headset', 'shemagh', 'kneepads'];
@@ -41,6 +42,10 @@ export class Menu {
     this.rebinding = null; // { action, slot } mentre si aspetta un tasto
     this.teamIds = Object.keys(config.teams || {});
     this.scene = sceneCfg ? new MenuScene($('menu-scene'), sceneCfg, i18n) : null;
+    // schermata di rientro dopo la morte del giocatore (aperta/chiusa dal gioco)
+    this.deploy = new DeployScreen({ game, i18n });
+    game.onDeployOpen = () => this._syncDeploy();
+    game.onDeployClose = () => this._syncDeploy();
 
     // ultima configurazione usata (salvata) o valori di default da game.json -> menu
     const last = settings.get('newGame', {});
@@ -97,6 +102,7 @@ export class Menu {
     this.input.releaseAll();
     this.audio.setMuted(true);
     this.mode = 'menu';
+    this._syncDeploy();
     this.stack = [];
     this._open('main');
     this._renderCareer($('menu-career'), game.career.xp);
@@ -142,8 +148,29 @@ export class Menu {
     this.input.enabled = false;
     this.input.releaseAll();
     this.stack = [];
+    this._syncDeploy(); // in pausa la schermata di rientro si chiude (si riapre alla ripresa)
     this._open('pause');
     this._updatePauseButton();
+  }
+
+  /**
+   * Schermata di rientro visibile solo in partita con il giocatore morto (game.respawn); mentre è aperta
+   * l'input del gioco è spento (tasti e tocchi vanno alla schermata).
+   */
+  _syncDeploy() {
+    const want = this.mode === 'playing' && !!this.game.respawn && !this.game.attract;
+    if (want === this.deploy.visible) return;
+    if (want) {
+      this.input.releaseAll();
+      this.input.enabled = false;
+      this.deploy.open();
+    } else {
+      this.deploy.close();
+      if (this.mode === 'playing') {
+        this.input.releaseAll();
+        this.input.enabled = true;
+      }
+    }
   }
 
   resume() {
@@ -158,12 +185,14 @@ export class Menu {
     document.activeElement?.blur?.(); // Spazio/Invio non devono premere un pulsante rimasto a fuoco
     this.input.releaseAll();
     this.input.enabled = true;
+    this._syncDeploy(); // ripresa con il giocatore morto: di nuovo la schermata di rientro
     this._updatePauseButton();
   }
 
   /** Callback del gioco (main.js li collega a game.onMatchEnd / onRestart). */
   onMatchEnd(outcome) {
     this.mode = 'ended';
+    this._syncDeploy();
     this._updatePauseButton();
     const ov = $('overlay-matchend');
     $('matchend-title').textContent = this.i18n.t(`matchEnd.${outcome}`);
