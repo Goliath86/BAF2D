@@ -1,4 +1,4 @@
-# BAF2D — itch.io page (v1.3.0)
+# BAF2D — itch.io page (v1.3.5)
 
 Copy each block into the matching field of the itch.io "Edit game" page.
 
@@ -15,7 +15,7 @@ Top-down pixel-art capture the flag: destructible maps, your own squad, vehicles
 ## Classification / Kind of project
 
 - Classification: **Games**
-- Kind of project: **HTML** (upload `dist/BAF2D-1.3.0-html5.zip`, tick "This file will be played in the browser")
+- Kind of project: **HTML** (upload `dist/BAF2D-1.3.5-html5.zip`, tick "This file will be played in the browser")
 - Release status: **Released**
 
 ## Embed options (Uploads → HTML)
@@ -68,6 +68,8 @@ pick up better weapons and jump into vehicles. Every match feeds your career: sc
   <li><strong>Squad AI.</strong> Bots move in pairs and spread across the flags, use cover, suppress, flank, dodge
     grenades, go and fetch a rocket launcher when enemy armour shows up, and drive vehicles to the flags. Up to
     8 vs 8.</li>
+  <li><strong>Gunfeel.</strong> Hit markers on the crosshair (with a distinct kill confirm), red arcs that show where
+    incoming fire comes from, a dynamic crosshair and recoil that rewards short bursts.</li>
   <li><strong>Career and ranks.</strong> Points for kills, assists, defending, capturing and destroying vehicles. Your
     rank is saved in the browser and grows from match to match, with a promotion screen when you rank up.</li>
   <li><strong>Medals.</strong> 16 feats to earn in battle: double and triple kills, killing sprees, grenade and
@@ -155,6 +157,25 @@ Source code licensed under the GNU GPL v3.</p>
   13. `apache_rocket.png` — Enemy gunship over the desert: a rocket launcher is your best friend.
 - Not in the list: `leaderboard.png` (superseded by `match_end.png`) and `editor.png` (superseded by
   `map_editor.png`).
+
+## Release notes (devlog) — v1.3.5
+
+Title: **BAF2D 1.3.5 — Hit markers and recoil**
+
+A small update focused on how shooting feels: you now always know when you hit, and where you're being hit from.
+
+**Hit feedback**
+- **Hit markers**: a tick flashes around the crosshair with a short sound whenever you hurt an enemy, with bullets,
+  grenades, rockets or by running them over. White on soldiers, orange on vehicles, longer and red on a kill. On
+  mobile it appears right on the target.
+- **Damage direction**: a red arc around your soldier points to where the shot came from; stronger hits are
+  brighter.
+- **Dynamic crosshair**: it opens up and closes with your weapon's current spread, so you can see how accurate your
+  next shot will be.
+
+**Recoil and movement**
+- Sustained automatic fire now spreads your shots wider, while short bursts stay accurate.
+- Standing still tightens your aim, moving loosens it. Bots play by the same rules.
 
 ## Release notes (devlog) — v1.3.0
 

@@ -3,7 +3,7 @@
 All notable changes to BAF2D. Versions follow [semantic versioning](https://semver.org/); the current version is
 in `config/game.json` (`version`) and shown in the bottom-right corner of the menu.
 
-## [Unreleased]
+## [1.3.5] — 2026-11-10
 
 ### Added
 - **Hit markers**: a tick around the crosshair (white on soldiers, orange on vehicles, longer and red on a kill) with
