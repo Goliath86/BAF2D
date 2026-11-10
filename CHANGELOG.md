@@ -3,7 +3,7 @@
 All notable changes to BAF2D. Versions follow [semantic versioning](https://semver.org/); the current version is
 in `config/game.json` (`version`) and shown in the bottom-right corner of the menu.
 
-## [Unreleased]
+## [1.2.0] — 2026-11-10
 
 ### Added
 - **Time limit** (*New game* → *Time limit*, 5–60 minutes or none, 20 by default): a countdown under the flags turns

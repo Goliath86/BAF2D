@@ -1,4 +1,4 @@
-# BAF2D — itch.io page (v1.1.2)
+# BAF2D — itch.io page (v1.2.0)
 
 Copy each block into the matching field of the itch.io "Edit game" page.
 
@@ -15,7 +15,7 @@ Top-down pixel-art capture the flag: squad AI, vehicles and helicopters, medals,
 ## Classification / Kind of project
 
 - Classification: **Games**
-- Kind of project: **HTML** (upload `dist/BAF2D-1.1.2-html5.zip`, tick "This file will be played in the browser")
+- Kind of project: **HTML** (upload `dist/BAF2D-1.2.0-html5.zip`, tick "This file will be played in the browser")
 - Release status: **Released**
 
 ## Embed options (Uploads → HTML)
@@ -147,6 +147,32 @@ Source code licensed under the GNU GPL v3.</p>
   13. `apache_rocket.png` — Enemy gunship over the desert: a rocket launcher is your best friend.
 - Not in the list: `leaderboard.png` (superseded by `match_end.png`) and `editor.png` (superseded by
   `map_editor.png`).
+
+## Release notes (devlog) — v1.2.0
+
+Title: **BAF2D 1.2.0 — Time limit and smarter squads**
+
+**Time limit**
+- New option in *New game*: a time limit from 5 to 60 minutes (or none; 20 by default). The countdown sits under
+  the flags and turns red in the last minute. When time runs out, the team with more tickets wins.
+
+**Smarter squads**
+- Bots no longer sit on their own quiet flags while there are flags left to take: matches keep moving and never
+  stall (Crossroads could get stuck for good before).
+- Squads now really share what they spot, so they react faster to attacks and to enemy vehicles.
+- On maps with vehicles every bot team always carries at least one rocket launcher.
+- Bots no longer freeze next to a weapon they can't quite reach.
+
+**Vehicles**
+- Jeeps have light armour: rifles and machine guns wear them down slowly, so jeep against jeep is now a real fight.
+- Two enemy vehicles no longer hold the same flag contested for ever.
+
+**Respawn**
+- You no longer respawn on a flag with enemies right next to it: you get a safer flag, or the base.
+
+**Results**
+- Across dozens of simulated bot matches: no more stalemates, more close finishes, and far fewer soldiers shot
+  right after respawning.
 
 ## Release notes (devlog) — v1.1.2
 
