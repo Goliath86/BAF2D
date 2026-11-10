@@ -177,6 +177,8 @@ A small update focused on how shooting feels: you now always know when you hit, 
 - Sustained automatic fire now spreads your shots wider, while short bursts stay accurate.
 - Standing still tightens your aim, moving loosens it. Bots play by the same rules.
 
+Have fun, and let me know in the comments how the shooting feels now!
+
 ## Release notes (devlog) — v1.3.0
 
 Title: **BAF2D 1.3.0 — Destructible maps and your own squad**
