@@ -190,6 +190,13 @@
     "killFeed": { "fontSize": 6, "life": 6, "fade": 1, "max": 5, "weaponColor": "#b8b8c4", "mineBack": "rgba(255,211,107,0.22)" },
     "stamina": { "color": "#8ad4ff", "lowColor": "#ff9a3a", "low": 0.25, "back": "rgba(0,0,0,0.6)" },
     "suppression": { "color": "0,0,0", "maxAlpha": 0.5, "inner": 0.45 },
+    "crosshair": { "dynamic": true, "color": "#ffffff", "outline": "#000000", "arm": 2, "minGap": 1, "maxGap": 10, "scale": 1, "smoothing": 18 },
+    "hitMarker": {
+      "life": 0.22, "killLife": 0.5, "killHold": 0.15, "fade": 0.4, "length": 2, "killLength": 3, "offset": 2,
+      "colors": { "hit": "#ffffff", "armor": "#ffb43a", "kill": "#ff3a2a" }, "shadow": "#000000",
+      "sound": "hit_marker", "armorSound": "hit_armor", "killSound": "hit_kill", "soundGap": 0.06
+    },
+    "hurtIndicator": { "color": "#ff2a1a", "radius": 20, "widthDeg": 50, "thickness": 3, "life": 1.2, "fade": 0.6, "minAlpha": 0.45, "maxAlpha": 0.9, "fullAt": 0.3, "mergeDeg": 25, "max": 6 },
     "margin": 5,
     "font": "\"Courier New\", monospace",
     "fontSize": 7,

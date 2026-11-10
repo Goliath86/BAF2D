@@ -161,13 +161,15 @@ export class Vehicle {
     return u;
   }
 
-  /** Danno (solo da esplosioni/razzi: la corazza ferma i proiettili, vedi Game). */
+  /** Danno (esplosioni/razzi; proiettili solo × bulletFactor, vedi Game). by.onDealt = segno di colpo a segno. */
   damage(amount, by = null) {
     if (this.destroyed || amount <= 0) return 0;
     if (by) this.lastHitBy = by;
     const before = this.health;
     this.health = Math.max(0, this.health - amount);
-    return before - this.health;
+    const dealt = before - this.health;
+    if (dealt > 0) by?.onDealt?.(this, dealt, this.health <= 0);
+    return dealt;
   }
 
   /** Punto di perno della torretta in coordinate mondo. */

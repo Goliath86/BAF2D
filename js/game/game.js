@@ -65,6 +65,10 @@ export class Game {
     this.bullets = [];
     this.grenades = new Grenades(assets, audio);
     this.shake = { time: 0, duration: 0, amount: 0 }; // scossa della camera (esplosioni)
+    // segno di colpo a segno del giocatore: { kind: hit|armor|kill, age, life, x, y } (hud.hitMarker)
+    this.hitMarker = null;
+    this.hitSoundAt = -1;
+    this.crosshairGap = null; // apertura del mirino dinamico (px di gioco, smorzata)
     this.effects = new Effects(effectsCfg, assets, audio);
     this.effectsCfg = effectsCfg;
     // decorazioni della mappa (game.json -> props) e meteo del livello (preparati in setup)
@@ -177,6 +181,7 @@ export class Game {
     const base = this.ctf.spawnPoint(this.playerTeam, null);
     this._spawnPlayer(base.x, base.y);
     this.hud = new Hud(this.config.hud, this.i18n, this.assets);
+    this.hitMarker = null;
     this.bullets.length = 0;
     this.grenades.clear();
     this.shake.time = 0;
@@ -367,7 +372,12 @@ export class Game {
     this.player.combatant = this.playerRecord;
     this.player.autoReloadEmpty = this.autoReload && !this.attract;
     this.squads[this.playerTeam]?.replan(); // la squadra segue il nuovo soldato del giocatore
-    if (!this.attract) return;
+    if (!this.attract) {
+      // colpi a segno (segno sul mirino + suono) e colpi subiti (indicatore della direzione)
+      this.player.onDealt = (target, dealt, killed) => this._onPlayerHit(target, killed);
+      this.player.onHurt = (dealt, source) => this._onPlayerHurt(dealt, source);
+      return;
+    }
     // partita dimostrativa: il giocatore è guidato da un BotBrain come gli altri soldati
     this.player.isBot = true;
     const squad = this.squads[this.playerTeam];
@@ -898,6 +908,7 @@ export class Game {
     for (const k of this.killFeed) k.age += dt;
     if (this.killFeed.length && this.killFeed[0].age >= feedLife) this.killFeed = this.killFeed.filter((k) => k.age < feedLife);
     this.hud.update(dt, this.player);
+    if (this.hitMarker && (this.hitMarker.age += dt) >= this.hitMarker.life) this.hitMarker = null;
     if (this.ended) {
       // a partita finita i mezzi si fermano per inerzia
       for (const v of this.vehicles) {
@@ -1579,9 +1590,11 @@ export class Game {
   }
 
   _spawnBullet(shooter, w) {
-    // sotto il fuoco nemico (soppressione) la rosa si allarga di combat.suppression.spreadDeg
+    // sotto il fuoco nemico (soppressione) la rosa si allarga di combat.suppression.spreadDeg;
+    // i soldati aggiungono movimento e rinculo (Player.spreadDeg), le armi dei mezzi usano solo quella dell'arma
     const sup = (shooter.suppression || 0) * (this.combat.suppression?.spreadDeg ?? 0);
-    const spread = (((w.spreadDeg || 0) + sup) * Math.PI) / 180;
+    const deg = typeof shooter.spreadDeg === 'function' ? shooter.spreadDeg(sup) : (w.spreadDeg || 0) + sup;
+    const spread = (deg * Math.PI) / 180;
     const a = shooter.angle + (Math.random() - 0.5) * spread;
     const dx = Math.cos(a);
     const dy = Math.sin(a);
@@ -1610,7 +1623,8 @@ export class Game {
   _spawnRocket(shooter, w) {
     const def = this.rocketTypes.get(w.rocket);
     const owner = shooter.owner ?? shooter;
-    const a = shooter.angle + (Math.random() - 0.5) * ((w.spreadDeg || 0) * Math.PI) / 180;
+    const deg = typeof shooter.spreadDeg === 'function' ? shooter.spreadDeg() : w.spreadDeg || 0;
+    const a = shooter.angle + (Math.random() - 0.5) * (deg * Math.PI) / 180;
     const m = shooter.muzzle;
     if (!shooter.fromVehicle?.airborne && this.map.blocksShotAt(m.x, m.y)) {
       this.explode(def, m.x, m.y, owner, null, 'rocket');
@@ -1642,6 +1656,112 @@ export class Game {
     const o = b.owner;
     u.damage(b.damage, o ? { unit: o, x: o.x, y: o.y, cause: 'bullet', weapon: b.weapon } : null);
     this.effects.impact(this.combat.hitImpact || 'flesh', b.x, b.y, b.x, b.y, b.dx, b.dy);
+  }
+
+  // ---------- Riscontro dei colpi (giocatore umano) ----------
+
+  /**
+   * Il giocatore ha fatto danno a target (soldato o mezzo, anche con granate, razzi o investendolo): segno sul
+   * mirino (hud.hitMarker: hit = soldato, armor = mezzo, kill = uccisione/distruzione) e suono, non più di uno
+   * ogni soundGap s (i pallini della pompa arrivano insieme). Niente segno sui compagni.
+   */
+  _onPlayerHit(target, killed) {
+    if (!target || target.team === this.player.team) return;
+    const hc = this.config.hud?.hitMarker || {};
+    if (hc.show === false) return;
+    const kind = killed ? 'kill' : target instanceof Player ? 'hit' : 'armor';
+    const cur = this.hitMarker;
+    // un'uccisione appena segnata non viene coperta dai colpi successivi dello stesso istante
+    if (cur?.kind === 'kill' && !killed && cur.age < (hc.killHold ?? 0.15)) return;
+    const life = (kind === 'kill' ? hc.killLife : hc.life) ?? (kind === 'kill' ? 0.5 : 0.22);
+    this.hitMarker = { kind, age: 0, life, x: target.x, y: target.y };
+    if (killed || this.time - this.hitSoundAt >= (hc.soundGap ?? 0.06)) {
+      this.hitSoundAt = this.time;
+      const snd = kind === 'kill' ? hc.killSound : kind === 'armor' ? hc.armorSound : hc.sound;
+      if (snd) this.audio.play(snd);
+    }
+  }
+
+  /** Il giocatore ha subito danno da source (x, y = da dove arriva): indicatore della direzione nell'HUD. */
+  _onPlayerHurt(dealt, source) {
+    const p = this.player;
+    if (!source || source.x === undefined || source.x === null) return;
+    const dx = source.x - p.x;
+    const dy = source.y - p.y;
+    if (Math.hypot(dx, dy) < 4) return; // esplosione addosso: nessuna direzione
+    this.hud.hurtFrom(Math.atan2(dy, dx), dealt / (p.maxHealth || 100));
+  }
+
+  /**
+   * Mirino del giocatore in (mx, my) px di gioco: con hud.crosshair.dynamic si apre con la rosa dei colpi (rinculo,
+   * movimento, soppressione) alla distanza del mirino, altrimenti lo sprite "crosshair".
+   */
+  _drawCrosshair(ctx, mx, my, cx, cy, dt) {
+    const xc = this.config.hud?.crosshair || {};
+    if (!xc.dynamic) {
+      if (this.crosshair) drawSprite(ctx, this.crosshair, 0, mx, my);
+      return;
+    }
+    const p = this.player;
+    const minGap = xc.minGap ?? 1;
+    let gap = minGap;
+    if (!p.vehicle) {
+      const sup = (p.suppression || 0) * (this.combat.suppression?.spreadDeg ?? 0);
+      const half = (p.spreadDeg(sup) / 2) * (Math.PI / 180);
+      const dist = Math.max(0, Math.hypot(mx + cx - p.x, my + cy - p.y) - (p.weapon.muzzleOffset ?? 8));
+      gap = Math.min(xc.maxGap ?? 10, Math.max(minGap, dist * Math.tan(half) * (xc.scale ?? 1)));
+    }
+    // apertura smorzata (niente scatti da un colpo all'altro)
+    const k = 1 - Math.exp(-(xc.smoothing ?? 18) * dt);
+    this.crosshairGap = this.crosshairGap === null ? gap : this.crosshairGap + (gap - this.crosshairGap) * k;
+    const g = Math.round(this.crosshairGap);
+    const arm = xc.arm ?? 2;
+    const x = Math.round(mx);
+    const y = Math.round(my);
+    // contorno, poi bracci e punto centrale (stesso disegno dello sprite: braccio di 1 px con bordo di 1 px)
+    ctx.fillStyle = xc.outline || '#000000';
+    ctx.fillRect(x - 1, y - g - arm - 1, 3, arm + 2);
+    ctx.fillRect(x - 1, y + g, 3, arm + 2);
+    ctx.fillRect(x - g - arm - 1, y - 1, arm + 2, 3);
+    ctx.fillRect(x + g, y - 1, arm + 2, 3);
+    if (g > 1) ctx.fillRect(x - 1, y - 1, 3, 3);
+    ctx.fillStyle = xc.color || '#ffffff';
+    ctx.fillRect(x, y - g - arm, 1, arm);
+    ctx.fillRect(x, y + g + 1, 1, arm);
+    ctx.fillRect(x - g - arm, y, arm, 1);
+    ctx.fillRect(x + g + 1, y, arm, 1);
+    ctx.fillRect(x, y, 1, 1);
+    return g;
+  }
+
+  /**
+   * Segno di colpo a segno: quattro trattini in diagonale attorno a (x, y) a distanza gap + 2, più lunghi e rossi
+   * per un'uccisione; svanisce nell'ultimo tratto della sua durata.
+   */
+  _drawHitMarker(ctx, x, y, gap) {
+    const m = this.hitMarker;
+    const hc = this.config.hud?.hitMarker || {};
+    const colors = hc.colors || {};
+    const color = colors[m.kind] || { hit: '#ffffff', armor: '#ffb43a', kill: '#ff3a2a' }[m.kind];
+    const len = m.kind === 'kill' ? hc.killLength ?? 3 : hc.length ?? 2;
+    const fade = hc.fade ?? 0.4;
+    const left = 1 - m.age / m.life;
+    ctx.globalAlpha = Math.min(1, left / fade);
+    const o = Math.max(2, gap + (hc.offset ?? 2));
+    const px = Math.round(x);
+    const py = Math.round(y);
+    for (const pass of [0, 1]) {
+      ctx.fillStyle = pass === 0 ? hc.shadow || '#000000' : color;
+      const s = pass === 0 ? 1 : 0; // ombra di 1 px in basso a destra
+      for (let i = 0; i < len; i++) {
+        const d = o + i;
+        ctx.fillRect(px + d + s, py + d + s, 1, 1);
+        ctx.fillRect(px - d + s, py + d + s, 1, 1);
+        ctx.fillRect(px + d + s, py - d + s, 1, 1);
+        ctx.fillRect(px - d + s, py - d + s, 1, 1);
+      }
+    }
+    ctx.globalAlpha = 1;
   }
 
   /** Debug: passa all'arma successiva del catalogo. */
@@ -1851,9 +1971,17 @@ export class Game {
 
     const live = this.running && !this.attract; // partita del giocatore (non la dimostrativa del menu)
     const playing = live && !this.suspended && !this.ended && !this.player.dead;
-    if (playing && input.mode === 'desktop' && input.mouse.seen && this.crosshair) {
+    // tempo reale tra due disegni (smorzamento del mirino dinamico)
+    const now = performance.now();
+    const rdt = this.renderAt ? Math.min(0.1, (now - this.renderAt) / 1000) : 0;
+    this.renderAt = now;
+    if (playing && input.mode === 'desktop' && input.mouse.seen) {
       const m = input.mouseGame;
-      drawSprite(ctx, this.crosshair, 0, m.x, m.y);
+      const gap = this._drawCrosshair(ctx, m.x, m.y, cx, cy, rdt) ?? 1;
+      if (this.hitMarker) this._drawHitMarker(ctx, m.x, m.y, gap);
+    } else if (playing && this.hitMarker) {
+      // touch / senza mouse: il segno compare sul bersaglio colpito
+      this._drawHitMarker(ctx, this.hitMarker.x - cx, this.hitMarker.y - cy, 1);
     }
 
     // UI ad alta risoluzione

@@ -57,6 +57,11 @@ export class Player {
     this.suppression = 0;
     this.suppressHold = 0;
     this.casingTimer = null; // secondi all'espulsione ritardata del bossolo (es. pompa)
+    // rinculo: gradi in più sulla rosa, crescono a ogni colpo (recoilDeg fino a recoilMaxDeg) e calano col tempo
+    this.bloom = 0;
+    // giocatore umano (Game._spawnPlayer): onDealt(bersaglio, danni, morto) = colpo a segno, onHurt(danni, source)
+    this.onDealt = null;
+    this.onHurt = null;
 
     // Busto: lo sprite dipende dall'arma impugnata (vedi equip)
     this.weapon = null;
@@ -107,6 +112,7 @@ export class Player {
     this.anim = new Animator(this.sprite, 'idle');
     this.cooldown = 0;
     this.casingTimer = null;
+    this.bloom = 0;
     // triggerHeld resta quello reale: se si stava tenendo premuto, una semiautomatica
     // appena impugnata non spara finché non si rilascia
     this.shotQueued = false;
@@ -214,7 +220,22 @@ export class Player {
       // come è morto (medaglie): bullet/grenade/rocket/runover/vehicle, arma e posizione di chi ha colpito
       this.killCause = source ? { cause: source.cause ?? null, weapon: source.weapon ?? null, x: source.x, y: source.y } : null;
     }
+    if (dealt > 0) {
+      this.onHurt?.(dealt, source);
+      if (by && by !== this) by.onDealt?.(this, dealt, this.dead);
+    }
     return dealt;
+  }
+
+  /**
+   * Rosa attuale dei colpi (gradi): spreadDeg dell'arma (× stillSpread da fermo), + moveSpreadDeg in proporzione
+   * alla velocità, + rinculo accumulato, + extraDeg (soppressione).
+   */
+  spreadDeg(extraDeg = 0) {
+    const w = this.weapon;
+    const move = Math.min(1, Math.hypot(this.vx, this.vy) / (this.speed || 1));
+    const base = (w.spreadDeg || 0) * (move < 0.05 ? w.stillSpread ?? 1 : 1);
+    return base + (w.moveSpreadDeg || 0) * move + this.bloom + extraDeg;
   }
 
   /** Recupera "amount" punti vita (fino al massimo); restituisce quanto recuperato. Non resuscita. */
@@ -345,6 +366,7 @@ export class Player {
     // Fuoco: automatico finché si tiene premuto, semiautomatico un colpo per pressione
     // (su touch le semiautomatiche possono ripetere tenendo lo stick, vedi input.touch.holdToRepeat)
     this.cooldown = Math.max(0, this.cooldown - dt);
+    this.bloom = Math.max(0, this.bloom - (w.recoilRecoverDeg ?? 8) * dt);
     if (this.casingTimer !== null) {
       this.casingTimer -= dt;
       if (this.casingTimer <= 0) {
@@ -373,6 +395,8 @@ export class Player {
         this.shotQueued = false;
         this.ammo--;
         game.fire(this);
+        // rinculo: il colpo appena sparato usa la rosa di prima, i successivi si allargano
+        this.bloom = Math.min(w.recoilMaxDeg ?? 0, this.bloom + (w.recoilDeg ?? 0));
         // bossolo: subito, o dopo casingDelay (es. azione della pompa)
         if (w.casing) {
           if (w.casingDelay > 0) this.casingTimer = w.casingDelay;

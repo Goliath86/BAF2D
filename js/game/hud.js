@@ -25,6 +25,29 @@ export class Hud {
     this.pc = cfg.promotion || {};
     this.popups = []; // "+100 UCCISIONE" sopra il giocatore: { text, color, age }
     this.promotions = []; // coda delle promozioni da mostrare: { name, insignia, age }
+    this.hurts = []; // colpi subiti: { angle (verso chi ha sparato), strength 0..1, age } (hud.hurtIndicator)
+  }
+
+  /**
+   * Colpo subito da direzione angle (radianti, dal giocatore verso la fonte), strength = frazione della vita persa:
+   * arco rosso attorno al giocatore. Colpi dalla stessa direzione (entro mergeDeg) rinnovano lo stesso arco.
+   */
+  hurtFrom(angle, strength) {
+    const hc = this.cfg.hurtIndicator || {};
+    if (hc.show === false) return;
+    const merge = ((hc.mergeDeg ?? 25) * Math.PI) / 180;
+    for (const h of this.hurts) {
+      const d = Math.abs(Math.atan2(Math.sin(angle - h.angle), Math.cos(angle - h.angle)));
+      if (d < merge) {
+        h.angle = angle;
+        h.age = 0;
+        h.strength = Math.min(1, Math.max(h.strength, strength) + strength * 0.5);
+        return;
+      }
+    }
+    this.hurts.push({ angle, strength: Math.min(1, strength), age: 0 });
+    const max = hc.max ?? 6;
+    while (this.hurts.length > max) this.hurts.shift();
   }
 
   /** Mostra un messaggio temporaneo sotto il pannello dei ticket. */
@@ -53,6 +76,11 @@ export class Hud {
     const life = this.sc.life ?? 1.4;
     for (const p of this.popups) p.age += dt;
     this.popups = this.popups.filter((p) => p.age < life);
+    if (this.hurts.length) {
+      const hurtLife = this.cfg.hurtIndicator?.life ?? 1.2;
+      for (const h of this.hurts) h.age += dt;
+      this.hurts = this.hurts.filter((h) => h.age < hurtLife);
+    }
     const pr = this.promotions[0];
     if (pr && (pr.age += dt) >= (pr.time ?? this.pc.time ?? 4)) this.promotions.shift();
     const ratio = player.health / player.maxHealth;
@@ -91,6 +119,7 @@ export class Hud {
     ui.save();
     ui.imageSmoothingEnabled = false;
     if (mode?.suppression > 0.01) this._drawSuppression(ui, display, mode.suppression);
+    if (this.hurts.length && mode?.screen && !player.dead) this._drawHurts(ui, u, mode.screen);
     this._drawHealth(ui, u, player);
     if (mode?.stamina !== null && mode?.stamina !== undefined) this._drawStamina(ui, u, mode.stamina);
     if (mode?.minimap) {
@@ -246,6 +275,47 @@ export class Hud {
     g.addColorStop(1, `rgba(${c},${a.toFixed(3)})`);
     ui.fillStyle = g;
     ui.fillRect(0, 0, w, h);
+  }
+
+  /**
+   * Indicatori dei colpi subiti: archi a pixel attorno al giocatore (screen = posizione in px di gioco), a
+   * hurtIndicator.radius px, larghi widthDeg, spessi thickness al centro e 1 px alle punte; opacità da minAlpha a
+   * maxAlpha secondo la forza (piena da fullAt della vita persa), svaniscono nell'ultimo "fade" della durata.
+   */
+  _drawHurts(ui, u, screen) {
+    const hc = this.cfg.hurtIndicator || {};
+    const life = hc.life ?? 1.2;
+    const fade = hc.fade ?? 0.6;
+    const R = hc.radius ?? 20;
+    const half = (((hc.widthDeg ?? 50) / 2) * Math.PI) / 180;
+    const thick = hc.thickness ?? 3;
+    const minA = hc.minAlpha ?? 0.45;
+    const maxA = hc.maxAlpha ?? 0.9;
+    const full = hc.fullAt ?? 0.3;
+    const sx = Math.round(screen.x);
+    const sy = Math.round(screen.y);
+    ui.fillStyle = hc.color || '#ff2a1a';
+    for (const h of this.hurts) {
+      const left = (life - h.age) / life;
+      const k = Math.min(1, h.strength / full);
+      ui.globalAlpha = (minA + (maxA - minA) * k) * Math.min(1, left / fade);
+      const seen = new Set(); // ogni pixel una volta sola (niente sovrapposizioni più scure)
+      const steps = Math.ceil(R * half * 2) * 2;
+      for (let i = 0; i <= steps; i++) {
+        const t = i / steps; // 0..1 lungo l'arco
+        const a = h.angle - half + t * half * 2;
+        const tk = Math.max(1, Math.round(thick * Math.sin(t * Math.PI))); // affusolato alle punte
+        for (let r = 0; r < tk; r++) {
+          const px = sx + Math.round(Math.cos(a) * (R + r));
+          const py = sy + Math.round(Math.sin(a) * (R + r));
+          const key = px * 4096 + py;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          ui.fillRect(px * u, py * u, u, u);
+        }
+      }
+    }
+    ui.globalAlpha = 1;
   }
 
   /** "RICARICA!" lampeggiante al centro, sotto il giocatore (game.json -> hud.reloadPrompt). */

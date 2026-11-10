@@ -3,6 +3,20 @@
 All notable changes to BAF2D. Versions follow [semantic versioning](https://semver.org/); the current version is
 in `config/game.json` (`version`) and shown in the bottom-right corner of the menu.
 
+## [Unreleased]
+
+### Added
+- **Hit markers**: a tick around the crosshair (white on soldiers, orange on vehicles, longer and red on a kill) with
+  a short sound whenever you hurt an enemy, with bullets, grenades, rockets or by running them over. On mobile it
+  appears on the target.
+- **Damage direction**: a red arc around your soldier points to where the shot came from; stronger hits are
+  brighter.
+- **Dynamic crosshair**: it opens up with your weapon's current spread.
+
+### Changed
+- **Recoil and movement**: sustained automatic fire spreads your shots wider (short bursts stay accurate),
+  standing still tightens your aim, moving loosens it. Applies to bots as well.
+
 ## [1.3.0] — 2026-11-10
 
 ### Added

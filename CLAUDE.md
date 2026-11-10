@@ -398,6 +398,15 @@ tools/check_level.mjs controllo livelli: celle irraggiungibili e vicoli ciechi (
   Stesso sistema per il caricatore che cade in ricarica: `reloadDrop` (tipo in `casings`, es. `mag_rifle`),
   `reloadDropAt` (frazione della ricarica; fucile 0.3 = quando sparisce dallo sprite), `reloadDropPort`.
   `Player._eject(game, type, port)` è il punto unico di uscita degli oggetti dall'arma.
+- Rosa dei colpi: `Player.spreadDeg(extra)` = `spreadDeg` (× `stillSpread` da fermo) + `moveSpreadDeg` × velocità
+  + `player.bloom` (rinculo: `recoilDeg` a colpo fino a `recoilMaxDeg`, cala di `recoilRecoverDeg`/s) + soppressione;
+  usata da `_spawnBullet`/`_spawnRocket` per i soldati (le armi dei mezzi usano solo `spreadDeg`).
+- Riscontro dei colpi (solo umano, non attract): `Player.damage`/`Vehicle.damage` chiamano `by.onDealt(target,
+  danni, morto)` e `onHurt(danni, source)` del bersaglio, impostati in `_spawnPlayer` -> `Game._onPlayerHit`
+  (`hitMarker` hit/armor/kill, suoni `hud.hitMarker.*`, niente sui compagni) e `_onPlayerHurt` -> `hud.hurtFrom`
+  (archi a pixel attorno al giocatore, `hud.hurtIndicator`). Mirino dinamico `Game._drawCrosshair`
+  (`hud.crosshair.dynamic`, apertura = rosa alla distanza del mirino; `false` = sprite `crosshair`); su touch il
+  segno compare sul bersaglio.
 - Vampata di volata: arma con `muzzleFlash` (tipo in `effects.json` -> `muzzles`): `sprite` (procedurale
   `muzzle_flash`, volata = bordo sinistro a metà altezza, 3 varianti), `life` (pochi centesimi di s), `glow`
   (alone additivo a `bands` dischi concentrici: `color`, `alpha`, `radius`, `offset`) ed `emitters` (fumo/scintille,

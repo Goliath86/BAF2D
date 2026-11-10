@@ -583,6 +583,24 @@
       "volume": 0.18,
       "placeholder": { "wave": "square", "freqStart": 2400, "freqEnd": 1800, "duration": 0.02 }
     },
+    "hit_marker": {
+      "src": null,
+      "volume": 0.14,
+      "placeholder": { "wave": "triangle", "freqStart": 2600, "freqEnd": 2200, "duration": 0.025 }
+    },
+    "hit_armor": {
+      "src": null,
+      "volume": 0.12,
+      "placeholder": { "wave": "square", "freqStart": 1500, "freqEnd": 1100, "duration": 0.03 }
+    },
+    "hit_kill": {
+      "src": null,
+      "volume": 0.18,
+      "placeholder": [
+        { "wave": "triangle", "freqStart": 2200, "freqEnd": 2000, "duration": 0.03 },
+        { "wave": "triangle", "freqStart": 3000, "freqEnd": 2700, "duration": 0.05, "at": [0.045] }
+      ]
+    },
     "reload_rifle": {
       "src": null,
       "volume": 0.2,
