@@ -3,6 +3,25 @@
 All notable changes to BAF2D. Versions follow [semantic versioning](https://semver.org/); the current version is
 in `config/game.json` (`version`) and shown in the bottom-right corner of the menu.
 
+## [Unreleased]
+
+### Added
+- **Time limit** (*New game* → *Time limit*, 5–60 minutes or none, 20 by default): a countdown under the flags turns
+  red in the last minute; when time runs out the team with more tickets wins (then more flags, otherwise a draw).
+
+### Changed
+- Jeeps have light armour: rifles and machine guns now wear them down slowly (jeep against jeep is a real fight).
+- Soldiers no longer respawn on a flag with enemies close by: they pick a safer flag, or the base.
+- On maps with vehicles each bot team always has at least one rocket launcher.
+
+### Fixed
+- Bots no longer all sit on their own quiet flags: they attack while there are flags left to take, so matches
+  (especially on Crossroads) no longer stall for ever.
+- Two enemy vehicles no longer hold the same flag contested for ever: the one that can't hurt the other moves on.
+- Squad AI shared enemy sightings correctly (they were forgotten almost immediately), so squads react better to
+  threats and to enemy vehicles.
+- Bots no longer stand still next to a weapon they can't quite reach.
+
 ## [1.1.2] — 2026-11-10
 
 ### Fixed

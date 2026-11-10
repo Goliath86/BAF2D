@@ -50,6 +50,8 @@ export class Menu {
       allies: range(this.cfg.allies, 3),
       enemies: range(this.cfg.enemies, 4),
       tickets: range(this.cfg.tickets, ticketsDef, 1000, 50), // ticket per squadra (chi li esaurisce perde)
+      // tempo limite in minuti (0 = nessuno): allo scadere vince chi ha più ticket
+      timeLimit: range(this.cfg.timeLimit, Math.round((config.ctf?.timeLimit ?? 0) / 60), 60, 5),
     };
     // valore salvato o di default, nei limiti e sul passo dello stepper
     const pick = (key) => {
@@ -63,6 +65,7 @@ export class Menu {
       allies: pick('allies'),
       enemies: pick('enemies'),
       tickets: pick('tickets'),
+      timeLimit: pick('timeLimit'),
     };
 
     this._buildMaps();
@@ -127,7 +130,7 @@ export class Menu {
     this._hide();
     const { game } = this;
     game.viewOffsetX = 0;
-    game.setup({ level: lvl.data, team: c.team, allies: c.allies, enemies: c.enemies, tickets: c.tickets, attract: false });
+    game.setup({ level: lvl.data, team: c.team, allies: c.allies, enemies: c.enemies, tickets: c.tickets, timeLimit: c.timeLimit * 60, attract: false });
     game.running = true;
     this._play();
   }
@@ -164,7 +167,9 @@ export class Menu {
     this._updatePauseButton();
     const ov = $('overlay-matchend');
     $('matchend-title').textContent = this.i18n.t(`matchEnd.${outcome}`);
-    $('matchend-subtitle').textContent = this.i18n.t(`matchEnd.${outcome}Subtitle`);
+    // finita per tempo scaduto: sottotitolo apposito (vince chi aveva più ticket)
+    const byTime = this.game.ctf?.result?.reason === 'time';
+    $('matchend-subtitle').textContent = this.i18n.t(`matchEnd.${outcome}${byTime ? 'Time' : ''}Subtitle`);
     const summary = this.game.matchSummary;
     this._renderScoreboard($('scoreboard'), summary);
     this._renderCareer($('matchend-career'), summary.xpAfter, summary.xpBefore);
@@ -470,11 +475,18 @@ export class Menu {
     for (const { id, b } of this.teamButtons) b.setAttribute('aria-pressed', String(id === c.team));
     for (const [key, s] of Object.entries(this.steppers)) {
       const l = this.limits[key];
-      s.value.textContent = String(c[key]);
+      s.value.textContent = this._stepperText(key, c[key]);
       s.minus.disabled = c[key] <= l.min;
       s.plus.disabled = c[key] >= l.max;
     }
-    $('newgame-summary').textContent = this.i18n.t('newGame.summary', { allies: c.allies, enemies: c.enemies, tickets: c.tickets });
+    const time = c.timeLimit > 0 ? this.i18n.t('newGame.summaryTime', { minutes: c.timeLimit }) : '';
+    $('newgame-summary').textContent = this.i18n.t('newGame.summary', { allies: c.allies, enemies: c.enemies, tickets: c.tickets }) + time;
+  }
+
+  /** Valore mostrato da uno stepper: il tempo limite in minuti ("Nessuno" a 0), gli altri così come sono. */
+  _stepperText(key, v) {
+    if (key !== 'timeLimit') return String(v);
+    return v > 0 ? this.i18n.t('newGame.minutes', { n: v }) : this.i18n.t('newGame.noLimit');
   }
 
   // ---------- Soldato (personalizzazione) ----------

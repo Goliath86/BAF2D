@@ -35,6 +35,7 @@
     "allies": { "min": 0, "max": 7, "default": 3 },
     "enemies": { "min": 1, "max": 8, "default": 4 },
     "tickets": { "min": 100, "max": 1000, "step": 50, "default": 400 },
+    "timeLimit": { "min": 0, "max": 60, "step": 5, "default": 20 },
     "procedural": false,
     "background": "scene",
     "scene": "config/menu_scene.json",
@@ -107,6 +108,8 @@
 
   "ctf": {
     "tickets": 400,
+    "timeLimit": 1200,
+    "spawnSafeRadius": 150,
     "ticketsPerDeath": 1,
     "bleed": { "interval": 3, "mode": "advantage", "perFlag": 1 },
     "flag": {
@@ -234,7 +237,11 @@
       "toastTime": 2.5,
       "respawnY": 0.7,
       "respawnFontSize": 10,
-      "killedColor": "#e8463a"
+      "killedColor": "#e8463a",
+      "timerFontSize": 7,
+      "timerWarn": 60,
+      "timerBlink": 10,
+      "timerWarnColor": "#ff6a4a"
     },
     "rank": {
       "show": true,
@@ -372,6 +379,7 @@
     "weapons": ["rifle", "rifle", "shotgun", "rifle+launcher"],
     "respawnDelay": 5,
     "baseSpread": [6, 22],
+    "ensureAntiArmor": { "weapon": "launcher", "min": 1 },
     "player": { "speed": 78, "faceMoveWhenIdle": false, "grenades": 2 },
     "ai": {
       "grenades": true,
@@ -406,7 +414,8 @@
         "stealEmpty": true,
         "fearRange": 130,
         "targetPriority": 0.6,
-        "antiVehicleBonus": 1.5
+        "antiVehicleBonus": 1.5,
+        "fightBulletFactor": 0.25
       },
       "vehicle": {
         "viewRange": 260,
@@ -431,7 +440,9 @@
         "stuckTime": 1.2,
         "stuckLimit": 3,
         "stuckAvoidTime": 12,
-        "reverseTime": 0.7
+        "reverseTime": 0.7,
+        "contestStallTime": 10,
+        "contestAvoidTime": 25
       },
       "viewRange": 210,
       "reactionTime": [0.3, 0.6],
@@ -504,7 +515,12 @@
       "repathInterval": 0.5,
       "arriveDistance": 4,
       "waypointReach": 3,
-      "destTolerance": 8
+      "destTolerance": 8,
+      "idleDefendPenalty": 5000,
+      "defendThreatRadius": 160,
+      "pickupDirectReach": 28,
+      "pickupGiveUp": 2.5,
+      "pickupSkipTime": 20
     }
   },
 

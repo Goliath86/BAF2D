@@ -64,6 +64,7 @@ export class VehicleBrain {
     this.repath -= dt;
     this.rocketTimer -= dt;
     this._perceive(game);
+    this._contestStall(dt, game);
 
     // movimento verso l'obiettivo
     this.objTimer -= dt;
@@ -120,6 +121,34 @@ export class VehicleBrain {
     }
     const reload = !this.visible && v.guns.some((g) => !g.reload && g.ammo < g.w.magazine * 0.5);
     return { move, aim: () => this.aimAngle, firing, secondary, reload };
+  }
+
+  /** Può danneggiare il mezzo o: con i razzi, o con la mitragliatrice se la sua corazza lascia passare i colpi. */
+  _canHurt(o) {
+    return this.hasRockets || (o.def.bulletFactor ?? 0) > 0;
+  }
+
+  /**
+   * Nell'area della propria bandiera-obiettivo contesa solo da mezzi nemici che non può danneggiare: dopo
+   * contestStallTime s la lascia ad altri per contestAvoidTime s (due mezzi fermi a contendersela per sempre
+   * bloccherebbero la partita).
+   */
+  _contestStall(dt, game) {
+    const v = this.v;
+    const c = this.cfg;
+    const f = this.objective?.flag;
+    const enemies = f && f.contested && game.ctf.inZone(f, v.x, v.y) ? f.units.filter((u) => u.team !== v.team) : [];
+    if (!enemies.length || !enemies.every((u) => u.vehicle && !this._canHurt(u.vehicle))) {
+      this.stall = 0;
+      return;
+    }
+    this.stall = (this.stall || 0) + dt;
+    if (this.stall < (c.contestStallTime ?? 10)) return;
+    this.stall = 0;
+    this.avoid.set(f, this.time + (c.contestAvoidTime ?? 25));
+    this.objective = null;
+    this.objTimer = 0;
+    this.path = null;
   }
 
   /** Soldati nemici a piedi entro 30 px dal bersaglio (per decidere un razzo contro un gruppo). */

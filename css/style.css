@@ -826,6 +826,12 @@ button {
   color: var(--menu-gold);
 }
 
+/* tempo limite: "20 min" / "Nessuno" sono più larghi dei numeri */
+[data-stepper="timeLimit"] .step-value {
+  min-width: 104px;
+  font-size: 18px;
+}
+
 .newgame-summary {
   margin-top: 18px;
   padding: 8px 10px;

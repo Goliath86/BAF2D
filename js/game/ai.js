@@ -129,12 +129,14 @@ export class Squad {
       let bs = Infinity;
       free.forEach((b, i) => {
         launchers.forEach((it, j) => {
+          if (b.skipsPickup(it)) return; // l'ha appena lasciato perdere: irraggiungibile per lui
           let s = dist(it, b.unit);
           // lanciarazzi vicino a un mezzo nemico: meglio un altro
           if (threats.some((v) => dist(v, it) < near)) s += ac.threatPenalty ?? 400;
           if (s < bs) { bs = s; bb = i; bl = j; }
         });
       });
+      if (bb < 0) break;
       const b = free.splice(bb, 1)[0];
       const it = launchers.splice(bl, 1)[0];
       b.huntLauncher(it, ac.huntTime ?? 30);
@@ -222,11 +224,21 @@ export class Squad {
     // bandiere presidiate da un mezzo nemico avvistato: i gruppi senza anticarro ci vanno solo se non c'è altro
     const armorNear = (f) => [...this.contacts.keys()].some((e) => e.isVehicle && !e.destroyed && e.occupied
       && dist(this.contacts.get(e), f) < f.radius + (cfg.antiArmor?.flagRadius ?? 60));
+    // bandiera minacciata: contesa o con nemici avvistati di recente vicino (lavagna di squadra)
+    const threatR = cfg.defendThreatRadius ?? 160;
+    const threatened = (f) => f.contested
+      || [...this.contacts].some(([e, k]) => !e.dead && !e.destroyed && dist(k, f) < f.radius + threatR);
     const cost = (g, f, c) => {
       if (g.bias[f.id] === undefined) g.bias[f.id] = Math.random() * (cfg.flagBias ?? 60);
       let s = dist(c, f) + g.bias[f.id];
-      if (!g.members.some((m) => m.antiVehicle) && armorNear(f)) s += cfg.antiArmor?.flagAvoid ?? 600;
-      if (!needs(f)) s += (cfg.defendCost ?? 350) - (f.contested ? cfg.contestedBonus ?? 500 : 0);
+      const noAT = !g.members.some((m) => m.antiVehicle);
+      if (noAT && armorNear(f)) s += cfg.antiArmor?.flagAvoid ?? 600;
+      if (!needs(f)) {
+        s += (cfg.defendCost ?? 350) - (f.contested ? cfg.contestedBonus ?? 500 : 0);
+        // difesa di una bandiera tranquilla solo se ogni bandiera da prendere (raggiungibile per il gruppo:
+        // senza anticarro non quelle presidiate da un mezzo) ha già un gruppo; altrimenti si attacca
+        if (!threatened(f) && capture.some((cf) => !load.get(cf) && !(noAT && armorNear(cf)))) s += cfg.idleDefendPenalty ?? 5000;
+      }
       if (g.flag === f) s -= cfg.groupStickiness ?? 150;
       return s + (load.get(f) || 0) * (cfg.spreadPenalty ?? 800);
     };
@@ -270,7 +282,7 @@ export class BotBrain {
     this.unit = unit;
     this.squad = squad;
     this.cfg = cfg;
-    this.time = 0;
+    this.time = 0; // tempo di gioco (aggiornato in think)
     this.angle = unit.angle;
 
     this.mode = 'objective'; // 'objective' | 'combat'
@@ -342,9 +354,13 @@ export class BotBrain {
     return !!this.unit.hasAntiVehicle;
   }
 
-  /** Può ferire il mezzo v: con un'arma anticarro, o con le armi leggere se v è a corazza leggera (elicottero). */
+  /**
+   * Vale la pena attaccare il mezzo v: con un'arma anticarro, o con le armi leggere se la sua corazza lascia
+   * passare almeno vehicles.fightBulletFactor del danno (elicottero sì; la jeep, appena scalfibile, no: ci si ripara).
+   */
   canHurt(v) {
-    return this.antiVehicle || (v?.def?.bulletFactor ?? 0) > 0;
+    const k = v?.def?.bulletFactor ?? 0;
+    return this.antiVehicle || (k > 0 && k >= (this.cfg.vehicles?.fightBulletFactor ?? 0));
   }
 
   /**
@@ -364,7 +380,9 @@ export class BotBrain {
   think(dt, game) {
     const u = this.unit;
     const c = this.cfg;
-    this.time += dt;
+    // orologio = tempo di gioco, lo stesso della lavagna di squadra (Squad.update lo usa per dimenticare i
+    // contatti: con un orologio proprio di ogni bot gli avvistamenti sparivano subito)
+    this.time = game.time;
     this.repath -= dt;
 
     this._perceive(dt, game);
@@ -1120,7 +1138,7 @@ export class BotBrain {
       const hold = this.zone || (this._capturing(game) ? this.objective.flag : null);
       let bestS = -Infinity;
       for (const it of game.pickups.list) {
-        if (it.kind !== 'weapon' || it.weapon === primary) continue;
+        if (it.kind !== 'weapon' || it.weapon === primary || this.skipsPickup(it)) continue;
         const special = !!game.weapons.get(it.weapon).special;
         if (special && hasSpecial) continue;
         const d = dist(it, u);
@@ -1142,14 +1160,46 @@ export class BotBrain {
       this.weaponGoalUntil = this.time + (c.weaponGoalTime ?? 6);
       this.unreachable = false;
     }
-    if (dist(goal, u) <= Math.max(2, (game.pickupsCfg?.radius ?? 9) - 3)) {
+    const d = dist(goal, u);
+    // Game accetta lo scambio fino a pickups.radius + 2 px
+    if (d <= Math.max(2, game.pickupsCfg?.radius ?? 9)) {
       this.pickupNow = goal;
       this.weaponGoal = null;
+      this.pickupClose = 0;
       this._stop();
       return true;
     }
+    // ultimo tratto dritto verso l'arma: se è in un punto che la griglia non raggiunge esattamente (es. caduta
+    // contro un muro) il percorso finirebbe al centro del tile vicino, troppo lontano per raccoglierla;
+    // se dopo pickupGiveUp s non ci arriva, la lascia perdere per un po'
+    if (d <= (c.pickupDirectReach ?? 28) && game.nav.los(u.x, u.y, goal.x, goal.y)) {
+      this.pickupClose = (this.pickupClose || 0) + dt;
+      if (this.pickupClose > (c.pickupGiveUp ?? 2.5)) {
+        this._skipPickup(goal);
+        return false;
+      }
+      this.path = [{ x: goal.x, y: goal.y }];
+      this.pathIdx = 0;
+      this.dest = { x: goal.x, y: goal.y };
+      return true;
+    }
+    this.pickupClose = 0;
     this._goTo(goal, game);
     return true;
+  }
+
+  /** Arma a terra irraggiungibile: niente più caccia né ricerca su quella per pickupSkipTime s. */
+  _skipPickup(it) {
+    (this.skipPickups ||= new Map()).set(it, this.time + (this.cfg.pickupSkipTime ?? 20));
+    if (this.launcherHunt === it) this.launcherHunt = null;
+    this.weaponGoal = null;
+    this.pickupClose = 0;
+    this._stop();
+  }
+
+  /** L'arma a terra "it" è da ignorare (non raggiunta di recente). */
+  skipsPickup(it) {
+    return (this.skipPickups?.get(it) ?? -Infinity) > this.time;
   }
 
   // ---------- Granate ----------

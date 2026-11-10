@@ -126,11 +126,14 @@ export class Game {
    * Prepara una partita: level = JSON del livello, team = squadra del giocatore,
    * allies / enemies = bot compagni / avversari, attract = partita dimostrativa (tutti bot, niente HUD né audio).
    */
-  setup({ level, team, allies = 0, enemies = 4, tickets = null, attract = false }) {
+  setup({ level, team, allies = 0, enemies = 4, tickets = null, timeLimit = null, attract = false }) {
     this.level = level;
     this.map = new TileMap(level, this.assets.tileset(level.tileset));
-    // tickets (opzionale, dal menu) = ticket iniziali di ogni squadra al posto di ctf.tickets (vale anche per la rivincita)
-    const ctfCfg = tickets > 0 ? { ...this.config.ctf, tickets: Math.round(tickets) } : this.config.ctf;
+    // tickets (opzionale, dal menu) = ticket iniziali di ogni squadra al posto di ctf.tickets (vale anche per la rivincita);
+    // timeLimit (s, dal menu; 0 = nessun limite, null = ctf.timeLimit)
+    const ctfCfg = { ...this.config.ctf };
+    if (tickets > 0) ctfCfg.tickets = Math.round(tickets);
+    if (timeLimit !== null && timeLimit !== undefined) ctfCfg.timeLimit = Math.max(0, Number(timeLimit) || 0);
     this.ctf = new Ctf(ctfCfg, this.teams, this.map, level);
     // decorazioni e meteo del livello (level.weather = tipo in effects.json -> weather)
     this.props.reset(this.map);
@@ -349,6 +352,7 @@ export class Game {
     this.player.isBot = true;
     const squad = this.squads[this.playerTeam];
     const brain = new BotBrain(this.player, squad, this.aiCfg);
+    brain.time = this.time; // orologio = tempo di gioco (anche prima del primo think)
     const i = squad.brains.indexOf(this.playerBrain);
     if (i >= 0) squad.brains[i] = brain;
     else squad.brains.push(brain);
@@ -398,22 +402,46 @@ export class Game {
     const cfg = { ...this.config.player, ...(this.botsCfg.player || {}), weapon: primary };
     const hw = (cfg.hitbox?.[0] ?? 10) / 2;
     const hh = (cfg.hitbox?.[1] ?? 10) / 2;
-    const pos = this.ctf.spawnPoint(slot.team, near, hw, hh, { preferFlags: true, spread: this.botsCfg.baseSpread || [6, 22] });
+    // all'inizio (near = null) nessun controllo dei nemici: si parte dalle proprie bandiere
+    const enemies = near ? this._enemiesOf(slot.team) : null;
+    const pos = this.ctf.spawnPoint(slot.team, near, hw, hh, { preferFlags: true, spread: this.botsCfg.baseSpread || [6, 22], enemies });
     const unit = new Player(cfg, pos.x, pos.y, this.assets, this.weapons, this.grenadeTypes, slot.team);
     unit.isBot = true;
     unit.combatant = slot.record;
-    if (special && this.weapons.has(special)) unit.giveSpecial(special);
+    const extra = special && this.weapons.has(special) ? special : this._antiArmorFor(slot);
+    if (extra) unit.giveSpecial(extra);
     // guarda verso il centro della mappa
     unit.angle = Math.atan2(this.map.pixelHeight / 2 - pos.y, this.map.pixelWidth / 2 - pos.x);
     unit.legsAngle = unit.angle;
     const squad = this.squads[slot.team];
     const brain = new BotBrain(unit, squad, this.aiCfg);
+    brain.time = this.time; // orologio = tempo di gioco (anche prima del primo think)
     const i = squad.brains.indexOf(slot.brain);
     if (i >= 0) squad.brains[i] = brain;
     else squad.brains.push(brain);
     slot.unit = unit;
     slot.brain = brain;
     slot.respawn = null;
+  }
+
+  /**
+   * Anticarro garantito (bots.ensureAntiArmor = { weapon, min }): sulle mappe con mezzi, se nella squadra di "slot" i bot
+   * con un'arma anticarro sono meno di "min", il bot che (ri)entra riceve "weapon" come arma speciale. Così anche
+   * con pochi bot (le armi a rotazione di bots.weapons danno il lanciarazzi solo al quarto) qualcuno può
+   * fermare i mezzi nemici.
+   */
+  _antiArmorFor(slot) {
+    const a = this.botsCfg.ensureAntiArmor;
+    if (!a?.weapon || !this.weapons.has(a.weapon) || !this.vehicleSpawns?.length) return null;
+    // mezzi che la squadra avversaria può guidare: suoi o neutrali
+    if (!this.vehicleSpawns.some((s) => s.team !== slot.team)) return null;
+    let have = 0;
+    for (const b of this.bots) {
+      if (b === slot || b.team !== slot.team) continue;
+      const u = b.unit;
+      if (u && !u.dead ? u.hasAntiVehicle : String(b.weapon).includes('+')) have++;
+    }
+    return have < (a.min ?? 1) ? a.weapon : null;
   }
 
   _updateBots(dt) {
@@ -983,13 +1011,18 @@ export class Game {
     while (this.corpses.length > max) this.corpses.shift();
   }
 
+  /** Soldati nemici di "team" vivi (anche a bordo dei mezzi): posizioni per scegliere un rientro sicuro. */
+  _enemiesOf(team) {
+    return this.units.filter((u) => u && !u.dead && u.team !== team);
+  }
+
   _updateRespawn(dt) {
     const r = this.respawn;
     r.time += dt;
     if (r.time < r.delay) return;
     // rientro alla bandiera della squadra più vicina al punto della morte, o alla base
     const p = this.player;
-    const pos = this.ctf.spawnPoint(this.playerTeam, r, p.hw, p.hh);
+    const pos = this.ctf.spawnPoint(this.playerTeam, r, p.hw, p.hh, { enemies: this._enemiesOf(this.playerTeam) });
     this._spawnPlayer(pos.x, pos.y);
     this.respawn = null;
     if (this.deathCfg.respawnSound) this.audio.play(this.deathCfg.respawnSound);

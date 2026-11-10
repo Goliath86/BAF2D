@@ -178,6 +178,12 @@ tools/check_level.mjs controllo livelli: celle irraggiungibili e vicoli ciechi (
   `this.respawn`; dopo `death.respawnDelay` un nuovo Player rientra con `ctf.spawnPoint(team, puntoMorte)` (bandiera
   posseduta non contesa più vicina o base). HUD: ticket + bandiere in alto al centro, stato cattura, messaggi, scritta
   di rientro.
+- Tempo limite: `ctf.timeLimit` (s, 0 = nessuno; default di game.json, override `game.setup({ timeLimit })` dal
+  menu, stepper `timeLimit` in minuti in `menu.timeLimit`, salvato in Settings `newGame`). `ctf.timeLeft` (null senza
+  limite) -> HUD mm:ss sotto le bandiere (`hud.ctf.timer*`); allo scadere `_timeUp`: vince chi ha più ticket, poi più
+  bandiere, altrimenti pareggio. `ctf.result.reason` = `tickets` | `time` (sottotitoli `matchEnd.<esito>TimeSubtitle`).
+- Rientro sicuro: `ctf.spawnPoint(..., { enemies })` scarta le bandiere con nemici vivi entro `ctf.spawnSafeRadius`
+  (tutte minacciate: la base se sicura). Game passa `_enemiesOf(team)` per giocatore e bot (non al primo spawn).
 - Fine partita: `ctf.result` -> `Game.ended` (`outcome` victory/defeat/draw), dopo `matchEnd.delay` chiama
   `onMatchEnd(outcome)` (Menu riempie `#overlay-matchend` e mette `body.match-over match-<outcome>` = filtro CSS).
   `restart()` (pulsante Rivincita o `confirm` = Invio) solo dopo `restartDelay`; `_reset()` azzera ctf, ricrea
@@ -239,7 +245,12 @@ tools/check_level.mjs controllo livelli: celle irraggiungibili e vicoli ciechi (
   Piano di squadra `Squad.plan` (chiamato da `Game._updateBots`, ogni `planInterval` s o quando cambiano le
   bandiere): gruppi per combattente (coppie stabili, il dispari fa un terzetto, `maxGroup`/`pairRadius`/
   `groupBreak`), una bandiera per gruppo con `spreadPenalty` per ogni gruppo già sulla stessa; difesa delle proprie
-  con `defendCost` (meno `contestedBonus` se attaccate). `_chooseObjective` usa `squad.groupOf(brain).flag`; in
+  con `defendCost` (meno `contestedBonus` se attaccate); una propria bandiera non minacciata (contesa o nemici in
+  lavagna entro `defendThreatRadius`) costa `idleDefendPenalty` finché c'è una bandiera da prendere senza gruppo
+  (evita lo stallo "tutti in difesa"). Orologio dei `BotBrain` = `game.time` (stesso della lavagna `Squad.contacts`,
+  che `Squad.update` pulisce col tempo di gioco). Anticarro garantito: `bots.ensureAntiArmor` = { weapon, min } ->
+  `Game._antiArmorFor(slot)` dà il lanciarazzi al bot che rientra se in squadra ce ne sono meno di `min` (solo
+  mappe con mezzi usabili dal nemico). `_chooseObjective` usa `squad.groupOf(brain).flag`; in
   `_objectiveTick` chi è più avanti va incontro al compagno (`squad.straggler`, `pairLeash`, `pairWaitMax`).
   Piano anticarro `Squad.armor` (`bots.ai.antiArmor`): i bot senza anticarro segnalano i mezzi nemici
   (`squad.report`); se i portatori di anticarro sono meno di `perVehicle` per mezzo, i più vicini a un lanciarazzi
@@ -275,7 +286,9 @@ tools/check_level.mjs controllo livelli: celle irraggiungibili e vicoli ciechi (
   raccoglibile dal giocatore umano -> azione `pickup` (E/F, pulsante touch con `hidden` gestito da `state.hidden`)
   -> `_swapWeapon` (equip + vecchia arma a terra). `keyName(code, i18n)` in input.js (usato da menu e HUD).
   Bot: `BotBrain._weaponTick` sceglie `weaponGoal` (valore `weaponValues` + `weaponBias` personale), ci va e
-  imposta `pickupNow`; `Game._updatePickups` fa lo scambio per bot e `playerBrain` (dopo `_updateBots`).
+  imposta `pickupNow` (entro `pickups.radius`); entro `pickupDirectReach` px e in vista va dritto sull'arma, dopo
+  `pickupGiveUp` s senza arrivarci la ignora per `pickupSkipTime` s (`_skipPickup`, `skipsPickup`, anche in
+  `Squad.armor`); `Game._updatePickups` fa lo scambio per bot e `playerBrain` (dopo `_updateBots`).
 - Mezzi (`vehicles.js`, `config/vehicles.json`, caricato da main.js -> `VehicleTypes`; `game.vehicles`,
   `game.vehicleSpawns` dalla legend `{ "tile", "vehicle", "team", "angleDeg" }` -> `TileMap.vehicles`). Un soldato a
   bordo ha `unit.vehicle` (posizione sincronizzata da `Game._syncDriver`, non disegnato, escluso da colpi/esplosioni/
@@ -295,7 +308,10 @@ tools/check_level.mjs controllo livelli: celle irraggiungibili e vicoli ciechi (
   `_vehicleContacts`: soldati spinti fuori (o investiti, `runover`), mezzi separati. `VehicleBrain`: una bandiera
   per mezzo se possibile (`crowdPenalty`, in difesa `defendCrowdPenalty`), punto nell'area lontano dagli altri mezzi
   (`_zonePoint`, `v.brainPoint`, `vehicleSpacing`), nell'area con un compagno addosso si ferma (`_mateTouching`),
-  dopo `stuckLimit` blocchi evita la bandiera per `stuckAvoidTime` s.
+  dopo `stuckLimit` blocchi evita la bandiera per `stuckAvoidTime` s; nell'area contesa solo da mezzi nemici che
+  non può danneggiare, dopo `contestStallTime` s la evita per `contestAvoidTime` s (`_contestStall`).
+  Jeep a corazza leggera (`bulletFactor` 0.15): i colpi la scalfiscono, ma la fanteria la attacca col fucile solo
+  se `bulletFactor >= bots.ai.vehicles.fightBulletFactor` (elicottero sì, jeep no: ci si ripara).
   Elicottero (`flying: true` in vehicles.json, `Vehicle._fly`): quota `alt` 0..1 (decolla con un pilota, atterra
   senza pilota o con `landing` se sotto è libero), `airborne` = in volo (niente collisioni con la mappa, non urta né
   investe, esplosioni solo a contatto, colpi `fromAir` che passano sopra i muri, il pilota non conta per le

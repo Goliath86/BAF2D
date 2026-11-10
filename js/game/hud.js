@@ -255,7 +255,7 @@ export class Hud {
 
     // bandiere
     const flags = ctf.flags;
-    if (!flags.length) return y;
+    if (!flags.length) return this._drawTimer(ui, u, cx, y, ctf);
     const iw = 7; // pennone + drappo di 5 px + spazio
     const ih = 8;
     const fgap = cc.flagGap ?? 4;
@@ -277,7 +277,24 @@ export class Hud {
       if (zone?.flag === f) this._px(ui, u, x, y + ih + letter + 2, iw - 1, 1, lc);
       x += iw + fgap;
     }
-    return y + ih + letter + 4;
+    return this._drawTimer(ui, u, cx, y + ih + letter + 4, ctf);
+  }
+
+  /**
+   * Tempo rimasto (ctf.timeLeft, se la partita ha un tempo limite) sotto le bandiere, mm:ss; negli ultimi
+   * hud.ctf.timerWarn secondi diventa del colore timerWarnColor e lampeggia. Restituisce la y sotto il testo.
+   */
+  _drawTimer(ui, u, cx, y, ctf) {
+    if (ctf.timeLeft === null || ctf.timeLeft === undefined) return y;
+    const cc = this.cc;
+    const size = cc.timerFontSize ?? 7;
+    const s = Math.ceil(ctf.timeLeft);
+    const text = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    const warn = s <= (cc.timerWarn ?? 60);
+    const blink = warn && s <= (cc.timerBlink ?? 10) && Math.floor(this.time * 3) % 2 === 0;
+    const color = blink ? this.cfg.text || '#fff' : warn ? cc.timerWarnColor || '#ff6a4a' : cc.timerColor || this.cfg.text || '#fff';
+    this._text(ui, u, text, cx, y - 1, size, color, 'center');
+    return y + size + 2;
   }
 
   /** Stato della cattura se il giocatore è nell'area di una bandiera: testo + barra dell'altezza del drappo. */

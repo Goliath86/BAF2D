@@ -47,6 +47,7 @@
       "turretTurnRate": 6,
       "engineSound": "engine_jeep",
       "health": 260,
+      "bulletFactor": 0.15,
       "respawn": 25,
       "weapons": ["vehicle_mg"]
     },

@@ -114,7 +114,10 @@ export class Ctf {
     }
     this.bleedTimer = 0;
     this.events = [];
-    this.result = null; // { winner: id | null (pareggio), losers: [id] }
+    this.result = null; // { winner: id | null (pareggio), losers: [id], reason: 'tickets' | 'time' }
+    // tempo limite (cfg.timeLimit s, 0/assente = nessuno): allo scadere vince chi ha più ticket
+    this.timeLimit = this.cfg.timeLimit > 0 ? this.cfg.timeLimit : 0;
+    this.timeLeft = this.timeLimit || null;
   }
 
   /** Avanza catture e calo dei ticket. units = unità con { x, y, team, dead }. */
@@ -146,6 +149,20 @@ export class Ctf {
       }
     }
     this._checkResult();
+    if (!this.result && this.timeLeft !== null) {
+      this.timeLeft = Math.max(0, this.timeLeft - dt);
+      if (this.timeLeft <= 0) this._timeUp();
+    }
+  }
+
+  /** Tempo scaduto: vince chi ha più ticket; a pari ticket chi ha più bandiere; altrimenti pareggio. */
+  _timeUp() {
+    const n = this.flagCounts();
+    const score = (t) => this.tickets[t] * 1000 + n[t];
+    const best = Math.max(...this.teamIds.map(score));
+    const top = this.teamIds.filter((t) => score(t) === best);
+    const winner = top.length === 1 ? top[0] : null;
+    this.result = { winner, losers: this.teamIds.filter((t) => t !== winner), reason: 'time' };
   }
 
   /** (x, y) è nell'area di cattura della bandiera f (raggio e, se richiesto, linea di vista). */
@@ -217,7 +234,7 @@ export class Ctf {
     const losers = this.teamIds.filter((t) => this.tickets[t] <= 0);
     if (!losers.length) return;
     const alive = this.teamIds.filter((t) => this.tickets[t] > 0);
-    this.result = { winner: alive.length === 1 ? alive[0] : null, losers };
+    this.result = { winner: alive.length === 1 ? alive[0] : null, losers, reason: 'tickets' };
   }
 
   /** Eventi (catture/neutralizzazioni) accumulati dall'ultima chiamata. */
@@ -230,13 +247,27 @@ export class Ctf {
   /**
    * Punto di rientro per "team": tra la base e le bandiere possedute (non contese) il più vicino a
    * "near" (es. dove è morto). Vicino alla bandiera cerca un punto libero per un AABB hw x hh.
+   * opts: preferFlags (bot: sempre su una bandiera se possibile), spread ([min, max] px attorno alla base),
+   * enemies ([{ x, y }] nemici vivi, per scartare le bandiere minacciate: cfg.spawnSafeRadius).
    */
   spawnPoint(team, near, hw = 5, hh = 5, opts = {}) {
     const base = this.bases[team] || { x: this.map.pixelWidth / 2, y: this.map.pixelHeight / 2 };
     // bandiere possedute in cui non c'è nessun nemico
-    const owned = this.flags.filter((f) => f.owner === team && !Object.keys(f.present).some((t) => t !== team));
+    let owned = this.flags.filter((f) => f.owner === team && !Object.keys(f.present).some((t) => t !== team));
+    // opts.enemies = posizioni dei nemici vivi: niente rientro su una bandiera con nemici entro spawnSafeRadius
+    // (se nessuna è sicura: la base, se lo è; altrimenti come prima)
+    const R = this.cfg.spawnSafeRadius ?? 0;
+    let useBase = false;
+    if (R > 0 && opts.enemies?.length) {
+      const safe = (p) => !opts.enemies.some((e) => Math.hypot(e.x - p.x, e.y - p.y) < R);
+      const ok = owned.filter(safe);
+      if (ok.length) owned = ok;
+      else if (owned.length && safe(base)) useBase = true;
+    }
     let best = base;
-    if (opts.preferFlags && owned.length) {
+    if (useBase) {
+      // tutte le bandiere sotto attacco: alla base
+    } else if (opts.preferFlags && owned.length) {
       // (bot) sempre su una bandiera se ce n'è una: la più vicina a "near", o una a caso
       if (near) {
         let bestD = Infinity;
