@@ -1,4 +1,4 @@
-# BAF2D — itch.io page (v1.2.0)
+# BAF2D — itch.io page (v1.3.0)
 
 Copy each block into the matching field of the itch.io "Edit game" page.
 
@@ -10,12 +10,12 @@ BAF2D
 
 ## Short description or tagline
 
-Top-down pixel-art capture the flag: squad AI, vehicles and helicopters, medals, unlocks, a custom soldier and a map editor.
+Top-down pixel-art capture the flag: destructible maps, your own squad, vehicles and helicopters, medals, unlocks and a map editor.
 
 ## Classification / Kind of project
 
 - Classification: **Games**
-- Kind of project: **HTML** (upload `dist/BAF2D-1.2.0-html5.zip`, tick "This file will be played in the browser")
+- Kind of project: **HTML** (upload `dist/BAF2D-1.3.0-html5.zip`, tick "This file will be played in the browser")
 - Release status: **Released**
 
 ## Embed options (Uploads → HTML)
@@ -52,6 +52,12 @@ pick up better weapons and jump into vehicles. Every match feeds your career: sc
     palms, dry-stone walls and wide dirt roads built for vehicles, and <em>Countryside</em>: green farmland between
     two zig-zag trench lines with sandbag parapets, hedgerows, orchards, shell craters and a farmhouse in the middle.
     Every map is symmetric and has no dead ends: there is always another way round.</li>
+  <li><strong>Destructible maps.</strong> Crates, fences, hay bales, hedges, sandbags and walls crack and give way
+    under fire: bullets chew through light cover, rockets breach brick and stone, tanks drive straight through
+    fences and sandbags. Every firefight reshapes the battlefield.</li>
+  <li><strong>Your squad.</strong> Three bot teammates follow you in formation: send them to attack or defend a flag
+    with one key, or call them back. When you fall, pick where to redeploy on a tactical map: your base, a safe
+    flag or a squadmate.</li>
   <li><strong>Vehicles.</strong> Drive a fast <strong>jeep</strong> with a mounted machine gun or a heavy
     <strong>rocket tank</strong>, or take to the air in an <strong>attack helicopter</strong> with a chin cannon and
     rocket pods that flies over walls and trees. Armour shrugs off small arms fire: bring a rocket launcher or
@@ -87,12 +93,14 @@ pick up better weapons and jump into vehicles. Every match feeds your career: sc
   </thead>
   <tbody>
     <tr><td>Move</td><td>WASD / arrow keys</td><td>Left stick</td></tr>
+    <tr><td>Sprint</td><td>Shift</td><td>Push the left stick all the way</td></tr>
     <tr><td>Aim</td><td>Mouse</td><td>Right stick</td></tr>
     <tr><td>Fire</td><td>Left click / Space</td><td>Push the right stick past the dashed ring</td></tr>
     <tr><td>Reload</td><td>R</td><td>Reload button</td></tr>
     <tr><td>Throw grenade</td><td>G</td><td>Grenade button</td></tr>
     <tr><td>Pick up weapon / get in or out of a vehicle</td><td>E (or F)</td><td>Button that appears when available</td></tr>
     <tr><td>Switch weapon (rocket launcher)</td><td>Q</td><td>Swap button (with two weapons)</td></tr>
+    <tr><td>Squad order (flag under the crosshair / follow me)</td><td>T</td><td>Order button (nearest flag)</td></tr>
     <tr><td>Pause</td><td>Esc / P</td><td>Pause button</td></tr>
   </tbody>
 </table>
@@ -147,6 +155,31 @@ Source code licensed under the GNU GPL v3.</p>
   13. `apache_rocket.png` — Enemy gunship over the desert: a rocket launcher is your best friend.
 - Not in the list: `leaderboard.png` (superseded by `match_end.png`) and `editor.png` (superseded by
   `map_editor.png`).
+
+## Release notes (devlog) — v1.3.0
+
+Title: **BAF2D 1.3.0 — Destructible maps and your own squad**
+
+**Destructible maps**
+- Crates, fences, hay bales, hedges, sandbags and walls can now be destroyed. Damage shows as growing cracks; when a
+  tile gives way it bursts into dust and debris and opens new lines of fire and new paths.
+- Bullets splinter wood and slowly rip sandbags apart, grenades blow light cover away, rockets and tank shells
+  breach brick, adobe and stone. Tanks drive straight through fences, hedges, crates and sandbags.
+- Bots look for new cover when theirs is blown away. Maps are restored for the rematch.
+
+**Your squad**
+- Three bot teammates follow you in formation, marked in green. Press **T** with the crosshair on a flag to send
+  them to attack or defend it, press again to have them follow you.
+
+**Deploy screen**
+- When you die, a tactical map shows who killed you and lets you choose where to respawn: your base, a flag you
+  hold that isn't under attack, or a squadmate who isn't in a firefight.
+
+**Battlefield awareness**
+- Minimap under the weapon panel (flags, teammates, spotted enemies, vehicles) and a kill feed.
+- **Sprint** with Shift (or the left stick pushed all the way): faster, but you can't shoot and it costs stamina.
+- **Suppression**: bullets whizzing past darken the screen edges and throw your aim off; suppressed bots dive for
+  cover.
 
 ## Release notes (devlog) — v1.2.0
 

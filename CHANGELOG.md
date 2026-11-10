@@ -3,7 +3,7 @@
 All notable changes to BAF2D. Versions follow [semantic versioning](https://semver.org/); the current version is
 in `config/game.json` (`version`) and shown in the bottom-right corner of the menu.
 
-## [Unreleased]
+## [1.3.0] — 2026-11-10
 
 ### Added
 - **Deploy screen**: when you die a tactical map opens over the battle: pick where to respawn (your base, a flag you
