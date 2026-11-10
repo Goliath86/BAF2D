@@ -160,26 +160,39 @@ Source code licensed under the GNU GPL v3.</p>
 
 Title: **BAF2D 1.3.0 — Destructible maps and your own squad**
 
+This is the biggest update since launch. The battlefield now breaks apart under fire, and you no longer fight
+alone: you get a squad of your own, a deploy screen and a minimap.
+
 **Destructible maps**
 - Crates, fences, hay bales, hedges, sandbags and walls can now be destroyed. Damage shows as growing cracks; when a
   tile gives way it bursts into dust and debris and opens new lines of fire and new paths.
 - Bullets splinter wood and slowly rip sandbags apart, grenades blow light cover away, rockets and tank shells
-  breach brick, adobe and stone. Tanks drive straight through fences, hedges, crates and sandbags.
-- Bots look for new cover when theirs is blown away. Maps are restored for the rematch.
+  breach brick, adobe and stone. Tanks drive straight through fences, hedges, crates and sandbags; jeeps through
+  fences and crates.
+- That sandbag wall you're hiding behind won't last for ever. Bots know it too: they look for new cover when theirs
+  is blown away.
+- Maps are restored to their original state for the rematch, and the outer edge of every map stays intact.
 
 **Your squad**
-- Three bot teammates follow you in formation, marked in green. Press **T** with the crosshair on a flag to send
-  them to attack or defend it, press again to have them follow you.
+- Three bot teammates follow you in formation and fight alongside you, marked in green.
+- Press **T** with the crosshair on a flag to send them to attack or defend it, and press it again to have them
+  follow you. On mobile, the order button sends them to the nearest flag.
 
 **Deploy screen**
-- When you die, a tactical map shows who killed you and lets you choose where to respawn: your base, a flag you
-  hold that isn't under attack, or a squadmate who isn't in a firefight.
+- When you die, a tactical map opens over the battle and shows who killed you and with what.
+- Choose where to respawn: your base, a flag you hold that isn't under attack, or a squadmate who isn't in a
+  firefight. Press *Deploy* (or 1–9 / Enter, or tap the map twice).
 
 **Battlefield awareness**
-- Minimap under the weapon panel (flags, teammates, spotted enemies, vehicles) and a kill feed.
-- **Sprint** with Shift (or the left stick pushed all the way): faster, but you can't shoot and it costs stamina.
-- **Suppression**: bullets whizzing past darken the screen edges and throw your aim off; suppressed bots dive for
-  cover.
+- **Minimap** under the weapon panel: flags, teammates, your squad, enemies your team has spotted and vehicles.
+- **Kill feed**: who killed whom, and with what.
+- **Sprint** with Shift (or push the left stick all the way on mobile): you move faster, but you can't shoot and
+  it drains your stamina. Bots sprint too.
+- **Suppression**: bullets whizzing past darken the edges of the screen and throw your aim off. Suppressed bots
+  dive for cover, so keeping their heads down is now a real tactic.
+
+Sprint and squad orders can be remapped in *Options* like every other key. Have fun, and let me know in the
+comments how the new squads play!
 
 ## Release notes (devlog) — v1.2.0
 
