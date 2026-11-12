@@ -1,0 +1,9 @@
+/.claude
+/.zed
+/drawings
+/dist
+package.json
+# screenshot dei test automatici (node --test)
+/tests/output/
+# Asset con licenza che ne vieta la ridistribuzione (es. CraftPix): mai nel repository
+/assets/licensed/
