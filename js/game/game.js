@@ -1344,14 +1344,26 @@ export class Game {
 
   /** Granate raccolte passandoci sopra (tutti); scambio d'arma del giocatore umano con l'azione "pickup". */
   _updatePickups(dt) {
-    this.pickups.update(dt, this.units, (u, n) => {
-      if (this.pickupsCfg.grenadeSound) this.audio.play(this.pickupsCfg.grenadeSound, u);
-      if (u === this.player && !this.attract) this.hud.popup(this.i18n.t('pickup.grenades', { count: n }), this.pickupsCfg.popupColor);
-    }, (u, n) => {
-      // munizioni prese da un'arma uguale a terra
-      if (this.ammoCfg.sound) this.audio.play(this.ammoCfg.sound, u);
-      u.resupplyFlash = this.ammoCfg.flashTime ?? 0.8;
-      if (u === this.player && !this.attract) this.hud.popup(this.i18n.t('pickup.ammo', { count: n }), this.pickupsCfg.popupColor);
+    const mine = (u) => u === this.player && !this.attract;
+    this.pickups.update(dt, this.units, {
+      grenades: (u, n) => {
+        if (this.pickupsCfg.grenadeSound) this.audio.play(this.pickupsCfg.grenadeSound, u);
+        if (mine(u)) this.hud.popup(this.i18n.t('pickup.grenades', { count: n }), this.pickupsCfg.popupColor);
+      },
+      ammo: (u, n) => {
+        // munizioni prese da un'arma uguale a terra
+        if (this.ammoCfg.sound) this.audio.play(this.ammoCfg.sound, u);
+        u.resupplyFlash = this.ammoCfg.flashTime ?? 0.8;
+        if (mine(u)) this.hud.popup(this.i18n.t('pickup.ammo', { count: n }), this.pickupsCfg.popupColor);
+      },
+      box: (u, got) => {
+        // cassa di munizioni
+        if (this.ammoCfg.sound) this.audio.play(this.ammoCfg.sound, u);
+        if (got.rounds > 0) u.resupplyFlash = this.ammoCfg.flashTime ?? 0.8;
+        if (!mine(u)) return;
+        const key = got.rounds > 0 ? (got.grenades > 0 ? 'pickup.boxBoth' : 'pickup.ammo') : 'pickup.grenades';
+        this.hud.popup(this.i18n.t(key, { count: got.rounds || got.grenades, grenades: got.grenades }), this.pickupsCfg.popupColor);
+      },
     });
     this._updateResupply(dt);
     const p = this.player;
@@ -1395,6 +1407,7 @@ export class Game {
       if (!it) continue;
       br.pickupNow = null;
       const u = br.unit;
+      if (it.kind !== 'weapon') continue; // casse e granate si prendono passandoci sopra
       if (u.dead || !this.pickups.list.includes(it) || Math.hypot(u.x - it.x, u.y - it.y) > r) continue;
       this._swapWeapon(u, it);
     }

@@ -1238,7 +1238,22 @@ export class BotBrain {
       const hold = this.zone || (this._capturing(game) ? this.objective.flag : null);
       let bestS = -Infinity;
       for (const it of game.pickups.list) {
-        if (it.kind !== 'weapon' || this.skipsPickup(it)) continue;
+        if (this.skipsPickup(it)) continue;
+        if (it.kind === 'ammo') {
+          // cassa di munizioni: come un'arma uguale alla propria (si prende passandoci sopra)
+          if (!low || !game.pickups.wantsBox(u, it)) continue;
+          const d = dist(it, u);
+          const gain = (am.crateValue ?? am.scavengeValue ?? 1.5) * need;
+          if (d > reach || gain < minGain) continue;
+          if (hold && !game.ctf.inZone(hold, it.x, it.y)) continue;
+          const s = gain * 100 - d;
+          if (s > bestS) {
+            bestS = s;
+            goal = it;
+          }
+          continue;
+        }
+        if (it.kind !== 'weapon') continue;
         const special = !!game.weapons.get(it.weapon).special;
         let gain;
         if (it.weapon === primary || (special && it.weapon === u.specialId)) {
@@ -1307,7 +1322,7 @@ export class BotBrain {
     const ratio = u.primaryAmmoRatio;
     let r = this.resupply;
     if (r) {
-      const lost = r.flag && (r.flag.owner !== u.team || r.flag.contested);
+      const lost = (r.flag && (r.flag.owner !== u.team || r.flag.contested)) || (r.item && !game.pickups.list.includes(r.item));
       if (ratio >= (am.resupplyUntil ?? 0.9) || lost || this.time > r.until || this.unreachable) {
         this.resupply = r = null;
         this.unreachable = false;
@@ -1320,7 +1335,11 @@ export class BotBrain {
       this.resupplyTimer = am.retry ?? 2;
       let best = null;
       let bestD = Infinity;
-      for (const p of game.resupplyPoints(u.team)) {
+      // base, bandiere della squadra e casse di munizioni (quelle che servono e raggiungibili di recente)
+      const crates = game.pickups.list
+        .filter((it) => it.kind === 'ammo' && !this.skipsPickup(it) && game.pickups.wantsBox(u, it))
+        .map((it) => ({ x: it.x, y: it.y, flag: null, item: it }));
+      for (const p of [...game.resupplyPoints(u.team), ...crates]) {
         const d = dist(p, u);
         if (d < bestD) {
           bestD = d;
@@ -1328,12 +1347,26 @@ export class BotBrain {
         }
       }
       if (!best) return false;
-      r = this.resupply = { point: { x: best.x, y: best.y }, flag: best.flag, until: this.time + (am.goalTime ?? 30) };
+      r = this.resupply = { point: { x: best.x, y: best.y }, flag: best.flag, item: best.item || null, until: this.time + (am.goalTime ?? 30) };
+      this.pickupClose = 0;
       this.unreachable = false;
     }
     if (this.target && this.visible && ratio > 0) return false;
-    if (game.inResupply(u)) {
+    if (!r.item && game.inResupply(u)) {
       this._stop();
+      return true;
+    }
+    // cassa irraggiungibile esattamente (come per le armi): dopo un po' la si lascia perdere
+    if (r.item && dist(r.item, u) <= (this.cfg.pickupDirectReach ?? 28) && game.nav.los(u.x, u.y, r.item.x, r.item.y)) {
+      this.pickupClose = (this.pickupClose || 0) + dt;
+      if (this.pickupClose > (this.cfg.pickupGiveUp ?? 2.5)) {
+        this._skipPickup(r.item);
+        this.resupply = null;
+        return false;
+      }
+      this.path = [{ x: r.item.x, y: r.item.y }];
+      this.pathIdx = 0;
+      this.dest = { x: r.item.x, y: r.item.y };
       return true;
     }
     this._goTo(r.point, game);

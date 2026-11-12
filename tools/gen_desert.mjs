@@ -206,6 +206,9 @@ set(30, 53, 'U', ['=']); // elicottero blu (i rossi: ruotato)
 // lanciarazzi: fattoria e casa del villaggio
 set(30, 44, 'L', ['.', 'r', 'd', 'o', 'b']);
 set(42, 40, 'L', ['f', 'F', 'r']);
+// casse di munizioni: dietro la fattoria e dentro la casa a nord
+set(35, 49, 'a', ['.']);
+set(33, 25, 'i', ['f']);
 
 // rossi: le celle ruotate di "1" e delle bandiere (set() le ha copiate uguali)
 {
@@ -283,6 +286,8 @@ const level = {
     S: { ...sand, pickup: 'shotgun' },
     G: { ...sand, pickup: 'grenades' },
     L: { ...sand, pickup: 'launcher' },
+    a: { ...sand, pickup: 'ammo' },
+    i: { tile: ['house_floor', 'house_floor2'], variantWeights: [3, 1], pickup: 'ammo' },
     J: { tile: ['road', 'road2', 'road3'], vehicle: 'jeep', team: 'blue', angleDeg: 0 },
     K: { tile: ['road', 'road2', 'road3'], vehicle: 'jeep', team: 'red', angleDeg: 180 },
     T: { tile: ['road', 'road2', 'road3'], vehicle: 'tank', team: 'blue', angleDeg: 0 },

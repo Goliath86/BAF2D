@@ -300,7 +300,7 @@ export class MapView {
       } else if (o.kind === 'pickup') {
         const pdef = config.pickups?.types?.[o.type];
         const wdef = pdef?.weapon ? this.env.weapons?.[pdef.weapon] : null;
-        const sp = sprite(wdef?.pickupSprite || (pdef?.grenades ? config.pickups?.grenadeSprite : null));
+        const sp = sprite(wdef?.pickupSprite || (pdef?.ammo ? config.pickups?.ammoSprite || 'ammo_box' : null) || (pdef?.grenades ? config.pickups?.grenadeSprite : null));
         if (config.pickups?.pad) {
           const p = config.pickups.padSize ?? 12;
           ctx.fillStyle = config.pickups.padColor || 'rgba(255,211,107,0.35)';

@@ -199,6 +199,7 @@
   "pickup": {
     "grenades": "+{count} GRENADES",
     "ammo": "+{count} ROUNDS",
+    "boxBoth": "+{count} ROUNDS +{grenades} GRENADES",
     "resupply": "RESUPPLY"
   },
   "score": {
@@ -461,6 +462,7 @@
       "flag": "Flag",
       "flagId": "Flag {id}",
       "grenades": "{count} grenades",
+      "ammo": "Ammo crate",
       "neutral": "Neutral",
       "team": "Team",
       "angle": "Direction",

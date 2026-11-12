@@ -337,6 +337,7 @@ class Editor {
           const w = this.weaponsCfg.weapons?.[p.weapon];
           return this.label(w?.name || `weapons.${p.weapon}`, p.weapon); // stesso nome dell'HUD in gioco
         }
+        if (p?.ammo) return this.t('editor.objects.ammo');
         if (p?.grenades) return this.t('editor.objects.grenades', { count: p.grenades });
         return o.type;
       }
@@ -1049,7 +1050,7 @@ class Editor {
     } else if (o.kind === 'pickup') {
       const p = cfg.pickups?.types?.[o.type];
       const w = p?.weapon ? this.weaponsCfg.weapons?.[p.weapon] : null;
-      sp = sprite(w?.pickupSprite || (p?.grenades ? cfg.pickups?.grenadeSprite : null));
+      sp = sprite(w?.pickupSprite || (p?.ammo ? cfg.pickups?.ammoSprite || 'ammo_box' : null) || (p?.grenades ? cfg.pickups?.grenadeSprite : null));
     } else if (o.kind === 'prop') {
       sp = sprite(cfg.props?.types?.[o.type]?.sprite || o.type);
     } else if (o.kind === 'vehicle') {

@@ -213,6 +213,8 @@ G[45][33] = 'L'; // lanciarazzi in trincea
 G[49][21] = 'G'; // granate al posto di comando
 G[9][24] = 'S'; // fucile a pompa nel frutteto
 G[29][33] = 'G'; // granate al cratere
+G[39][26] = 'e'; // casse di munizioni: in trincea e sul prato a nord
+G[20][45] = 'a';
 
 g.symmetrize({ 1: '2', 2: '1', A: 'E', E: 'A', B: 'D', D: 'B', J: 'K', K: 'J', V: 'Y', Y: 'V', U: 'Z', Z: 'U' });
 
@@ -235,7 +237,7 @@ g.symmetrize({ 1: '2', 2: '1', A: 'E', E: 'A', B: 'D', D: 'B', J: 'K', K: 'J', V
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
       if (SOLID.has(G[y][x]) || seen.has(`${x},${y}`)) continue;
-      if (/[12A-ESGLJKVYNUZ]/.test(G[y][x])) throw new Error(`unreachable ${G[y][x]} at ${x},${y}`);
+      if (/[12A-ESGLJKVYNUZae]/.test(G[y][x])) throw new Error(`unreachable ${G[y][x]} at ${x},${y}`);
       G[y][x] = '#';
     }
   }
@@ -277,6 +279,8 @@ writeLevel('config/levels/level04.json', {
     S: { ...grass, pickup: 'shotgun' },
     G: { ...grass, pickup: 'grenades' },
     L: { ...grass, pickup: 'launcher' },
+    a: { ...grass, pickup: 'ammo' },
+    e: { tile: ['trench', 'trench2'], variantWeights: [3, 1], pickup: 'ammo' },
     J: { tile: dirt, vehicle: 'jeep', team: 'blue', angleDeg: 0 },
     K: { tile: dirt, vehicle: 'jeep', team: 'red', angleDeg: 180 },
     V: { tile: dirt, vehicle: 'tank', team: 'blue', angleDeg: 0 },

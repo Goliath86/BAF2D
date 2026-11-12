@@ -279,6 +279,26 @@
         "metalLight": "#c8c8c8"
       }
     },
+    "ammo_box": {
+      "src": null,
+      "frameWidth": 16,
+      "frameHeight": 12,
+      "origin": [8, 6],
+      "placeholder": {
+        "shape": "ammoBox",
+        "autoOutline": "#0d0f08",
+        "body": "#56633a",
+        "light": "#7a8a52",
+        "dark": "#3a4626",
+        "shadow": "#2a331b",
+        "stencil": "#d8c46a",
+        "metal": "#8a8a7a",
+        "metalLight": "#c8c8b8",
+        "brass": "#c8a040",
+        "brassDark": "#8a6a24",
+        "tip": "#e8d090"
+      }
+    },
     "scorch": {
       "src": null,
       "frameWidth": 36,

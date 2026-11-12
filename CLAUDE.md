@@ -358,7 +358,11 @@ tools/check_level.mjs controllo livelli: celle irraggiungibili e vicoli ciechi (
   (+ granata ogni `grenadeEvery`), `unit.resupplyFlash` = scorta verde nell'HUD (rossa a zero). A secco l'HUD dice
   dove rifornirsi (`hud.noAmmo*`). Bot (`bots.ai.ammo`): sotto `lowRatio` cercano più lontano armi uguali (per i
   colpi) o altre armi; a secco (o sotto `resupplyRatio` senza bersaglio) `BotBrain._ammoTick` li porta al punto
-  di rifornimento più vicino finché non tornano a `resupplyUntil`.
+  di rifornimento più vicino (anche casse) finché non tornano a `resupplyUntil`.
+  Casse di munizioni: tipo di pickup con `ammo` (`pickups.types.ammo` = { ammo: frazione della scorta per uso,
+  grenades, uses, cooldown, respawn }), oggetto `kind: 'ammo'` (sprite procedurale `ammo_box`, forma `ammoBox`),
+  si usano passandoci sopra (`Pickups.wantsBox`/`_useBox`, popup `pickup.ammo`/`boxBoth`); i bot le cercano in
+  `_weaponTick` (sotto `lowRatio`) e in `_ammoTick`. Nelle mappe: 4 per livello (2 per metà, legend `pickup: 'ammo'`).
 - Razzi (`rockets.js`): arma con `projectile: "rocket"` + `rocket` (tipo in weapons.json -> `rockets`); gittata come i
   proiettili (`Game._shotRange`), scia `effects.json -> trails`; IA: armi `antiVehicle` mirano ai mezzi, mai sotto
   `minSafeRange`; senza anticarro la fanteria si ripara (`BotBrain._vehicleDanger`).

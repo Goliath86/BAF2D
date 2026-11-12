@@ -199,6 +199,7 @@
   "pickup": {
     "grenades": "+{count} GRANATE",
     "ammo": "+{count} COLPI",
+    "boxBoth": "+{count} COLPI +{grenades} GRANATE",
     "resupply": "RIFORNIMENTO"
   },
   "score": {
@@ -461,6 +462,7 @@
       "flag": "Bandiera",
       "flagId": "Bandiera {id}",
       "grenades": "{count} granate",
+      "ammo": "Cassa di munizioni",
       "neutral": "Neutrale",
       "team": "Squadra",
       "angle": "Direzione",

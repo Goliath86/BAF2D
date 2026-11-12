@@ -4,7 +4,8 @@
 // - punti fissi della mappa (legend del livello: { "tile": "floor", "pickup": "shotgun" }, tipi in
 //   pickups.types) che fanno ricomparire l'oggetto "respawn" secondi dopo la raccolta.
 // Le granate si raccolgono passandoci sopra (qualunque soldato, fino a maxGrenades); le armi solo con
-// l'azione "pickup" (scambio: l'arma impugnata resta a terra), vedi Game._updatePickups.
+// l'azione "pickup" (scambio: l'arma impugnata resta a terra), vedi Game._updatePickups. Da un'arma uguale alla
+// propria e dalle casse di munizioni (tipo con "ammo") si prendono i colpi passandoci sopra.
 
 import { drawSprite } from '../engine/assets.js';
 
@@ -41,9 +42,12 @@ export class Pickups {
 
   _fill(s) {
     const d = s.def;
-    const item = d.weapon
-      ? this._item('weapon', s.x, s.y, { weapon: d.weapon, ammo: null, angle: d.angle ?? -0.35 })
-      : this._item('grenades', s.x, s.y, { count: d.grenades ?? 2 });
+    let item;
+    if (d.weapon) item = this._item('weapon', s.x, s.y, { weapon: d.weapon, ammo: null, angle: d.angle ?? -0.35 });
+    // cassa di munizioni: "uses" rifornimenti, ognuno dà "ammo" (frazione della scorta massima) a ogni arma
+    // e "grenades" granate; lo stesso soldato può riprenderne solo dopo "cooldown" s
+    else if (d.ammo) item = this._item('ammo', s.x, s.y, { count: d.uses ?? 4, share: d.ammo, grenades: d.grenades ?? 0, cooldown: d.cooldown ?? 8, users: null });
+    else item = this._item('grenades', s.x, s.y, { count: d.grenades ?? 2 });
     item.life = null; // resta finché qualcuno non lo prende
     item.spawner = s;
     s.item = item;
@@ -118,10 +122,38 @@ export class Pickups {
   }
 
   /**
-   * Avanza età e punti fissi; granate e munizioni (armi uguali alle proprie) raccolte da chi ci passa sopra:
-   * onGrenades(unit, quante) e onAmmo(unit, colpi, idArma) per ogni raccolta.
+   * L'unità ha bisogno della cassa di munizioni "it" (scorta non piena, o granate se la cassa ne dà) e può usarla
+   * (non l'ha appena usata: tipo -> "cooldown" s).
    */
-  update(dt, units, onGrenades, onAmmo) {
+  wantsBox(u, it) {
+    if (u.dead || u.vehicle || (it.users?.get(u) ?? -Infinity) > this.time) return false;
+    if (it.grenades > 0 && u.grenades < u.maxGrenades) return true;
+    return [u.weapon?.id, u.holster?.id].some((id) => id && u.ammoMissing(id) > 0);
+  }
+
+  /** Un rifornimento dalla cassa "it" all'unità: { rounds, grenades } presi (la cassa perde un uso se serve). */
+  _useBox(it, u) {
+    let rounds = 0;
+    for (const id of [u.weapon.id, u.holster?.id]) {
+      if (!id) continue;
+      const w = this.weapons.get(id);
+      if (w.reserve !== undefined) rounds += u.addAmmo(id, Math.max(1, Math.ceil(w.reserve * it.share)));
+    }
+    const grenades = it.grenades > 0 ? u.addGrenades(it.grenades) : 0;
+    if (rounds + grenades > 0) {
+      (it.users ||= new Map()).set(u, this.time + it.cooldown);
+      if (--it.count <= 0) this.take(it);
+    }
+    return { rounds, grenades };
+  }
+
+  /**
+   * Avanza età e punti fissi; granate, munizioni (armi uguali alle proprie) e casse di munizioni raccolte da chi
+   * ci passa sopra. on = { grenades(unit, quante), ammo(unit, colpi, idArma), box(unit, { rounds, grenades }) }.
+   */
+  update(dt, units, on = {}) {
+    const onGrenades = on.grenades;
+    const onAmmo = on.ammo;
     this.time += dt;
     for (const s of this.spawners) {
       if (!s.item && (s.timer -= dt) <= 0) this._fill(s);
@@ -139,6 +171,15 @@ export class Pickups {
           if (u.dead || u.vehicle || Math.hypot(u.x - it.x, u.y - it.y) > r) continue;
           const n = this._scavenge(it, u);
           if (n > 0) onAmmo?.(u, n, it.weapon);
+          if (!this.list.includes(it)) break;
+        }
+        continue;
+      }
+      if (it.kind === 'ammo') {
+        for (const u of units) {
+          if (Math.hypot(u.x - it.x, u.y - it.y) > r || !this.wantsBox(u, it)) continue;
+          const got = this._useBox(it, u);
+          if (got.rounds + got.grenades > 0) on.box?.(u, got);
           if (!this.list.includes(it)) break;
         }
         continue;
@@ -207,9 +248,12 @@ export class Pickups {
     const c = this.cfg;
     const blinkTime = c.blinkTime ?? 5;
     const gSprite = this.assets.sprites.get(c.grenadeSprite || 'grenade');
+    const aSprite = this.assets.sprites.get(c.ammoSprite || 'ammo_box');
     for (const it of this.list) {
       if (it.life !== null && it.life - it.age < blinkTime && Math.floor(it.age * 8) % 2 === 0) continue;
-      if (it.kind === 'weapon') {
+      if (it.kind === 'ammo') {
+        if (aSprite) drawSprite(ctx, aSprite, 0, it.x, it.y, 0);
+      } else if (it.kind === 'weapon') {
         const w = this.weapons.get(it.weapon);
         const sprite = w.pickupSprite && this.assets.sprites.get(w.pickupSprite);
         if (sprite) drawSprite(ctx, sprite, 0, it.x, it.y, it.angle);

@@ -83,6 +83,8 @@ G[34][36] = 'g';
 G[52][38] = 'L'; // lanciarazzi dietro il muro sud
 G[18][30] = 's';
 G[60][11] = 'J'; // jeep della base
+G[51][25] = 'a'; // casse di munizioni: tra la base e il centro, e sul lato nord
+G[12][29] = 'a';
 
 g.symmetrize({ b: 'r', r: 'b', A: 'C', C: 'A', J: 'K', K: 'J' });
 
@@ -103,6 +105,7 @@ writeLevel('config/levels/level01.json', {
     s: { tile: 'floor', pickup: 'shotgun' },
     g: { tile: 'floor', pickup: 'grenades' },
     L: { tile: 'floor', pickup: 'launcher' },
+    a: { tile: 'floor', pickup: 'ammo' },
     J: { tile: 'floor', vehicle: 'jeep', team: 'blue', angleDeg: 0 },
     K: { tile: 'floor', vehicle: 'jeep', team: 'red', angleDeg: 180 },
   },

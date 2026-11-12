@@ -162,6 +162,7 @@
     "blinkTime": 5,
     "maxDropped": 16,
     "grenadeSprite": "grenade",
+    "ammoSprite": "ammo_box",
     "pad": true,
     "padSize": 12,
     "padColor": "rgba(255,211,107,0.35)",
@@ -174,7 +175,8 @@
       "rifle": { "weapon": "rifle", "respawn": 25 },
       "pistol": { "weapon": "pistol", "respawn": 25 },
       "grenades": { "grenades": 2, "respawn": 20 },
-      "launcher": { "weapon": "launcher", "respawn": 35, "angle": -0.2 }
+      "launcher": { "weapon": "launcher", "respawn": 35, "angle": -0.2 },
+      "ammo": { "ammo": 1, "grenades": 1, "uses": 4, "cooldown": 8, "respawn": 30 }
     }
   },
 

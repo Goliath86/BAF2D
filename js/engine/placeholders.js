@@ -715,6 +715,54 @@ const SPRITE_SHAPES = {
   },
 
   /**
+   * Cassa di munizioni vista dall'alto con un po' di fronte: coperchio (body/light/dark) con bordo rialzato,
+   * maniglia (metal), scritta a stampino (stencil), fronte più scuro con chiusure (metal/metalLight) e qualche
+   * cartuccia (brass/brassDark) appoggiata sul coperchio aperto a metà. Lasciare 1 px di bordo per autoOutline.
+   */
+  ammoBox(g, w, h, p) {
+    const x0 = 1;
+    const y0 = 1;
+    const bw = w - 2;
+    const lid = Math.max(4, h - 5); // altezza del coperchio
+    const front = h - 2 - lid; // altezza del fronte
+    // coperchio: fondo, bordo chiaro in alto/sinistra, scuro in basso/destra
+    rect(g, x0, y0, bw, lid, p.body);
+    rect(g, x0, y0, bw, 1, p.light);
+    rect(g, x0, y0, 1, lid, p.light);
+    rect(g, x0 + bw - 1, y0 + 1, 1, lid - 1, p.dark);
+    rect(g, x0 + 1, y0 + lid - 1, bw - 1, 1, p.dark);
+    // battuta del coperchio (due righe incise ai lati)
+    rect(g, x0 + 2, y0 + 1, 1, lid - 2, p.dark);
+    rect(g, x0 + bw - 3, y0 + 1, 1, lid - 2, p.dark);
+    // scritta a stampino a sinistra della maniglia
+    const sy = y0 + Math.floor(lid / 2) - 1;
+    rect(g, x0 + 4, sy, 1, 2, p.stencil);
+    rect(g, x0 + 5, sy, 1, 1, p.stencil);
+    rect(g, x0 + 6, sy, 1, 2, p.stencil);
+    // maniglia centrale (ombra sotto, riflesso sopra)
+    const hx = x0 + Math.floor(bw / 2) - 1;
+    rect(g, hx, sy, 4, 1, p.metal);
+    rect(g, hx, sy + 1, 1, 1, p.metal);
+    rect(g, hx + 3, sy + 1, 1, 1, p.metal);
+    rect(g, hx + 1, sy + 1, 2, 1, p.dark);
+    rect(g, hx + 1, sy, 2, 1, p.metalLight);
+    // cartucce sul coperchio, a destra
+    for (let k = 0; k < 2; k++) {
+      const cx = x0 + bw - 6 + k * 2;
+      rect(g, cx, y0 + 1, 1, 3, p.brass);
+      rect(g, cx, y0 + 3, 1, 1, p.brassDark);
+      rect(g, cx, y0 + 1, 1, 1, p.tip);
+    }
+    // fronte: più scuro, con le due chiusure
+    rect(g, x0, y0 + lid, bw, front, p.dark);
+    rect(g, x0, y0 + lid + front - 1, bw, 1, p.shadow);
+    for (const cx of [x0 + 2, x0 + bw - 4]) {
+      rect(g, cx, y0 + lid, 2, Math.max(1, front - 1), p.metal);
+      rect(g, cx, y0 + lid, 1, 1, p.metalLight);
+    }
+  },
+
+  /**
    * Bruciatura di un'esplosione (decal): macchia irregolare scura con centro più nero, raggi
    * di fuliggine e bordo "sgranato". Ogni frame è una variante.
    */
