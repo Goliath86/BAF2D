@@ -31,9 +31,18 @@ Sparatutto top-down in pixel-art per browser. Lingua di lavoro con l'utente: **i
 - Test lingua: `?lang=it` nell'URL.
 - Verifica rapida senza browser interattivo: Chrome headless con `--screenshot` e `--enable-logging=stderr`
   (gli errori di console compaiono nel log). Chrome: `C:\Program Files (x86)\Google\Chrome\Application\chrome.exe`.
-- Test di input/gameplay: Chrome headless con `--remote-debugging-port=9222` + script Node (WebSocket globale) che usa
-  CDP (`Input.dispatchMouseEvent`, `Runtime.evaluate` su `window.BAF2D`, `Page.captureScreenshot`). Nel rilascio del
-  mouse passare `button: 'left'`, altrimenti il tasto resta premuto. Script di test nello scratchpad, non nel repo.
+- **Test di regressione: `node --test`** (tutti, ~30 s; `node --test tests/static.test.mjs` = solo quelli senza
+  browser, pochi secondi). Lanciarli dopo ogni modifica e prima di ogni commit; a ogni nuova funzione aggiungere
+  il suo test. `tests/static.test.mjs`: riferimenti tra i JSON, lingue (stesse chiavi/segnaposto, chiavi usate nel
+  codice), livelli (legend, simmetria, `checkGrid`), generatori = livelli committati (in una copia temporanea),
+  import/export dell'editor. `tests/browser.test.mjs`: Chrome headless (`tests/lib/browser.mjs`: server su porta
+  libera, profilo temporaneo, client CDP, `Math.random` a seme fisso) + `window.T` (`tests/lib/helpers.mjs`):
+  `T.start(livello, scelte)` come "Inizia" con `game.suspended = true`, `T.step(s, until)` = tick da 1/60 s a mano
+  (veloce e ripetibile), `T.autopilot()` = il giocatore guidato da un BotBrain (altrimenti la sua squadra lo segue
+  e resta ferma alla base) con rientro automatico, `T.sanity()` = stati impossibili, `T.freeze(slot)`,
+  `T.missingKeys()`. Ogni test fallisce se la pagina scrive errori. Screenshot in `tests/output/` (gitignored).
+- Prove ad hoc di input/gameplay: stessa infrastruttura (`launch()` di `tests/lib/browser.mjs`) da uno script nello
+  scratchpad. Nel rilascio del mouse passare `button: 'left'`, altrimenti il tasto resta premuto.
 - Controllo sintassi: `node --check <file.js>`. Chiudere il server di sviluppo a fine verifica.
 
 ## Git
@@ -121,6 +130,8 @@ tools/gen_countryside.mjs genera config/levels/level04.json (Countryside 97x65: 
                       siepi, frutteto, casale, stagno, crateri; tileset "countryside", meteo "country_breeze")
 tools/levelgen.mjs    utilità dei generatori: griglia simmetrica (rotazione 180°), room/line/fill, writeLevel
 tools/check_level.mjs controllo livelli: celle irraggiungibili e vicoli ciechi (node tools/check_level.mjs <file...>)
+tests/                test di regressione (node --test): static.test.mjs, browser.test.mjs, lib/browser.mjs
+                      (Chrome + CDP), lib/helpers.mjs (window.T); output/ = screenshot (gitignored)
 ```
 
 - **Mappe**: grandi quanto il deserto (97x65), simmetriche per rotazione di 180° e **senza vicoli ciechi**

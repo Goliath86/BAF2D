@@ -15,6 +15,28 @@ oppure `python -m http.server 8080`.
 
 Apri `http://localhost:8080/`. Per provarlo su un telefono collegato alla stessa rete Wi-Fi usa l'indirizzo **LAN** stampato dal server.
 
+## Test automatici
+
+Test di regressione con il test runner integrato di Node (nessuna dipendenza), dalla cartella del repo:
+
+```
+node --test                          # tutti (circa 30 s)
+node --test tests/static.test.mjs    # solo i controlli senza browser (pochi secondi)
+node --test tests/browser.test.mjs   # solo il gioco nel browser
+```
+
+- `tests/static.test.mjs`: JSON validi e coerenti (sprite, suoni, effetti, armi, mezzi, oggetti a terra), file lingua
+  con le stesse chiavi e gli stessi segnaposto, chiavi usate nel codice esistenti, livelli validi (legend, oggetti,
+  simmetria, niente celle irraggiungibili né vicoli ciechi), generatori che riproducono i livelli committati,
+  import/export dell'editor senza perdite.
+- `tests/browser.test.mjs`: il gioco vero in Chrome headless (server di sviluppo su una porta libera, profilo
+  temporaneo). Le partite avanzano a passi fissi molto più veloci del tempo reale e `Math.random` ha un seme fisso,
+  quindi i risultati sono ripetibili. Controlla: avvio del menu, 90 s di partita con 7 bot su ogni mappa (niente
+  stati impossibili, bandiere conquistate, uccisioni), una partita fino alla fine con classifica e rivincita, sparo
+  e ricarica, munizioni e rifornimenti, granate, morte e rientro, mezzi, pausa, testi di tutte le lingue, editor.
+  Senza errori in console. Screenshot in `tests/output/` (ignorata da git). Chrome: percorsi standard o `CHROME_PATH`;
+  se manca, questi test vengono saltati.
+
 ## Controlli
 
 | Desktop | Mobile (solo landscape) |
@@ -214,6 +236,7 @@ js/
                        ctf (bandiere, ticket, rientro), scores (punti della partita), ranks (gradi, insegne, carriera),
                        pickups (oggetti a terra), props (decorazioni), weather (vento e sabbia)
 tools/serve.mjs        server statico di sviluppo (solo moduli Node built-in)
+tests/                 test automatici (node --test): static.test.mjs, browser.test.mjs, lib/ (Chrome + CDP, helper)
 tools/gen_desert.mjs   generatore della mappa del deserto (level03.json)
 tools/build-zip.mjs    zip per itch.io: node tools/build-zip.mjs -> dist/BAF2D-<versione>-html5.zip
 docs/itch-io.md        testi (in inglese) e impostazioni della pagina itch.io, note di rilascio
