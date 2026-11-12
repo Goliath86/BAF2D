@@ -290,6 +290,48 @@ describe('gioco nel browser', { skip: chrome ? false : 'Chrome non trovato (impo
     });
   }
 
+  it('fusione dei terreni: a strisce come intera, cambia i bordi, il preriscaldamento riempie la cache', async () => {
+    await openGame();
+    for (const lvl of game.levels) {
+      const r = await ev(`(async () => {
+        const TM = BAF2D_MENU.game.map ? BAF2D_MENU.game.map.constructor : null;
+        const level = JSON.parse(JSON.stringify(BAF2D_MENU.levels.find((l) => l.id === '${lvl.id}').data)); // copia: niente cache
+        const ts = BAF2D.assets.tileset(level.tileset);
+        const Map_ = TM || (await import('./js/engine/tilemap.js')).TileMap;
+        const pixels = (m) => m.canvas.getContext('2d').getImageData(0, 0, m.pixelWidth, m.pixelHeight).data;
+        const whole = new Map_(level, ts, { deferred: true });
+        whole._renderRegion(0, 0, whole.cols - 1, whole.rows - 1);
+        const strips = new Map_(level, ts, { deferred: true });
+        // a blocchi come TileMap.prewarm (24x4 celle), più qualche blocco di forma diversa
+        for (let y = 0; y < strips.rows; y += 4) for (let x = 0; x < strips.cols; x += 24) strips._renderRegion(x, y, Math.min(strips.cols - 1, x + 23), Math.min(strips.rows - 1, y + 3));
+        for (const [x, y] of [[5, 7], [40, 20], [60, 33]]) strips._renderRegion(x, y, x + 2, y + 2);
+        const plain = new Map_(level, ts, { blend: false });
+        const a = pixels(whole), b = pixels(strips), c = pixels(plain);
+        let seams = 0, blended = 0;
+        for (let i = 0; i < a.length; i += 4) {
+          if (a[i] !== b[i] || a[i + 1] !== b[i + 1] || a[i + 2] !== b[i + 2]) seams++;
+          if (a[i] !== c[i] || a[i + 1] !== c[i + 1] || a[i + 2] !== c[i + 2]) blended++;
+        }
+        // preriscaldamento: alla fine la partita trova la mappa in cache (stesso canvas intatto)
+        const fresh = JSON.parse(JSON.stringify(level));
+        Map_.prewarm(fresh, ts);
+        const t0 = performance.now();
+        while (performance.now() - t0 < 8000) {
+          await new Promise((r) => setTimeout(r, 50));
+          const probe = new Map_(fresh, ts, { deferred: true });
+          if (probe.pristine) return { seams, blended, terrains: !!ts.terrains, warmed: true, same: pixels(probe).every((v, i) => v === a[i]) };
+        }
+        return { seams, blended, terrains: !!ts.terrains, warmed: false };
+      })()`);
+      assert.equal(r.seams, 0, `${lvl.id}: pixel diversi disegnando a strisce (cuciture)`);
+      if (r.terrains) {
+        assert.ok(r.blended > 1000, `${lvl.id}: la fusione ha cambiato solo ${r.blended} pixel`);
+        assert.ok(r.warmed, `${lvl.id}: il preriscaldamento non ha riempito la cache`);
+        assert.ok(r.same, `${lvl.id}: la mappa preriscaldata è diversa da quella disegnata intera`);
+      }
+    }
+  });
+
   it('editor: carica ogni livello del gioco senza errori né avvisi del controllo', async () => {
     await page.open(`${ctx.base}/editor.html?lang=en`, 'window.BAF2D_EDITOR');
     for (const lvl of game.levels) {

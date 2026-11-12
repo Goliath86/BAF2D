@@ -122,6 +122,23 @@ describe('configurazione', () => {
     assert.ok(weaponsCfg.weapons[game.player.weapon], 'player.weapon');
   });
 
+  test('fusione dei terreni: i terreni nominati da tile e fasce di confine esistono', () => {
+    for (const [ts, def] of Object.entries(assets.tilesets)) {
+      const terrains = def.terrains || {};
+      for (const t of def.tiles) {
+        if (t.terrain) assert.ok(terrains[t.terrain], `tileset ${ts}, tile ${t.name}: terrain "${t.terrain}" non è in "terrains"`);
+        if (t.terrain) assert.ok(!t.solid || t.shootThrough, `tileset ${ts}, tile ${t.name}: un muro non deve fondersi (bordo diverso dalla collisione)`);
+      }
+      for (const [name, tr] of Object.entries(terrains)) {
+        assert.ok(def.tiles.some((t) => t.terrain === name), `tileset ${ts}: terreno "${name}" senza tile`);
+        for (const [other, rim] of Object.entries(tr.rim || {})) {
+          assert.ok(other === '*' || terrains[other], `tileset ${ts}: ${name}.rim.${other} non è un terreno`);
+          assert.ok(Array.isArray(rim.colors) && rim.colors.every((c) => /^#[0-9a-f]{6}$/i.test(c)), `tileset ${ts}: ${name}.rim.${other}.colors (#rrggbb)`);
+        }
+      }
+    }
+  });
+
   test('effetti: i tipi di impatto dei tile esistono', () => {
     for (const [ts, def] of Object.entries(assets.tilesets)) {
       for (const t of def.tiles) {

@@ -97,7 +97,7 @@ async function boot() {
     let testId = null;
     if (testLevel) {
       try {
-        new TileMap(testLevel, assets.tileset(testLevel.tileset)); // livello valido (tileset e tile esistenti)?
+        new TileMap(testLevel, assets.tileset(testLevel.tileset), { blend: false }); // livello valido (tileset e tile esistenti)?
         testId = config.editor?.testLevelId || 'editorTest';
         levels.unshift({ id: testId, data: testLevel, test: true });
       } catch (e) {

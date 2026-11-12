@@ -402,8 +402,18 @@ tests/                test di regressione (node --test): static.test.mjs, browse
 - Tile: `id`, `name`, `solid`, `index` opzionale (posizione nello sheet). Fuori mappa = solido.
   `shootThrough` = solido per il movimento ma non per colpi/vista: per proiettili, linee di vista (IA, bandiere,
   esplosioni), granate, bossoli e particelle usare `map.blocksShotAt/blocksShotTile`, per il movimento
-  `isSolidAt`/`rectHitsSolid`. Prerender del TileMap: tile, poi `edge` (bordi tra gruppi, `_drawEdges`), poi
-  ombre dei tile che bloccano i colpi (`tileset.shadow`, `_drawShadows`). Ogni tile placeholder è ritagliato
+  `isSolidAt`/`rectHitsSolid`. Prerender del TileMap: tile, poi fusione dei terreni (`_drawBlend`), poi `edge`
+  (vecchie fasce tra gruppi, `_drawEdges`, ora non usate dai tileset), poi ombre dei tile che bloccano i colpi
+  (`tileset.shadow`, `_drawShadows`).
+  Fusione dei terreni: tile con `"terrain"` + `tileset.terrains` { <terreno>: { amp, bias, spill, variants, rim:
+  { <altro terreno | "*">: { colors, width, dither } } } } + `tileset.blend` { amp, scale, variants, variantScale }.
+  Ogni pixel delle celle di confine sceglie il terreno con copertura (appartenenza ammorbidita 3x3 + smoothstep tra
+  i centri) + rumore (`NoiseGrid`, nodi globali: regioni diverse combaciano) e copia la texture di un tile vicino di
+  quel terreno; le varianti dello stesso terreno si mescolano a chiazze (`blend.variants`). Muri e pavimenti delle
+  case senza `terrain` restano netti (collisioni invariate). Costo ~0,4 s per mappa 97x65 su desktop: cache per
+  oggetto livello + tileset (`renderCache`, anche `pristine` per `reset()` alla rivincita), `TileMap.prewarm(level,
+  tileset)` la disegna a pezzi da 8 ms (chiamato da `Menu._renderChoice` per la mappa scelta).
+  `new TileMap(level, tileset, { blend: false })` per anteprime/controlli, `{ deferred: true }` = canvas vuoto. Ogni tile placeholder è ritagliato
   nel suo riquadro. Legend: liste di varianti (`cellRandom(x, y, salt)` stabile), `prop`, `pickup`.
 - Livello: `weather` (tipo in effects.json -> weather; `game.weather`, `effects.wind` per il fumo) e `background`.
   Ordine di disegno: mappa, decal, props a terra (+ ombre), lingue di sabbia, ..., soldati, ..., esplosioni,

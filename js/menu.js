@@ -399,7 +399,7 @@ export class Menu {
   /** Anteprima: la mappa pre-renderizzata dal TileMap, rimpicciolita, con basi e bandiere. */
   _thumbnail(level) {
     const k = this.cfg.thumbTile ?? 4;
-    const map = new TileMap(level, this.assets.tileset(level.tileset));
+    const map = new TileMap(level, this.assets.tileset(level.tileset), { blend: false }); // a 4 px per tile non si vede
     const c = el('canvas', 'map-thumb');
     c.width = map.cols * k;
     c.height = map.rows * k;
@@ -500,6 +500,13 @@ export class Menu {
 
   _renderChoice() {
     const c = this.choice;
+    // la mappa scelta si disegna in anticipo nei momenti liberi (fusione dei terreni): "Inizia" parte subito
+    const lvl = this._level(c.level);
+    if (lvl && lvl.id !== this._warmId) {
+      this._cancelWarm?.();
+      this._warmId = lvl.id;
+      this._cancelWarm = TileMap.prewarm(lvl.data, this.assets.tileset(lvl.data.tileset));
+    }
     for (const { card, lvl } of this.mapCards) card.setAttribute('aria-pressed', String(lvl.id === c.level));
     for (const { id, b } of this.teamButtons) b.setAttribute('aria-pressed', String(id === c.team));
     for (const [key, s] of Object.entries(this.steppers)) {
