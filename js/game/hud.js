@@ -684,9 +684,15 @@ export class Hud {
     const empty = player.ammo === 0 && !player.reloading;
     const ammoSize = wc.ammoFontSize ?? 10;
     const ammoColor = empty ? wc.emptyColor || '#f43' : wc.ammoColor || '#ffd36b';
-    // munizioni contate (lanciarazzi): "+N" di scorta invece della capienza del caricatore
-    const magText = w.reserve !== undefined ? ` +${player.reserve[w.id] ?? 0}` : `/${w.magazine}`;
-    const magW = this._textW(ui, u, magText, right, y + ammoSize - size, size, this.cfg.text || '#fff', 'right');
+    // munizioni contate: "+N" di scorta invece della capienza del caricatore (verde subito dopo un rifornimento,
+    // rossa a scorta finita)
+    const counted = w.reserve !== undefined;
+    const left = player.reserve[w.id] ?? 0;
+    const magText = counted ? ` +${left}` : `/${w.magazine}`;
+    let magColor = this.cfg.text || '#fff';
+    if (counted && player.resupplyFlash > 0) magColor = wc.resupplyColor || '#a4e88c';
+    else if (counted && left <= 0) magColor = wc.emptyColor || '#f43';
+    const magW = this._textW(ui, u, magText, right, y + ammoSize - size, size, magColor, 'right');
     const ammoW = this._textW(ui, u, String(player.ammo), right - magW - 1, y, ammoSize, ammoColor, 'right');
     const icon = w.pickupSprite && this.assets.sprites.get(w.pickupSprite);
     if (icon) {

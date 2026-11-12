@@ -70,11 +70,14 @@ export class Player {
     this.sprite = null;
     this.anim = null;
     // Seconda arma: un'arma "special" (lanciarazzi) si porta in più di quella principale; quella non in mano sta
-    // in holster = { id, ammo }. reserve = colpi di scorta delle armi con munizioni finite ("reserve" nel def).
+    // in holster = { id, ammo }. reserve = colpi di scorta delle armi con munizioni contate ("reserve" nel def;
+    // senza, munizioni infinite).
     this.holster = null;
     this.reserve = {};
     this.switchCooldown = 0; // dopo un cambio d'arma non si spara per un attimo
+    this.resupplyFlash = 0; // s di evidenza della scorta nell'HUD dopo un rifornimento
     this.equip(cfg.weapon);
+    this.fillReserve(this.weapon.id);
 
     // Gambe opzionali su livello separato: ruotano verso la direzione di marcia
     this.legs = cfg.legsSprite ? assets.sprite(cfg.legsSprite) : null;
@@ -151,7 +154,51 @@ export class Player {
   giveSpecial(id) {
     const w = this.weapons.get(id);
     this.holster = { id, ammo: w.magazine };
+    this.fillReserve(id);
+  }
+
+  // ---------- Munizioni di scorta ----------
+
+  /** Scorta piena per l'arma "id" (armi con "reserve" nel def). */
+  fillReserve(id) {
+    const w = this.weapons.get(id);
     if (w.reserve !== undefined) this.reserve[id] = w.reserve;
+  }
+
+  /** Colpi nel caricatore dell'arma "id" che porta (in mano o nella fondina), o null se non la porta. */
+  loadedOf(id) {
+    if (this.weapon.id === id) return this.ammo;
+    return this.holster?.id === id ? this.holster.ammo : null;
+  }
+
+  /** Colpi che mancano alla scorta dell'arma "id" (fino a "reserve"), 0 se è piena, non la porta o è infinita. */
+  ammoMissing(id) {
+    const w = this.weapons.get(id);
+    if (w.reserve === undefined || this.loadedOf(id) === null) return 0;
+    return Math.max(0, w.reserve - (this.reserve[id] ?? 0));
+  }
+
+  /** Aggiunge fino a "n" colpi alla scorta dell'arma "id" (al massimo "reserve"); restituisce quanti ne ha presi. */
+  addAmmo(id, n) {
+    const got = Math.min(Math.max(0, Math.floor(n)), this.ammoMissing(id));
+    if (got > 0) this.reserve[id] = (this.reserve[id] ?? 0) + got;
+    return got;
+  }
+
+  /** L'arma in mano non ha più colpi (né nel caricatore né di scorta) e non sta ricaricando. */
+  get outOfAmmo() {
+    const w = this.weapon;
+    return w.reserve !== undefined && this.ammo <= 0 && !this.reload && (this.reserve[w.id] ?? 0) <= 0;
+  }
+
+  /** Munizioni dell'arma principale rispetto al massimo, 0..1 (1 = piena o infinita). */
+  get primaryAmmoRatio() {
+    const id = this.primaryId;
+    if (!id) return 1;
+    const w = this.weapons.get(id);
+    if (w.reserve === undefined) return 1;
+    const max = w.reserve + w.magazine;
+    return max > 0 ? Math.min(1, ((this.loadedOf(id) ?? 0) + (this.reserve[id] ?? 0)) / max) : 1;
   }
 
   /**
@@ -173,13 +220,14 @@ export class Player {
         if (this.holster && this.weapons.get(this.holster.id).special) info(this.holster);
         this.holster = this.equip(id, ammo); // la principale va nella fondina
       }
-      if (w.reserve !== undefined) this.reserve[id] = reserve ?? w.reserve;
     } else if (this.weapon.special && this.holster) {
       info(this.holster); // in mano la speciale: si cambia la principale nella fondina
       this.holster = { id, ammo: ammo ?? w.magazine };
     } else {
       info(this.equip(id, ammo));
     }
+    // la scorta arriva con l'arma (default piena)
+    if (w.reserve !== undefined) this.reserve[id] = reserve ?? w.reserve;
     return dropped;
   }
 

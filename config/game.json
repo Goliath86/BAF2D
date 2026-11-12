@@ -178,6 +178,16 @@
     }
   },
 
+  "ammo": {
+    "resupply": true,
+    "flags": true,
+    "baseRadius": 48,
+    "interval": 2.5,
+    "grenadeEvery": 4,
+    "flashTime": 0.8,
+    "sound": "pickup_ammo"
+  },
+
   "matchEnd": {
     "delay": 2,
     "restartDelay": 0.8
@@ -442,6 +452,16 @@
       "weaponBias": 0.6,
       "weaponMinGain": 0.3,
       "weaponSearch": 110,
+      "ammo": {
+        "lowRatio": 0.35,
+        "search": 200,
+        "scavengeValue": 1.5,
+        "dryBonus": 1.5,
+        "resupplyRatio": 0.2,
+        "resupplyUntil": 0.9,
+        "goalTime": 30,
+        "retry": 2
+      },
       "weaponCombatReach": 28,
       "weaponScanInterval": [1, 2],
       "weaponGoalTime": 6,

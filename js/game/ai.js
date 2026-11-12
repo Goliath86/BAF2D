@@ -360,6 +360,9 @@ export class BotBrain {
     this.weaponBias = {};
     this.pickupNow = null; // oggetto da raccogliere in questo tick (letto da Game)
     this.launcherHunt = null; // lanciarazzi a terra da andare a prendere ovunque sia (Squad.armor)
+    // munizioni contate: punto di rifornimento verso cui va ({ point, flag, until }) e prossima ricerca
+    this.resupply = null;
+    this.resupplyTimer = 0;
 
     // mezzi: guidatore per indole (vehicles.driverChance), mezzo da raggiungere, salita (letta da Game),
     // riparo da un mezzo nemico (senza armi anticarro)
@@ -425,6 +428,8 @@ export class BotBrain {
     else if (this._vehicleDanger(dt, game)) this._goTo(this.hide.point, game);
     else if (this._weaponTick(dt, game)) {
       // sta andando a prendere un'arma (mira e fuoco continuano sotto)
+    } else if (this._ammoTick(dt, game)) {
+      // a corto di munizioni: verso la base o una bandiera della squadra
     } else if (!this.target && !this.squad.groupOf(this)?.follow && this._boardTick(dt, game)) {
       // (chi segue il giocatore resta con lui invece di salire sui mezzi)
       // sta andando verso un mezzo libero
@@ -1216,7 +1221,13 @@ export class BotBrain {
     if (!goal) {
       if ((this.weaponTimer -= dt) > 0) return false;
       this.weaponTimer = rand(c.weaponScanInterval, 1.5);
-      const reach = fighting ? combatReach : c.weaponSearch ?? 110;
+      // a corto di munizioni (ammo.lowRatio) cerca più lontano, anche armi uguali alla sua (per i colpi) e
+      // qualunque altra arma vale di più (ammo.dryBonus × quanto manca)
+      const am = c.ammo || {};
+      const ratio = u.primaryAmmoRatio;
+      const low = ratio <= (am.lowRatio ?? 0.35);
+      const need = 1 - ratio;
+      const reach = fighting ? combatReach : low ? am.search ?? 200 : c.weaponSearch ?? 110;
       // armi normali: confronto con la principale; arma speciale (lanciarazzi): si aggiunge se non ne ha una
       // (più ambita se ci sono mezzi nemici)
       const primary = u.primaryId;
@@ -1227,13 +1238,20 @@ export class BotBrain {
       const hold = this.zone || (this._capturing(game) ? this.objective.flag : null);
       let bestS = -Infinity;
       for (const it of game.pickups.list) {
-        if (it.kind !== 'weapon' || it.weapon === primary || this.skipsPickup(it)) continue;
+        if (it.kind !== 'weapon' || this.skipsPickup(it)) continue;
         const special = !!game.weapons.get(it.weapon).special;
-        if (special && hasSpecial) continue;
+        let gain;
+        if (it.weapon === primary || (special && it.weapon === u.specialId)) {
+          // stessa arma: solo per i colpi (si prendono passandoci sopra)
+          if (!low || it.weapon !== primary || game.pickups.ammoIn(it) <= 0) continue;
+          gain = (am.scavengeValue ?? 1.5) * need;
+        } else if (special) {
+          if (hasSpecial) continue;
+          gain = (c.specialValue ?? 0.8) + (this.enemyArmor ? c.vehicles?.antiVehicleBonus ?? 1.5 : 0);
+        } else {
+          gain = this._weaponValue(it.weapon) - own + (low ? (am.dryBonus ?? 1.5) * need : 0);
+        }
         const d = dist(it, u);
-        const gain = special
-          ? (c.specialValue ?? 0.8) + (this.enemyArmor ? c.vehicles?.antiVehicleBonus ?? 1.5 : 0)
-          : this._weaponValue(it.weapon) - own;
         if (d > reach || gain < minGain) continue;
         // un compagno ci sta già andando
         if (this.squad.brains.some((b) => b !== this && !b.unit.dead && b.weaponGoal === it)) continue;
@@ -1274,6 +1292,51 @@ export class BotBrain {
     }
     this.pickupClose = 0;
     this._goTo(goal, game);
+    return true;
+  }
+
+  /**
+   * Munizioni dell'arma principale finite (o sotto ammo.resupplyRatio senza bersaglio): va al punto di rifornimento
+   * più vicino della squadra (base o bandiera posseduta non contesa, Game.resupplyPoints) e ci resta finché non
+   * torna sopra ammo.resupplyUntil. Con un bersaglio e ancora qualche colpo combatte. true = movimento per questo.
+   */
+  _ammoTick(dt, game) {
+    const am = this.cfg.ammo || {};
+    const u = this.unit;
+    if (am.resupply === false || !game.resupplyPoints) return false;
+    const ratio = u.primaryAmmoRatio;
+    let r = this.resupply;
+    if (r) {
+      const lost = r.flag && (r.flag.owner !== u.team || r.flag.contested);
+      if (ratio >= (am.resupplyUntil ?? 0.9) || lost || this.time > r.until || this.unreachable) {
+        this.resupply = r = null;
+        this.unreachable = false;
+        this.resupplyTimer = am.retry ?? 2;
+      }
+    }
+    if (!r) {
+      if (!(ratio <= 0 || (!this.target && ratio <= (am.resupplyRatio ?? 0.2)))) return false;
+      if ((this.resupplyTimer -= dt) > 0) return false;
+      this.resupplyTimer = am.retry ?? 2;
+      let best = null;
+      let bestD = Infinity;
+      for (const p of game.resupplyPoints(u.team)) {
+        const d = dist(p, u);
+        if (d < bestD) {
+          bestD = d;
+          best = p;
+        }
+      }
+      if (!best) return false;
+      r = this.resupply = { point: { x: best.x, y: best.y }, flag: best.flag, until: this.time + (am.goalTime ?? 30) };
+      this.unreachable = false;
+    }
+    if (this.target && this.visible && ratio > 0) return false;
+    if (game.inResupply(u)) {
+      this._stop();
+      return true;
+    }
+    this._goTo(r.point, game);
     return true;
   }
 

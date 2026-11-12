@@ -93,11 +93,35 @@ export class Pickups {
     }
   }
 
+  /** Colpi che l'arma a terra "it" contiene (caricatore + scorta; null = pieni). */
+  ammoIn(it) {
+    const w = this.weapons.get(it.weapon);
+    return (it.ammo ?? w.magazine) + (it.reserve ?? w.reserve ?? 0);
+  }
+
   /**
-   * Avanza età e punti fissi; granate raccolte da chi ci passa sopra:
-   * onGrenades(unit, quante) per ogni raccolta.
+   * Munizioni prese passando sopra a un'arma uguale a una di quelle che l'unità porta: si tolgono prima dalla
+   * scorta dell'oggetto, poi dal caricatore; vuoto = sparisce. Restituisce i colpi presi.
    */
-  update(dt, units, onGrenades) {
+  _scavenge(it, u) {
+    const w = this.weapons.get(it.weapon);
+    if (w.reserve === undefined || u.loadedOf(it.weapon) === null) return 0;
+    const got = u.addAmmo(it.weapon, this.ammoIn(it));
+    if (got <= 0) return 0;
+    let rest = got;
+    const fromReserve = Math.min(rest, it.reserve ?? w.reserve ?? 0);
+    it.reserve = (it.reserve ?? w.reserve ?? 0) - fromReserve;
+    rest -= fromReserve;
+    it.ammo = (it.ammo ?? w.magazine) - rest;
+    if (this.ammoIn(it) <= 0) this.take(it);
+    return got;
+  }
+
+  /**
+   * Avanza età e punti fissi; granate e munizioni (armi uguali alle proprie) raccolte da chi ci passa sopra:
+   * onGrenades(unit, quante) e onAmmo(unit, colpi, idArma) per ogni raccolta.
+   */
+  update(dt, units, onGrenades, onAmmo) {
     this.time += dt;
     for (const s of this.spawners) {
       if (!s.item && (s.timer -= dt) <= 0) this._fill(s);
@@ -108,6 +132,15 @@ export class Pickups {
       it.age += dt;
       if (it.life !== null && it.age >= it.life) {
         this.list.splice(i, 1);
+        continue;
+      }
+      if (it.kind === 'weapon') {
+        for (const u of units) {
+          if (u.dead || u.vehicle || Math.hypot(u.x - it.x, u.y - it.y) > r) continue;
+          const n = this._scavenge(it, u);
+          if (n > 0) onAmmo?.(u, n, it.weapon);
+          if (!this.list.includes(it)) break;
+        }
         continue;
       }
       if (it.kind !== 'grenades') continue;
@@ -125,22 +158,16 @@ export class Pickups {
   }
 
   /**
-   * Arma a terra più vicina all'unità (entro radius) diversa da quelle che porta, o null. Un'arma speciale uguale
-   * alla propria vale solo se la scorta non è piena (si raccoglie per i colpi).
+   * Arma a terra più vicina all'unità (entro radius) diversa da quelle che porta, o null (da un'arma uguale si
+   * prendono solo i colpi, passandoci sopra: vedi update).
    */
   nearestWeapon(unit) {
     const r = this.cfg.radius ?? 9;
     let best = null;
     let bestD = r;
-    const special = unit.specialId;
     for (const it of this.list) {
       if (it.kind !== 'weapon') continue;
-      if (it.weapon === unit.primaryId) continue;
-      if (it.weapon === special) {
-        const w = this.weapons.get(special);
-        const loaded = unit.weapon.id === special ? unit.ammo : unit.holster?.ammo ?? 0;
-        if ((unit.reserve[special] ?? 0) + loaded >= (w.reserve ?? 0) + w.magazine) continue;
-      }
+      if (it.weapon === unit.primaryId || it.weapon === unit.specialId) continue;
       const d = Math.hypot(unit.x - it.x, unit.y - it.y);
       if (d <= bestD) {
         bestD = d;

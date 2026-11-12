@@ -701,6 +701,15 @@
         { "wave": "square", "freqStart": 420, "freqEnd": 420, "duration": 0.05, "at": [0.11], "volume": 0.8 }
       ]
     },
+    "pickup_ammo": {
+      "src": null,
+      "volume": 0.12,
+      "placeholder": [
+        { "wave": "noise", "duration": 0.03 },
+        { "wave": "square", "freqStart": 520, "freqEnd": 520, "duration": 0.03, "at": [0.04] },
+        { "wave": "square", "freqStart": 520, "freqEnd": 520, "duration": 0.03, "at": [0.09], "volume": 0.7 }
+      ]
+    },
     "pickup_grenade": {
       "src": null,
       "volume": 0.12,

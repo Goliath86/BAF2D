@@ -349,6 +349,16 @@ tools/check_level.mjs controllo livelli: celle irraggiungibili e vicoli ciechi (
   `switchTime`), `giveSpecial(id)` (bot "rifle+launcher"), `_discardEmptySpecial()`, getter `primaryId`/`specialId`/
   `hasAntiVehicle`. I caduti lasciano anche l'arma della fondina. IA: `BotBrain._wantSwitch` (anticarro solo contro
   i mezzi), in `_weaponTick` la speciale vale `specialValue` (+ bonus con mezzi nemici) solo se non ne ha già una.
+- Munizioni contate: arma con `reserve` (scorta massima, senza = infinite) e `resupply` (colpi per rifornimento,
+  default un caricatore). `player.reserve[id]`, `fillReserve(id)`, `addAmmo(id, n)` (fino a `reserve`),
+  `ammoMissing`, `loadedOf`, `outOfAmmo`, `primaryAmmoRatio`. Passando sopra a un'arma a terra uguale a una delle
+  proprie si prendono i colpi (`Pickups._scavenge`, `ammoIn`; l'oggetto si svuota o sparisce, popup `pickup.ammo`);
+  lo scambio con E vale solo per armi diverse. Rifornimento (`game.json -> ammo`): `Game.resupplyPoints(team)` =
+  base (`baseRadius`) + bandiere possedute non contese, `inResupply(u)`, `_updateResupply` ogni `interval` s
+  (+ granata ogni `grenadeEvery`), `unit.resupplyFlash` = scorta verde nell'HUD (rossa a zero). A secco l'HUD dice
+  dove rifornirsi (`hud.noAmmo*`). Bot (`bots.ai.ammo`): sotto `lowRatio` cercano più lontano armi uguali (per i
+  colpi) o altre armi; a secco (o sotto `resupplyRatio` senza bersaglio) `BotBrain._ammoTick` li porta al punto
+  di rifornimento più vicino finché non tornano a `resupplyUntil`.
 - Razzi (`rockets.js`): arma con `projectile: "rocket"` + `rocket` (tipo in weapons.json -> `rockets`); gittata come i
   proiettili (`Game._shotRange`), scia `effects.json -> trails`; IA: armi `antiVehicle` mirano ai mezzi, mai sotto
   `minSafeRange`; senza anticarro la fanteria si ripara (`BotBrain._vehicleDanger`).
@@ -452,6 +462,7 @@ tools/check_level.mjs controllo livelli: celle irraggiungibili e vicoli ciechi (
   (nomi fittizi per i bot), 18 gradi con insegne a pixel, promozioni in partita e carriera salvata in localStorage.
 - Fatto anche: raccolta di armi (scambio con E, anche i bot) e granate da terra, punti fissi con respawn sulle mappe.
 - Fatto anche: editor di mappe (`editor.html`) con salvataggio/caricamento JSON, controllo e prova nel gioco.
-- Non ancora presenti: mappa procedurale, riserva di munizioni (ora infinita),
-  asset grafici reali.
+- Fatto anche: munizioni contate per tutte le armi dei soldati (scorta, raccolta da armi uguali a terra,
+  rifornimento alle bandiere possedute e alla base, bot che vanno a rifornirsi).
+- Non ancora presenti: mappa procedurale, asset grafici reali.
 - Controlli touch (stick + pulsante ricarica) verificati dall'utente su un dispositivo reale (2026-11-02).

@@ -111,6 +111,8 @@ export class Game {
 
     // Armi e granate a terra (game.json -> pickups); pickupOffer = arma che il giocatore può raccogliere ora
     this.pickupsCfg = config.pickups || {};
+    // munizioni contate: rifornimento alle bandiere possedute e alla base (game.json -> ammo)
+    this.ammoCfg = config.ammo || {};
     this.pickups = new Pickups(this.pickupsCfg, assets, weapons);
     this.pickupOffer = null;
 
@@ -1345,7 +1347,13 @@ export class Game {
     this.pickups.update(dt, this.units, (u, n) => {
       if (this.pickupsCfg.grenadeSound) this.audio.play(this.pickupsCfg.grenadeSound, u);
       if (u === this.player && !this.attract) this.hud.popup(this.i18n.t('pickup.grenades', { count: n }), this.pickupsCfg.popupColor);
+    }, (u, n) => {
+      // munizioni prese da un'arma uguale a terra
+      if (this.ammoCfg.sound) this.audio.play(this.ammoCfg.sound, u);
+      u.resupplyFlash = this.ammoCfg.flashTime ?? 0.8;
+      if (u === this.player && !this.attract) this.hud.popup(this.i18n.t('pickup.ammo', { count: n }), this.pickupsCfg.popupColor);
     });
+    this._updateResupply(dt);
     const p = this.player;
     // azione "pickup" (E): scendere dal mezzo, salire su un mezzo vicino (precedenza) o raccogliere un'arma
     const pressed = this.input.wasPressed('pickup');
@@ -1392,10 +1400,77 @@ export class Game {
     }
   }
 
+  // ---------- Rifornimento di munizioni ----------
+
+  /**
+   * Punti di rifornimento della squadra: la base (raggio ammo.baseRadius) e, se ammo.flags non è false, le bandiere
+   * possedute e non contese (area di cattura). Elenco di { x, y, flag? }.
+   */
+  resupplyPoints(team) {
+    const c = this.ammoCfg;
+    if (c.resupply === false || !this.ctf) return [];
+    const list = [];
+    const base = this.ctf.bases[team];
+    if (base) list.push({ x: base.x, y: base.y, flag: null });
+    if (c.flags !== false) {
+      for (const f of this.ctf.flags) if (f.owner === team && !f.contested) list.push({ x: f.x, y: f.y, flag: f });
+    }
+    return list;
+  }
+
+  /** L'unità è in un punto di rifornimento della sua squadra. */
+  inResupply(u) {
+    for (const p of this.resupplyPoints(u.team)) {
+      if (p.flag ? this.ctf.inZone(p.flag, u.x, u.y) : Math.hypot(u.x - p.x, u.y - p.y) <= (this.ammoCfg.baseRadius ?? 48)) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Soldati a piedi in un punto di rifornimento: ogni ammo.interval s ogni arma che portano riceve "resupply" colpi
+   * (weapons.json, default un caricatore) fino al massimo; ogni ammo.grenadeEvery rifornimenti anche una granata.
+   */
+  _updateResupply(dt) {
+    const c = this.ammoCfg;
+    const interval = c.interval ?? 2.5;
+    for (const u of this.units) {
+      if (u.resupplyFlash > 0) u.resupplyFlash = Math.max(0, u.resupplyFlash - dt);
+      if (u.dead || u.vehicle || interval <= 0 || !this.inResupply(u)) {
+        u.resupplyTimer = 0;
+        u.resupplying = false;
+        continue;
+      }
+      u.resupplyTimer = (u.resupplyTimer || 0) + dt;
+      if (u.resupplyTimer < interval) continue;
+      u.resupplyTimer -= interval;
+      let got = 0;
+      for (const id of [u.weapon.id, u.holster?.id]) {
+        if (!id) continue;
+        const w = this.weapons.get(id);
+        got += u.addAmmo(id, w.resupply ?? w.magazine);
+      }
+      u.resupplyCount = (u.resupplyCount || 0) + 1;
+      if (c.grenadeEvery > 0 && u.resupplyCount % c.grenadeEvery === 0) got += u.addGrenades(1);
+      if (got <= 0) continue;
+      u.resupplyFlash = c.flashTime ?? 0.8;
+      if (c.sound) this.audio.play(c.sound, u);
+      // scritta solo al primo rifornimento di una sosta
+      if (u === this.player && !this.attract && !u.resupplying) this.hud.popup(this.i18n.t('pickup.resupply'), this.pickupsCfg.popupColor);
+      u.resupplying = true;
+    }
+  }
+
   /** Scritta lampeggiante "RICARICA!" a caricatore vuoto (a piedi, se si può ricaricare), o null. */
   _reloadPrompt() {
     const p = this.player;
-    if (p.dead || p.vehicle || p.ammo > 0 || !p.canReload) return null;
+    if (p.dead || p.vehicle) return null;
+    // niente più colpi: dove rifornirsi
+    if (p.outOfAmmo) {
+      if (!p.holster) return this.i18n.t('hud.noAmmo');
+      if (this.input.mode === 'touch') return this.i18n.t('hud.noAmmoSwitchTouch');
+      return this.i18n.t('hud.noAmmoSwitch', { key: keyName(this.input.bindings.switchWeapon?.[0], this.i18n) });
+    }
+    if (p.ammo > 0 || !p.canReload) return null;
     if (this.input.mode === 'touch') return this.i18n.t('hud.reloadPromptTouch');
     return this.i18n.t('hud.reloadPrompt', { key: keyName(this.input.bindings.reload?.[0], this.i18n) });
   }
@@ -1434,17 +1509,11 @@ export class Game {
 
   /** L'unità prende l'arma "item" (con i colpi rimasti) e lascia a terra quella che impugnava. */
   _swapWeapon(u, item) {
+    // (da un'arma uguale alle proprie si prendono solo i colpi passandoci sopra: Pickups.update)
+    if (item.weapon === u.primaryId || item.weapon === u.specialId) return;
     this.pickups.take(item);
-    const special = this.weapons.get(item.weapon).special && u.specialId === item.weapon;
-    if (special) {
-      // stessa arma speciale: si prendono solo i colpi (scorta, fino al massimo)
-      const w = this.weapons.get(item.weapon);
-      const got = (item.ammo ?? w.magazine) + (item.reserve ?? w.reserve ?? 0);
-      u.reserve[item.weapon] = Math.min(w.reserve ?? 0, (u.reserve[item.weapon] ?? 0) + got);
-    } else {
-      const dropped = u.pickUp(item.weapon, item.ammo ?? undefined, item.reserve ?? undefined);
-      for (const d of dropped) this.pickups.dropWeapon(d.id, d.ammo, u.x, u.y, u.angle + Math.PI / 2, d.reserve ?? null);
-    }
+    const dropped = u.pickUp(item.weapon, item.ammo ?? undefined, item.reserve ?? undefined);
+    for (const d of dropped) this.pickups.dropWeapon(d.id, d.ammo, u.x, u.y, u.angle + Math.PI / 2, d.reserve ?? null);
     if (this.pickupsCfg.weaponSound) this.audio.play(this.pickupsCfg.weaponSound, u);
     if (u === this.player && !this.attract) {
       this.hud.popup(this.i18n.t(u.weapon.name || u.weapon.id), this.pickupsCfg.popupColor);
@@ -1769,6 +1838,7 @@ export class Game {
     const ids = this.weapons.ids.filter((id) => !this.weapons.get(id).vehicleOnly);
     const i = ids.indexOf(this.player.weapon.id);
     this.player.equip(ids[(i + 1) % ids.length]);
+    this.player.fillReserve(this.player.weapon.id);
   }
 
   /** Distanza lungo (dx,dy) da (x,y) al bordo dell'area visibile (meno un margine). */

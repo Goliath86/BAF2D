@@ -164,6 +164,9 @@
     "reloading": "RICARICA",
     "reloadPrompt": "RICARICA! [{key}]",
     "reloadPromptTouch": "RICARICA!",
+    "noAmmo": "MUNIZIONI FINITE - RIFORNISCITI A UNA BANDIERA O ALLA BASE",
+    "noAmmoSwitch": "MUNIZIONI FINITE - CAMBIA ARMA [{key}]",
+    "noAmmoSwitchTouch": "MUNIZIONI FINITE - CAMBIA ARMA",
     "empty": "SCARICO",
     "grenades": "x{count}",
     "killed": "SEI STATO UCCISO",
@@ -194,7 +197,9 @@
     }
   },
   "pickup": {
-    "grenades": "+{count} GRANATE"
+    "grenades": "+{count} GRANATE",
+    "ammo": "+{count} COLPI",
+    "resupply": "RIFORNIMENTO"
   },
   "score": {
     "events": {

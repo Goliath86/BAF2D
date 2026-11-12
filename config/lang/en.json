@@ -164,6 +164,9 @@
     "reloading": "RELOADING",
     "reloadPrompt": "RELOAD! [{key}]",
     "reloadPromptTouch": "RELOAD!",
+    "noAmmo": "OUT OF AMMO - RESUPPLY AT A FLAG OR BASE",
+    "noAmmoSwitch": "OUT OF AMMO - SWITCH WEAPON [{key}]",
+    "noAmmoSwitchTouch": "OUT OF AMMO - SWITCH WEAPON",
     "empty": "EMPTY",
     "grenades": "x{count}",
     "killed": "KILLED IN ACTION",
@@ -194,7 +197,9 @@
     }
   },
   "pickup": {
-    "grenades": "+{count} GRENADES"
+    "grenades": "+{count} GRENADES",
+    "ammo": "+{count} ROUNDS",
+    "resupply": "RESUPPLY"
   },
   "score": {
     "events": {
