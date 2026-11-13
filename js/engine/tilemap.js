@@ -292,7 +292,88 @@ export class TileMap {
     this._drawDebris(g, r);
     this._drawEdges(g, r);
     this._drawShadows(g, r);
+    this._drawHeight(g, r);
     this._drawCracks(g, r);
+    g.restore();
+  }
+
+  /** Altezza (px della faccia) del tile che ferma i colpi in (tx, ty), 0 = piatto o non bloccante. */
+  _heightAt(tx, ty) {
+    if (!this.blocksShotTile(tx, ty)) return 0;
+    const t = this.tileAt(tx, ty);
+    if (!t) return this.tileset.height?.face ?? 0; // fuori mappa: come un muro
+    return t.height ?? this.tileset.height?.face ?? 0;
+  }
+
+  /**
+   * Altezza finta (vista leggermente dall'alto) dei tile che fermano i colpi, senza cambiare le collisioni
+   * (tileset.height = { face, shade: [alto, basso], color, lip, lipColor, rim, rimColor, dark, ao: { size, alpha } },
+   * "height" sul tile = px della faccia, 0 = piatto):
+   * - faccia sud nelle ultime "face" righe della cella (se sotto non c'è un altro tile alto): la texture si scurisce
+   *   verso il basso, con un filo di luce sul bordo della cima ("lip") e una riga scura dove tocca terra;
+   * - bordi della cima: chiari dal lato della luce, scuri dal lato opposto (luce dalle ombre: tileset.shadow);
+   * - occlusione alla base: il terreno accanto ai tile alti si scurisce per "ao.size" px.
+   */
+  _drawHeight(g, r) {
+    const H = this.tileset.height;
+    if (!H) return;
+    const s = this.size;
+    const sh = this.tileset.shadow || { dx: 2, dy: 3 };
+    // lato illuminato in orizzontale: la luce viene dal lato opposto all'ombra
+    const litWest = (sh.dx ?? 1) >= 0;
+    const [shTop, shBot] = H.shade || [0.25, 0.5];
+    const color = H.color || '#000';
+    const lip = H.lip ?? 0.2;
+    const rim = H.rim ?? 0.15;
+    const dark = H.dark ?? 0.3;
+    const ao = H.ao || null;
+    const fill = (x, y, w, h, c, a) => {
+      if (a <= 0 || w <= 0 || h <= 0) return;
+      g.globalAlpha = Math.min(1, a);
+      g.fillStyle = c;
+      g.fillRect(x, y, w, h);
+    };
+    g.save();
+    for (let y = r.y0; y <= r.y1; y++) {
+      for (let x = r.x0; x <= r.x1; x++) {
+        const ox = x * s;
+        const oy = y * s;
+        const h = this._heightAt(x, y);
+        if (h > 0) {
+          const f = Math.min(s - 2, h);
+          const south = this._heightAt(x, y + 1) > 0;
+          const north = this._heightAt(x, y - 1) > 0;
+          const west = this._heightAt(x - 1, y) > 0;
+          const east = this._heightAt(x + 1, y) > 0;
+          const top = south ? s : s - f; // righe della cima
+          // bordi della cima verso il terreno: luce (nord e lato illuminato), ombra (lato opposto)
+          if (!north) fill(ox, oy, s, 1, H.lipColor || '#fff', rim);
+          const litSide = litWest ? !west : !east;
+          const darkSide = litWest ? !east : !west;
+          const lx = litWest ? ox : ox + s - 1;
+          const dxp = litWest ? ox + s - 1 : ox;
+          if (litSide) fill(lx, oy + (north ? 0 : 1), 1, top - (north ? 0 : 1), H.lipColor || '#fff', rim);
+          if (darkSide) fill(dxp, oy, 1, s, color, dark);
+          if (!south) {
+            // faccia: sfumatura verso il basso, filo di luce sul bordo della cima, contatto col terreno
+            for (let k = 0; k < f; k++) fill(ox, oy + top + k, s, 1, color, shTop + ((shBot - shTop) * k) / Math.max(1, f - 1));
+            fill(ox, oy + top - 1, s, 1, H.lipColor || '#fff', lip);
+            fill(ox, oy + s - 1, s, 1, color, Math.min(1, shBot + 0.15));
+          }
+          continue;
+        }
+        // occlusione alla base: terreno a ridosso dei tile alti (più forte sotto, dove c'è la faccia)
+        if (!ao || !ao.size) continue;
+        const n = ao.size;
+        for (let k = 0; k < n; k++) {
+          const a = (ao.alpha ?? 0.2) * (1 - k / n);
+          if (this._heightAt(x, y - 1) > 0) fill(ox, oy + k, s, 1, color, a * 1.3);
+          if (this._heightAt(x, y + 1) > 0) fill(ox, oy + s - 1 - k, s, 1, color, a * 0.7);
+          if (this._heightAt(x - 1, y) > 0) fill(ox + k, oy, 1, s, color, a);
+          if (this._heightAt(x + 1, y) > 0) fill(ox + s - 1 - k, oy, 1, s, color, a);
+        }
+      }
+    }
     g.restore();
   }
 

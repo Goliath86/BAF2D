@@ -108,6 +108,7 @@ export class Assets {
         shootThrough: !!t.shootThrough, // solido per il movimento ma non per colpi e vista (es. acqua)
         edge: t.edge || null, // bordo verso i tile di un altro gruppo (TileMap._drawEdges)
         terrain: t.terrain || null, // terreno per la fusione dei bordi (tileset.terrains, TileMap._drawBlend)
+        height: t.height ?? null, // px della faccia sud (TileMap._drawHeight); null = tileset.height.face
         index: t.index ?? t.id,
         // tipo di impatto in effects.json (default: "wall" se solido, "ground" altrimenti)
         impact: t.impact || (t.solid ? 'wall' : 'ground'),
@@ -129,6 +130,7 @@ export class Assets {
       byId,
       byName,
       shadow: def.shadow || null, // ombra proiettata dai tile che bloccano i colpi (TileMap._drawShadows)
+      height: def.height || null, // altezza finta dei tile che bloccano i colpi (TileMap._drawHeight)
       terrains: def.terrains || null, // fusione dei bordi tra terreni (TileMap._drawBlend)
       blend: def.blend || null,
     });

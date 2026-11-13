@@ -154,6 +154,38 @@ describe('gioco nel browser', { skip: chrome ? false : 'Chrome non trovato (impo
     await shot('lighting-arena');
   });
 
+  it('muri con altezza: faccia sud più scura della cima, terreno scurito alla base', async () => {
+    await openGame();
+    await T(`start('arena', { allies: 0, enemies: 0 })`);
+    const r = await ev(`(() => {
+      const m = BAF2D.map, s = m.size;
+      // un muro con terreno libero sotto, lontano dal bordo
+      let cell = null;
+      for (let y = 2; y < m.rows - 2 && !cell; y++) for (let x = 2; x < m.cols - 2; x++) {
+        if (m._heightAt(x, y) > 0 && !m.blocksShotTile(x, y + 1) && !m.blocksShotTile(x, y - 1)) { cell = { x, y }; break; }
+      }
+      const lum = (x, y, w, h) => {
+        const d = m.canvas.getContext('2d').getImageData(x, y, w, h).data;
+        let t = 0; for (let i = 0; i < d.length; i += 4) t += d[i] + d[i + 1] + d[i + 2];
+        return t / (d.length / 4);
+      };
+      const sample = () => ({
+        face: lum(cell.x * s, cell.y * s + s - 4, s, 3),
+        ground: lum(cell.x * s, (cell.y + 1) * s + 1, s, 2),
+      });
+      const keep = m.tileset.height;
+      m.tileset.height = null; m._renderRegion(cell.x - 1, cell.y - 1, cell.x + 1, cell.y + 1);
+      const flat = sample();
+      m.tileset.height = keep; m._renderRegion(cell.x - 1, cell.y - 1, cell.x + 1, cell.y + 1);
+      const tall = sample();
+      return { cell, flat, tall, h: m._heightAt(cell.x, cell.y) };
+    })()`);
+    assert.ok(r.cell, 'nessun muro con terreno libero sotto');
+    assert.ok(r.h > 0, 'muro senza altezza');
+    assert.ok(r.tall.face < r.flat.face * 0.85, `faccia non più scura: ${JSON.stringify(r)}`);
+    assert.ok(r.tall.ground < r.flat.ground, `niente occlusione alla base: ${JSON.stringify(r)}`);
+  });
+
   it('animazioni del soldato: rinculo, colpito, lancio, caduta lontano dal colpo, pose dei caduti', async () => {
     await openGame();
     await T(`start('arena', { allies: 0, enemies: 0 })`);

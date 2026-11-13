@@ -13,7 +13,12 @@ Ordine = impatto stimato sul colpo d'occhio. Tutto procedurale (canvas), configu
   (rinculo, lampo e sobbalzo, lancio granata, corsa col fucile di traverso), caduta lontano dal colpo con 4 pose
   e fotogrammi di caduta, pozze di sangue a 4 forme irregolari.
 - Rimasto del punto 1: accovacciato/riparato (serve prima la meccanica di gioco).
-- Prossimo passo proposto: punto 2 (muri con altezza e luce coerente con quella dei soldati).
+- Fatto (2026-11-13): punto 2, altezza finta dei tile che fermano i colpi (`TileMap._drawHeight`,
+  `tileset.height` + `height` per tile in assets.json): faccia sud in ombra, filo di luce sulla cima, bordi chiari
+  dal lato della luce e scuri dall'altro, occlusione alla base. Collisioni invariate.
+- Rimasto del punto 2: case del deserto con tetti/parapetti/scale/tende (tocca il generatore e la visibilità degli
+  interni: da decidere), casse con coperchio disegnato a parte (ora hanno solo la faccia).
+- Prossimo passo proposto: punto 3 (luci dinamiche) o punto 4 (varietà delle mappe).
 - Da misurare sul telefono anche il costo per frame della luce dei soldati (qualche drawImage su canvas piccoli
   per soldato + un livello delle ombre grande quanto la visuale).
 - Punto aperto: l'anteprima reale dell'editor si ricostruisce a ogni modifica e con la fusione costa ~0,4 s.
@@ -32,10 +37,10 @@ Ordine = impatto stimato sul colpo d'occhio. Tutto procedurale (canvas), configu
 - ~~Cadaveri: posizioni varie, arma sparsa, sangue che si allarga in modo irregolare (non sempre la stessa pozza).~~ fatto
 
 ## 2. Muri e oggetti con altezza (pseudo-3D)
-- Faccia frontale visibile sul lato sud di muri, case, rocce, sacchi di sabbia (vista leggermente dall'alto).
-- Cima dei muri più chiara, faccia più scura, bordo superiore illuminato.
-- Ombra alla base dei muri (occlusione ambientale) oltre all'ombra portata.
-- Direzione della luce unica per tutta la mappa (ombre, riflessi e rim light coerenti).
+- ~~Faccia frontale visibile sul lato sud di muri, case, rocce, sacchi di sabbia (vista leggermente dall'alto).~~ fatto
+- ~~Cima dei muri più chiara, faccia più scura, bordo superiore illuminato.~~ fatto
+- ~~Ombra alla base dei muri (occlusione ambientale) oltre all'ombra portata.~~ fatto
+- ~~Direzione della luce unica per tutta la mappa (ombre, riflessi e rim light coerenti).~~ fatto (da tileset.shadow)
 - Case del deserto con tetti piani, parapetti, scale esterne, tende sui tetti.
 - Casse con coperchio e fianco visibili, pile di casse di altezze diverse.
 

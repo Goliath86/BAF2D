@@ -424,7 +424,9 @@ tests/                test di regressione (node --test): static.test.mjs, browse
   esplosioni), granate, bossoli e particelle usare `map.blocksShotAt/blocksShotTile`, per il movimento
   `isSolidAt`/`rectHitsSolid`. Prerender del TileMap: tile, poi fusione dei terreni (`_drawBlend`), poi `edge`
   (vecchie fasce tra gruppi, `_drawEdges`, ora non usate dai tileset), poi ombre dei tile che bloccano i colpi
-  (`tileset.shadow`, `_drawShadows`).
+  (`tileset.shadow`, `_drawShadows`), poi altezza finta (`_drawHeight`, `tileset.height` = { face, shade, color,
+  lip, rim, dark, ao }, `height` del tile = px della faccia sud, 0 = piatto; `_heightAt`): faccia sud in ombra,
+  bordi della cima chiari/scuri secondo la luce di `tileset.shadow`, occlusione alla base. Collisioni invariate.
   Fusione dei terreni: tile con `"terrain"` + `tileset.terrains` { <terreno>: { amp, bias, spill, variants, rim:
   { <altro terreno | "*">: { colors, width, dither } } } } + `tileset.blend` { amp, scale, variants, variantScale }.
   Ogni pixel delle celle di confine sceglie il terreno con copertura (appartenenza ammorbidita 3x3 + smoothstep tra
