@@ -73,6 +73,10 @@ js/engine/
   rotsprite.js        drawRotated: rotazione di qualità della pixel art (Scale2x ×4), cache per angolo
   scatter.js          paintScatter: dettagli a terra cotti nella mappa (tileset.scatter: segnaletica, olio, crepe,
                       tombini, griglie, cavi, tracce, impronte, rifiuti, ciuffi, canne, sassolini, fiori)
+js/game/water.js      Water: riflessi e increspature animati sulle celle d'acqua visibili (tileset.water)
+js/game/marks.js      GroundMarks: segni che restano tutta la partita su un livello grande quanto la mappa (crateri
+                      explosions.<t>.crater, tracce dei mezzi vehicles.json -> trail, bossoli fermi cotti
+                      se effects.json -> bakeCasings), azzerato in _reset, disegnato dopo l'acqua e prima dei decal
 js/game/lights.js     Lights: luci dinamiche (aloni a gradini retinati in cache, lampi e luci del fotogramma) e buio
                       dell'ora del giorno (game.json -> lights.times)
   loader.js           loadJSON / loadImage / loadArrayBuffer (errori = LocalizedError)

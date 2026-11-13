@@ -40,6 +40,8 @@ export class Effects {
     this.fires = []; // fuochi rimasti accesi dopo le esplosioni (fiamma animata, fumo, luce)
     this.maxFires = cfg.maxFires ?? 24;
     this.lights = null; // Lights (game/lights.js), impostato da Game: aloni di vampate, esplosioni e fuochi
+    this.marks = null; // GroundMarks (game/marks.js), impostato da Game: crateri e bossoli che restano
+    this.bakeCasings = cfg.bakeCasings !== false; // bossoli fermi cotti nei segni a terra (restano tutta la partita)
   }
 
   /**
@@ -119,6 +121,7 @@ export class Effects {
       return;
     }
     if (d.decal) this.addDecal(d.decal, x, y, map);
+    if (d.crater) this.marks?.crater(x, y, d.crater); // cratere che resta (sotto la bruciatura che svanisce)
     // lampo di luce: illumina terreno, muri e soldati attorno (si restringe mentre si spegne)
     if (d.glow) this.lights?.flash(x, y, { shrink: 0.4, ...d.glow, life: d.glow.life ?? 0.3 });
     if (d.fireball) {
@@ -427,7 +430,15 @@ export class Effects {
         c.vx *= k;
         c.vy *= k;
         c.spin *= k;
-        if (Math.hypot(c.vx, c.vy) < 2 && Math.abs(c.spin) < 1) c.resting = true;
+        if (Math.hypot(c.vx, c.vy) < 2 && Math.abs(c.spin) < 1) {
+          c.resting = true;
+          // fermo: diventa parte dei segni a terra (resta tutta la partita) e non si disegna più a parte
+          if (this.bakeCasings && this.marks && d.bake !== false && !map?.blocksShotAt(c.x, c.y)) {
+            this.marks.bake(c.sprite, c.frame, c.x, c.y, c.rot, d.bakeAlpha ?? 0.9);
+            this.casings.splice(i, 1);
+            continue;
+          }
+        }
       }
 
       // spostamento asse per asse con rimbalzo sui tile solidi

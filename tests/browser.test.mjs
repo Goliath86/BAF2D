@@ -213,6 +213,24 @@ describe('gioco nel browser', { skip: chrome ? false : 'Chrome non trovato (impo
     assert.equal(await ev('BAF2D.lights.flashes.length'), 0, 'lampi rimasti accesi');
   });
 
+  it('segni di battaglia: il cratere resta, i bossoli fermi si cuociono a terra, la rivincita li cancella', async () => {
+    await openGame();
+    await T(`start('desert', { allies: 0, enemies: 0 })`);
+    await T('step(0.2)');
+    const alphaAt = `((x, y) => { const c = BAF2D.marks.canvas; return c ? c.getContext('2d').getImageData(Math.round(x), Math.round(y), 1, 1).data[3] : 0; })`;
+    // punto libero vicino al giocatore
+    const p = await ev(`(() => { const g = BAF2D, p = g.player; for (const [dx, dy] of [[40, 0], [-40, 0], [0, 40], [0, -40], [30, 30]]) if (!g.map.isSolidAt(p.x + dx, p.y + dy)) return { x: p.x + dx, y: p.y + dy }; return { x: p.x, y: p.y }; })()`);
+    await ev(`BAF2D.effects.explosion('frag', ${p.x}, ${p.y}, BAF2D.map)`);
+    assert.ok((await ev(`${alphaAt}(${p.x}, ${p.y})`)) > 0, 'nessun cratere nei segni a terra');
+    await T('step(20)');
+    assert.ok((await ev(`${alphaAt}(${p.x}, ${p.y})`)) > 0, 'il cratere è sparito');
+    // bossoli: dopo qualche secondo fermi non restano tra gli oggetti da disegnare
+    const before = await ev(`BAF2D.effects.casings.length`);
+    assert.equal(before, 0, `bossoli/detriti ancora da disegnare dopo 20 s: ${before}`);
+    await ev(`BAF2D._reset()`); // come la rivincita
+    assert.equal(await ev(`${alphaAt}(${p.x}, ${p.y})`), 0, 'la nuova partita non ha cancellato i segni');
+  });
+
   it('animazioni del soldato: rinculo, colpito, lancio, caduta lontano dal colpo, pose dei caduti', async () => {
     await openGame();
     await T(`start('arena', { allies: 0, enemies: 0 })`);

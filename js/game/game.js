@@ -19,6 +19,8 @@ import { Destruction } from './destruction.js';
 import { keyName } from '../engine/input.js';
 import { UnitLighting } from '../engine/lighting.js';
 import { Lights } from './lights.js';
+import { Water } from './water.js';
+import { GroundMarks } from './marks.js';
 import { configureRotation, drawRotated } from '../engine/rotsprite.js';
 
 const STEP = 1 / 60; // update a timestep fisso
@@ -81,6 +83,9 @@ export class Game {
     // luci dinamiche (aloni, fuochi, bandiere, fari) e buio dell'ora del giorno
     this.lights = new Lights(config.lights);
     this.effects.lights = this.lights;
+    // segni di battaglia che restano: crateri, tracce dei mezzi, bossoli fermi
+    this.marks = new GroundMarks();
+    this.effects.marks = this.marks;
     configureRotation(config.display?.rotation); // rotazione di qualità dei soldati (passi, cache)
     this.crosshair = assets.sprites.get('crosshair') || null;
     this.camera = new Camera(config.camera);
@@ -163,6 +168,7 @@ export class Game {
     this.ctf = new Ctf(ctfCfg, this.teams, this.map, level);
     // decorazioni e meteo del livello (level.weather = tipo in effects.json -> weather)
     this.props.reset(this.map);
+    this.water = new Water(this.map, this.map.tileset.water); // riflessi e increspature animati
     this.weather = new Weather(level.weather ? this.effectsCfg.weather?.[level.weather] : null);
     if (level.weather && !this.weather.active) console.warn(`Level weather "${level.weather}" not found in effects.json`);
     this.effects.wind = this.weather.active ? this.weather.wind : null;
@@ -199,6 +205,7 @@ export class Game {
     this.shake.time = 0;
     this.effects.clear();
     this.lights.clear();
+    this.marks.reset(this.map);
     this.corpses.length = 0;
     this.pickups.reset(this.map);
     this.pickupOffer = null;
@@ -929,6 +936,7 @@ export class Game {
         if (v.driver) this._syncDriver(v);
       }
     }
+    for (const v of this.vehicles) this.marks.vehicle(v); // tracce di ruote e cingoli
     this._updateBullets(dt);
     this.rockets.update(dt, this, (r, x, y, v) => {
       // colpo diretto su un mezzo + esplosione
@@ -2094,8 +2102,10 @@ export class Game {
     ctx.translate(-cx, -cy);
 
     this.map.draw(ctx, cx, cy, W, H);
-    this.effects.drawDecals(ctx);
     const view = { x: cx, y: cy, w: W, h: H };
+    this.water?.draw(ctx, view, this.lights.clock);
+    this.marks.draw(ctx, view); // crateri, tracce dei mezzi, bossoli fermi
+    this.effects.drawDecals(ctx);
     const wind = this.weather.active ? this.weather.wind : null;
     this.props.drawGround(ctx, view, wind); // ombre, cespugli, sassi
     for (const v of this.vehicles) if (v.high) v.drawShadow(ctx); // ombre degli elicotteri in volo

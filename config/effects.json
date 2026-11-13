@@ -352,6 +352,7 @@
     "frag": {
       "sound": "explosion",
       "decal": { "sprite": "scorch", "life": 30, "fade": 8, "alpha": 0.9, "clipSolid": true },
+      "crater": { "radius": 4, "hole": "#1c1914", "ring": "#2e2820", "rim": "#5a4c3a", "clods": 7, "alpha": 0.75 },
       "fireball": { "sprite": "explosion", "duration": 0.6 },
       "glow": { "color": "#ff9a2a", "alpha": 0.4, "radius": 34, "bands": 4, "life": 0.25 },
       "fires": {
@@ -424,6 +425,7 @@
     "rocket": {
       "sound": "explosion",
       "decal": { "sprite": "scorch", "life": 25, "fade": 8, "alpha": 0.8, "clipSolid": true },
+      "crater": { "radius": 5, "hole": "#1c1914", "ring": "#2e2820", "rim": "#5a4c3a", "clods": 8, "alpha": 0.75 },
       "fireball": { "sprite": "explosion", "duration": 0.5 },
       "glow": { "color": "#ff9a2a", "alpha": 0.38, "radius": 30, "bands": 4, "life": 0.22 },
       "fires": {
@@ -447,6 +449,7 @@
     "vehicle": {
       "sound": "vehicle_explosion",
       "decal": { "sprite": "scorch", "life": 40, "fade": 10, "alpha": 0.95, "clipSolid": true },
+      "crater": { "radius": 8, "hole": "#16130f", "ring": "#2a241c", "rim": "#54463a", "clods": 14, "alpha": 0.8 },
       "fireball": { "sprite": "explosion", "duration": 0.8 },
       "glow": { "color": "#ff8a1a", "alpha": 0.5, "radius": 52, "bands": 5, "life": 0.4 },
       "fires": {

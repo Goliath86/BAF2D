@@ -571,6 +571,7 @@
       "src": null,
       "tileSize": 16,
       "shadow": { "color": "#4a2a10", "alpha": 0.3, "dx": 3, "dy": 4 },
+      "water": { "tiles": ["water"], "glint": "#eaf8ff", "ripple": "#8cc8e4", "glints": 1, "ripples": 2, "speed": 1, "margin": 5 },
       "autoProps": [
         { "type": "torch", "on": ["house_floor", "house_floor2", "terracotta", "terracotta2"], "near": ["adobe", "adobe2", "plaster", "plaster2"], "chance": 0.16, "spacing": 1, "sameSpacing": 4, "clear": 1 },
         { "type": "tarp", "on": ["terrain:sand"], "far": ["terrain:water", "terrain:road"], "chance": 0.012, "spacing": 1, "sameSpacing": 4 },
@@ -628,6 +629,7 @@
       "src": null,
       "tileSize": 16,
       "shadow": { "color": "#0e1a08", "alpha": 0.32, "dx": 3, "dy": 4 },
+      "water": { "tiles": ["water"], "glint": "#e0f0f0", "ripple": "#7aa8b4", "glints": 1, "ripples": 2, "speed": 0.8, "margin": 5 },
       "autoProps": [
         { "type": "torch", "on": ["planks"], "near": ["brick"], "chance": 0.16, "spacing": 1, "sameSpacing": 4, "clear": 1 },
         { "type": "log", "on": ["terrain:grass"], "far": ["terrain:dirt", "terrain:trench"], "chance": 0.012, "spacing": 1, "sameSpacing": 3 },

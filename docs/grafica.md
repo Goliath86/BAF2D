@@ -24,7 +24,13 @@ Ordine = impatto stimato sul colpo d'occhio. Tutto procedurale (canvas), configu
   cattura, ora del giorno nel menu (giorno, tramonto, notte) con fari dei mezzi e alone attorno al giocatore.
 - Rimasto del punto 3: torce e lampioni sulle mappe (decorazioni con luce: insieme al punto 4); di notte l'IA vede
   come di giorno.
-- Prossimo passo proposto: punto 4 (varietà delle mappe), poi 5 (effetti).
+- Fatto (2026-11-13): punto 4. Dettagli a terra cotti nella mappa (`scatter.js`, `tileset.scatter`), decorazioni
+  sparse in automatico (`tileset.autoProps`: tronchi, rami, balle di fieno, spaventapasseri, teli, pneumatici,
+  torce e lampade che fanno luce), alberi e palme a 6 varianti, acqua animata (`water.js`), segni di battaglia
+  che restano (`marks.js`: crateri, tracce di ruote e cingoli, bossoli cotti a terra).
+- Rimasto del punto 4: oggetti solidi nuovi (carri, pozzi, carcasse d'auto, tende): servono tile e generatori
+  (e il controllo dei vicoli ciechi); case del deserto con tetti (vedi punto 2).
+- Prossimo passo proposto: punto 5 (effetti), poi 6 (mezzi).
 - Da misurare sul telefono anche il costo per frame della luce dei soldati (qualche drawImage su canvas piccoli
   per soldato + un livello delle ombre grande quanto la visuale).
 - Punto aperto: l'anteprima reale dell'editor si ricostruisce a ogni modifica e con la fusione costa ~0,4 s.
@@ -58,14 +64,16 @@ Ordine = impatto stimato sul colpo d'occhio. Tutto procedurale (canvas), configu
 - ~~Lampeggio delle luci sulle bandiere in cattura.~~ fatto
 
 ## 4. Dettaglio e varietà delle mappe
-- Arena: pavimento meno uniforme: macchie d'olio, crepe, segnaletica a terra, tombini, griglie, scritte, cavi.
-- Campagna: alberi di dimensioni, rotazioni e specie diverse; tronchi caduti, rami spezzati, staccionate rotte,
-  balle di fieno sparse, carri, pozzo, spaventapasseri.
-- Deserto: tracce di pneumatici, impronte, rifiuti, teli, tende, carcasse di auto, pozzi, palme di forme diverse.
-- Decorazioni di confine: ciuffi d'erba sopra la terra, sassi lungo le strade, canne attorno all'acqua.
-- Acqua animata (riflessi che si muovono, increspature), riva con canne e sassi.
-- Decal persistenti di battaglia: bossoli che restano a lungo, segni di pneumatici dei mezzi, crateri che restano
-  dopo le esplosioni (deformano visivamente il terreno).
+- ~~Arena: pavimento meno uniforme: macchie d'olio, crepe, segnaletica a terra, tombini, griglie, cavi~~ fatto
+  (scritte: no).
+- ~~Campagna: alberi di dimensioni diverse; tronchi caduti, rami spezzati, balle di fieno, spaventapasseri~~ fatto;
+  specie diverse, staccionate rotte, carri, pozzo: da fare.
+- ~~Deserto: tracce di pneumatici, impronte, rifiuti, teli, palme di forme diverse~~ fatto; tende, carcasse di
+  auto, pozzi (oggetti solidi): da fare.
+- ~~Decorazioni di confine: ciuffi d'erba sopra la terra, sassi lungo le strade, canne attorno all'acqua.~~ fatto
+- ~~Acqua animata (riflessi che si muovono, increspature), riva con canne e sassi.~~ fatto
+- ~~Decal persistenti di battaglia: bossoli che restano a lungo, segni di pneumatici dei mezzi, crateri che restano
+  dopo le esplosioni.~~ fatto
 - Varianti di tile più numerose per spezzare la ripetizione residua dei motivi interni.
 
 ## 5. Effetti

@@ -133,6 +133,7 @@ export class Assets {
       height: def.height || null, // altezza finta dei tile che bloccano i colpi (TileMap._drawHeight)
       scatter: def.scatter || null, // dettagli a terra (js/engine/scatter.js)
       autoProps: def.autoProps || null, // decorazioni sparse in automatico (TileMap: aggiunte a map.props)
+      water: def.water || null, // acqua animata (js/game/water.js)
       terrains: def.terrains || null, // fusione dei bordi tra terreni (TileMap._drawBlend)
       blend: def.blend || null,
     });
