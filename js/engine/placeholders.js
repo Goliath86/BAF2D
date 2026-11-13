@@ -555,6 +555,39 @@ const SPRITE_SHAPES = {
     if (rad > 4) rect(g, Math.round(cx - rad * 0.3), Math.round(cy - rad * 0.4), 2, 1, p.light || p.color); // riflesso
   },
 
+  /**
+   * Fuoco a terra (fotogrammi = tremolio): braci alla base e lingue di fiamma a colonne, dal contorno rosso al
+   * cuore quasi bianco, altezza diversa per colonna e per fotogramma; ogni tanto una lingua staccata in cima.
+   * Base al centro della riga in basso (origin).
+   */
+  fire(g, w, h, p, frame) {
+    const r = rng(41 + frame * 13);
+    const cx = (w - 1) / 2;
+    const base = h - 2;
+    // braci
+    ellipse(g, cx + 0.5, base + 0.5, w / 2 - 0.5, 1.5, p.ember);
+    for (let i = 0; i < 3; i++) rect(g, Math.floor(1 + r() * (w - 2)), base + (i % 2), 1, 1, p.emberLight);
+    // lingue: profilo a campana, altezze perturbate
+    for (let x = 1; x < w - 1; x++) {
+      const d = Math.abs(x - cx) / (w / 2);
+      const top = (h - 3) * (1 - d * d) * (0.55 + r() * 0.45);
+      const H = Math.max(1, Math.round(top));
+      const layers = [
+        [p.outer, 1],
+        [p.mid, 0.72],
+        [p.inner, 0.45],
+        [p.core, 0.22],
+      ];
+      for (const [c, k] of layers) {
+        if (k < 1 && d > 0.75 - (1 - k) * 0.3) continue; // i colori più chiari restano al centro
+        const hh = Math.max(1, Math.round(H * k));
+        rect(g, x, base - hh + 1, 1, hh, c);
+      }
+    }
+    // lingua staccata
+    if (r() < 0.6) rect(g, Math.round(cx + (r() - 0.5) * 3), Math.max(0, Math.round(base - (h - 3) - 1 - r() * 1.5)), 1, 1, p.mid);
+  },
+
   /** Arma da sola (es. oggetto a terra da raccogliere), centrata nel frame. */
   weapon(g, w, h, p) {
     const gun = GUNS[p.weapon] || GUNS.rifle;

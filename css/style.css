@@ -998,8 +998,9 @@ button {
   color: var(--menu-gold);
 }
 
-/* tempo limite: "20 min" / "Nessuno" sono più larghi dei numeri */
-[data-stepper="timeLimit"] .step-value {
+/* tempo limite e ora del giorno: "20 min" / "Nessuno" / "Tramonto" sono più larghi dei numeri */
+[data-stepper="timeLimit"] .step-value,
+[data-stepper="timeOfDay"] .step-value {
   min-width: 104px;
   font-size: 18px;
 }

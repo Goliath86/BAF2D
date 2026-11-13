@@ -102,6 +102,22 @@
     "lockLandscape": true
   },
 
+  "lights": {
+    "default": "day",
+    "falloff": 1.3,
+    "maxFlashes": 64,
+    "darkThreshold": 0.3,
+    "times": {
+      "day": null,
+      "dusk": { "color": "#2a1030", "darkness": 0.42, "cutScale": 1.3, "glowBoost": 0.8, "tint": { "color": "#ff6a20", "alpha": 0.2, "mode": "soft-light" } },
+      "night": { "color": "#02061a", "darkness": 0.72, "cutScale": 1.35, "glowBoost": 0.9, "tint": { "color": "#1a3a7a", "alpha": 0.12, "mode": "soft-light" } }
+    },
+    "rocket": { "color": "#ff9a2a", "alpha": 0.32, "radius": 16, "bands": 4, "cut": 0.9 },
+    "flag": { "alpha": 0.4, "radius": 14, "bands": 3, "cut": 0.6, "blinkHz": 2.5, "contested": "#ffb627" },
+    "headlights": { "color": "#fff2c0", "alpha": 0.12, "radius": 16, "bands": 3, "cut": 0.85, "step": 14, "count": 3 },
+    "player": { "color": "#ffffff", "alpha": 0, "radius": 64, "bands": 5, "cut": 0.7 }
+  },
+
   "lighting": {
     "shadow": { "length": 0.7, "alpha": 0.42, "fallback": { "dx": 2, "dy": 3, "color": "#05060a", "alpha": 0.35 } },
     "rim": { "color": "#fff2cc", "alpha": 0.55, "width": 1 }

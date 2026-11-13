@@ -186,6 +186,33 @@ describe('gioco nel browser', { skip: chrome ? false : 'Chrome non trovato (impo
     assert.ok(r.tall.ground < r.flat.ground, `niente occlusione alla base: ${JSON.stringify(r)}`);
   });
 
+  it('luci: notte più buia del giorno, lampi delle esplosioni, fuochi che si spengono', async () => {
+    await openGame();
+    const lum = `(() => { const g = BAF2D; g.render(); const d = g.display.ctx.getImageData(0, 0, g.display.width, g.display.height).data;
+      let t = 0; for (let i = 0; i < d.length; i += 16) t += d[i] + d[i + 1] + d[i + 2]; return t / (d.length / 16); })()`;
+    await T(`start('countryside', { allies: 0, enemies: 0, timeOfDay: 0 })`);
+    await T('step(0.2)');
+    const day = await ev(lum);
+    await T(`start('countryside', { allies: 0, enemies: 0, timeOfDay: 2 })`);
+    await T('step(0.2)');
+    const night = await ev(lum);
+    assert.equal(await ev('BAF2D.lights.time'), 'night');
+    assert.ok(night < day * 0.6, `la notte non è abbastanza buia (giorno ${day.toFixed(0)}, notte ${night.toFixed(0)})`);
+    // esplosione di un mezzo: lampo che rischiara e fuochi che restano accesi, poi si spengono
+    const r = await ev(`(() => { const g = BAF2D, p = g.player;
+      g.effects.explosion('vehicle', p.x + 30, p.y, g.map);
+      return { flashes: g.lights.flashes.length, fires: g.effects.fires.length }; })()`);
+    assert.ok(r.flashes > 0, 'nessun lampo di luce');
+    assert.ok(r.fires > 0, "nessun fuoco dopo l'esplosione di un mezzo");
+    await T('step(0.1)');
+    const lit = await ev(lum);
+    assert.ok(lit > night, `il lampo non rischiara la scena (${night.toFixed(0)} -> ${lit.toFixed(0)})`);
+    await shot('lights-night');
+    await T('step(15)');
+    assert.equal(await ev('BAF2D.effects.fires.length'), 0, 'i fuochi non si spengono');
+    assert.equal(await ev('BAF2D.lights.flashes.length'), 0, 'lampi rimasti accesi');
+  });
+
   it('animazioni del soldato: rinculo, colpito, lancio, caduta lontano dal colpo, pose dei caduti', async () => {
     await openGame();
     await T(`start('arena', { allies: 0, enemies: 0 })`);

@@ -38,6 +38,8 @@
     "minutes": "{n} min",
     "noLimit": "None",
     "summaryTime": " · {minutes} min",
+    "timeOfDay": "Time of day",
+    "times": { "day": "Day", "dusk": "Dusk", "night": "Night" },
     "procedural": "Procedural",
     "proceduralDesc": "A new map generated for every match.",
     "comingSoon": "Coming soon",

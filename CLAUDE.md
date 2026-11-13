@@ -71,6 +71,8 @@ js/settings.js        Settings: impostazioni del giocatore in localStorage (lang
 js/engine/
   lighting.js         UnitLighting: ombra portata e luce sul bordo dei soldati (direzione dalle ombre del tileset)
   rotsprite.js        drawRotated: rotazione di qualità della pixel art (Scale2x ×4), cache per angolo
+js/game/lights.js     Lights: luci dinamiche (aloni a gradini retinati in cache, lampi e luci del fotogramma) e buio
+                      dell'ora del giorno (game.json -> lights.times)
   loader.js           loadJSON / loadImage / loadArrayBuffer (errori = LocalizedError)
   errors.js           LocalizedError(key, params, fallbackMessage)
   i18n.js             I18n: load(cfg), t(key, params), applyToDOM() per [data-i18n], error(e)
@@ -195,6 +197,17 @@ tests/                test di regressione (node --test): static.test.mjs, browse
   `kickPx` dell'arma in weapons.json), lampo + sobbalzo quando colpito (`hitFlash*`, `hitJolt`, da `damage()`),
   torsione del lancio (`throwTime`, `throwTwistDeg`), corsa col busto verso la marcia e fucile di traverso
   (`sprintPortDeg`, `sprintSwayDeg`). `drawParts()` = [sprite, frame, angolo, dx, dy]: solo disegno.
+- Luci (`js/game/lights.js`, `game.json -> lights`, `game.lights`, `effects.lights`): luce = { color, alpha
+  (alone additivo), radius, bands, cut (buio tolto) }. `lights.flash(x, y, def)` = lampo che dura `life` (vampate:
+  `muzzles.<t>.glow`, esplosioni: `explosions.<t>.glow` con `shrink`); `lights.add(x, y, def, k, radiusK)` = luce
+  del fotogramma, ridichiarata da `Game._addLights()` (fuochi, razzi `lights.rocket`, bandiere con `f.activity` =
+  squadra che alza/abbassa il drappo o `contested` -> `lights.flag` lampeggiante; col buio fari dei mezzi guidati
+  `lights.headlights` e visuale del giocatore `lights.player`). Disegno dopo elicotteri e prima di segni di squadra
+  e granelli: buio (`times.<id>` = { color, darkness, cutScale, glowBoost, tint }) bucato dalle luci, poi aloni
+  `lighter`; `drawTint` dopo quella del meteo. Ora del giorno: `game.setup({ timeOfDay })` (menu: stepper
+  `timeOfDay` = indice in `lights.times`, testi `newGame.times.<id>`), altrimenti `level.timeOfDay`, `lights.default`.
+  Fuochi persistenti: `explosions.<t>.fires` = { count, spread, life, sprite (procedurale `fire`), light, smoke,
+  smokeEvery, sparks, sparkEvery } -> `effects.fires` (solo su terreno libero, `drawFires` sotto i soldati).
 - Caduti: `deathAngle` = verso chi ha colpito (la testa cade lontano), sprite `soldier_dead` con `sheetVariants`
   pose × `frames` fotogrammi di caduta (`DEAD_POSES`, `death.fallTime`, il corpo scivola da dov'era); pozza
   `blood_pool` a `sheetVariants` forme. `sprite.variants` (assets.js) = varianti in fila nel foglio.

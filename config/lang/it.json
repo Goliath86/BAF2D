@@ -38,6 +38,8 @@
     "minutes": "{n} min",
     "noLimit": "Nessuno",
     "summaryTime": " · {minutes} min",
+    "timeOfDay": "Ora del giorno",
+    "times": { "day": "Giorno", "dusk": "Tramonto", "night": "Notte" },
     "procedural": "Procedurale",
     "proceduralDesc": "Una mappa nuova generata a ogni partita.",
     "comingSoon": "Prossimamente",

@@ -67,6 +67,16 @@
         "idle": { "frames": [0], "fps": 1 }
       }
     },
+    "fire": {
+      "src": null,
+      "frameWidth": 9,
+      "frameHeight": 12,
+      "origin": [4, 11],
+      "placeholder": {
+        "shape": "fire", "frames": 6,
+        "ember": "#5a1a0a", "emberLight": "#a8320e", "outer": "#e04a10", "mid": "#ff9a2a", "inner": "#ffd36b", "core": "#fff4c2"
+      }
+    },
     "blood_pool": {
       "src": null,
       "frameWidth": 28,

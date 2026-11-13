@@ -135,7 +135,10 @@ export class Ctf {
       }
       const here = Object.keys(f.present);
       f.contested = here.length > 1;
+      // activity = squadra che sta alzando o abbassando il drappo, "contested", o null (luce che lampeggia)
+      const before = f.progress;
       if (here.length === 1) this._advance(f, here[0], f.present[here[0]], dt);
+      f.activity = f.contested ? 'contested' : here.length === 1 && f.progress !== before ? here[0] : null;
     }
 
     // calo periodico dei ticket in base alle bandiere possedute

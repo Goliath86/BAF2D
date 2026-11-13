@@ -58,6 +58,9 @@ export class Menu {
       // tempo limite in minuti (0 = nessuno): allo scadere vince chi ha più ticket
       timeLimit: range(this.cfg.timeLimit, Math.round((config.ctf?.timeLimit ?? 0) / 60), 60, 5),
     };
+    // ora del giorno: indice in game.json -> lights.times (giorno, tramonto, notte)
+    this.timeIds = Object.keys(config.lights?.times || { day: null });
+    this.limits.timeOfDay = { min: 0, max: this.timeIds.length - 1, def: Math.max(0, this.timeIds.indexOf(config.lights?.default)), step: 1 };
     // valore salvato o di default, nei limiti e sul passo dello stepper
     const pick = (key) => {
       const l = this.limits[key];
@@ -71,6 +74,7 @@ export class Menu {
       enemies: pick('enemies'),
       tickets: pick('tickets'),
       timeLimit: pick('timeLimit'),
+      timeOfDay: pick('timeOfDay'),
     };
 
     this._buildMaps();
@@ -136,7 +140,16 @@ export class Menu {
     this._hide();
     const { game } = this;
     game.viewOffsetX = 0;
-    game.setup({ level: lvl.data, team: c.team, allies: c.allies, enemies: c.enemies, tickets: c.tickets, timeLimit: c.timeLimit * 60, attract: false });
+    game.setup({
+      level: lvl.data,
+      team: c.team,
+      allies: c.allies,
+      enemies: c.enemies,
+      tickets: c.tickets,
+      timeLimit: c.timeLimit * 60,
+      timeOfDay: this.timeIds[c.timeOfDay] ?? null,
+      attract: false,
+    });
     game.running = true;
     this._play();
   }
@@ -521,6 +534,7 @@ export class Menu {
 
   /** Valore mostrato da uno stepper: il tempo limite in minuti ("Nessuno" a 0), gli altri così come sono. */
   _stepperText(key, v) {
+    if (key === 'timeOfDay') return this.i18n.t(`newGame.times.${this.timeIds[v]}`);
     if (key !== 'timeLimit') return String(v);
     return v > 0 ? this.i18n.t('newGame.minutes', { n: v }) : this.i18n.t('newGame.noLimit');
   }

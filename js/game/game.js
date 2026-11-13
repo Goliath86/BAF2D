@@ -18,6 +18,7 @@ import { Rockets } from './rockets.js';
 import { Destruction } from './destruction.js';
 import { keyName } from '../engine/input.js';
 import { UnitLighting } from '../engine/lighting.js';
+import { Lights } from './lights.js';
 import { configureRotation, drawRotated } from '../engine/rotsprite.js';
 
 const STEP = 1 / 60; // update a timestep fisso
@@ -77,6 +78,9 @@ export class Game {
     this.props = new Props(config.props, assets);
     this.weather = new Weather(null);
     this.lighting = new UnitLighting(config.lighting); // ombra portata e luce sul bordo dei soldati
+    // luci dinamiche (aloni, fuochi, bandiere, fari) e buio dell'ora del giorno
+    this.lights = new Lights(config.lights);
+    this.effects.lights = this.lights;
     configureRotation(config.display?.rotation); // rotazione di qualità dei soldati (passi, cache)
     this.crosshair = assets.sprites.get('crosshair') || null;
     this.camera = new Camera(config.camera);
@@ -146,8 +150,10 @@ export class Game {
    * Prepara una partita: level = JSON del livello, team = squadra del giocatore,
    * allies / enemies = bot compagni / avversari, attract = partita dimostrativa (tutti bot, niente HUD né audio).
    */
-  setup({ level, team, allies = 0, enemies = 4, tickets = null, timeLimit = null, attract = false }) {
+  setup({ level, team, allies = 0, enemies = 4, tickets = null, timeLimit = null, timeOfDay = null, attract = false }) {
     this.level = level;
+    // ora del giorno (game.json -> lights.times): dal menu, altrimenti quella del livello, altrimenti il default
+    this.lights.setTime(timeOfDay || level.timeOfDay || this.config.lights?.default || null);
     this.map = new TileMap(level, this.assets.tileset(level.tileset));
     // tickets (opzionale, dal menu) = ticket iniziali di ogni squadra al posto di ctf.tickets (vale anche per la rivincita);
     // timeLimit (s, dal menu; 0 = nessun limite, null = ctf.timeLimit)
@@ -192,6 +198,7 @@ export class Game {
     this.grenades.clear();
     this.shake.time = 0;
     this.effects.clear();
+    this.lights.clear();
     this.corpses.length = 0;
     this.pickups.reset(this.map);
     this.pickupOffer = null;
@@ -931,6 +938,7 @@ export class Game {
     this.grenades.update(dt, this.map, (g) => this.explode(g.def, g.x, g.y, g.owner, null, 'grenade'));
     this.destruction?.flush(); // tile distrutti in questo tick: griglia dei percorsi aggiornata
     this.effects.update(dt, this.map);
+    this.lights.update(dt);
     this.shake.time = Math.max(0, this.shake.time - dt);
 
     this.camera.follow(this.player.x - this.viewOffsetX, this.player.y, this.player.angle, display.width, display.height, this.map, dt);
@@ -2011,6 +2019,43 @@ export class Game {
 
   // ---------- Render ----------
 
+  /**
+   * Luci del fotogramma (game.json -> lights): fuochi, razzi in volo, bandiere in cattura (lampeggio del colore di
+   * chi la sta prendendo, ambra se contesa) e, col buio, fari dei mezzi guidati e alone attorno al giocatore.
+   */
+  _addLights() {
+    const L = this.lights;
+    const c = this.config.lights || {};
+    this.effects.addFireLights(L);
+    if (c.rocket) for (const r of this.rockets.list) L.add(r.x, r.y, c.rocket);
+    if (c.flag) {
+      const H = this.ctf.look?.poleHeight ?? 22;
+      const blink = 0.5 + 0.5 * Math.sin(this.ctf.time * Math.PI * 2 * (c.flag.blinkHz ?? 2.5));
+      for (const f of this.ctf.flags) {
+        if (!f.activity) continue;
+        const color = f.activity === 'contested' ? c.flag.contested || '#ffb627' : this.teams[f.activity]?.light || '#ffffff';
+        L.add(f.x, f.y - H - 1, { ...c.flag, color }, blink);
+      }
+    }
+    if (!L.dark) return;
+    if (c.headlights) {
+      for (const v of this.vehicles) {
+        if (v.destroyed || !v.driver || v.high) continue;
+        // fari: tre aloni sempre più larghi davanti al muso
+        const h = c.headlights;
+        const step = h.step ?? 14;
+        for (let i = 1; i <= (h.count ?? 3); i++) {
+          L.add(v.x + Math.cos(v.angle) * step * i, v.y + Math.sin(v.angle) * step * i, h, 1 - (i - 1) * 0.2, 0.6 + i * 0.25);
+        }
+      }
+    }
+    // il giocatore vede attorno a sé (visore notturno): toglie un po' di buio, nessun alone
+    if (c.player && !this.attract && this.player && !this.player.dead) {
+      const p = this.player.vehicle || this.player;
+      L.add(p.x, p.y, c.player);
+    }
+  }
+
   render() {
     const { display, input } = this;
     const ctx = display.ctx;
@@ -2050,6 +2095,7 @@ export class Game {
     this.grenades.draw(ctx, false); // granate a terra
     this.pickups.drawPads(ctx);
     this._drawCorpses(ctx);
+    this.effects.drawFires(ctx); // fuochi rimasti accesi dopo le esplosioni
     this.pickups.draw(ctx, this.attract ? null : this.pickupOffer);
     // pennoni e soldati ordinati per y: chi sta più in alto sullo schermo è "dietro"
     // (a parità di y prima il pennone; sort stabile)
@@ -2067,8 +2113,6 @@ export class Game {
       } else if (o.draw) o.draw(ctx);
       else this.ctf.drawFlag(ctx, o);
     }
-    if (!this.attract) this._drawSquadMarks(ctx);
-    if (this.debug) this._drawBotDebug(ctx);
     this.effects.drawCasings(ctx, true); // bossoli in volo
     this.grenades.draw(ctx, true); // granate in volo
     for (const b of this.bullets) drawSprite(ctx, b.sprite, 0, b.x, b.y, b.angle);
@@ -2078,10 +2122,16 @@ export class Game {
     this.effects.drawBlasts(ctx); // sopra il fumo, altrimenti ne coprirebbe il nucleo
     this.props.drawOverhead(ctx, view, wind); // chiome delle palme sopra i soldati
     for (const v of this.vehicles) if (v.high) v.draw(ctx); // elicotteri in volo sopra a tutto
+    // luci: buio dell'ora del giorno e aloni (illuminano terreno, muri, soldati e fumo)
+    this._addLights();
+    this.lights.draw(ctx, view);
+    if (!this.attract) this._drawSquadMarks(ctx);
+    if (this.debug) this._drawBotDebug(ctx);
     this.weather.drawAir(ctx); // granelli e polvere nell'aria
 
     ctx.restore();
     this.weather.drawTint(ctx, W, H);
+    this.lights.drawTint(ctx, W, H);
 
     const live = this.running && !this.attract; // partita del giocatore (non la dimostrativa del menu)
     const playing = live && !this.suspended && !this.ended && !this.player.dead;

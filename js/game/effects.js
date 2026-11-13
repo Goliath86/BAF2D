@@ -36,7 +36,74 @@ export class Effects {
     this.particles = [];
     this.casings = [];
     this.flashes = [];
-    this.blasts = []; // palle di fuoco delle esplosioni (sprite animato + alone)
+    this.blasts = []; // palle di fuoco delle esplosioni (sprite animato)
+    this.fires = []; // fuochi rimasti accesi dopo le esplosioni (fiamma animata, fumo, luce)
+    this.maxFires = cfg.maxFires ?? 24;
+    this.lights = null; // Lights (game/lights.js), impostato da Game: aloni di vampate, esplosioni e fuochi
+  }
+
+  /**
+   * Fuochi che restano accesi dopo un'esplosione (def = explosions.<tipo>.fires): { count, spread, life, sprite,
+   * light, smoke (emettitore), smokeEvery, sparks, sparkEvery }. Solo su terreno libero (non dentro muri o acqua).
+   */
+  _spawnFires(def, x, y, map) {
+    const n = Math.round(range(def.count, 1));
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const d = Math.random() * (def.spread ?? 10);
+      const fx = x + Math.cos(a) * d;
+      const fy = y + Math.sin(a) * d;
+      if (map?.isSolidAt(fx, fy)) continue;
+      const life = range(def.life, 5);
+      this.fires.push({
+        def,
+        sprite: this.assets.sprite(def.sprite || 'fire'),
+        x: Math.round(fx),
+        y: Math.round(fy),
+        time: 0,
+        life,
+        phase: Math.random() * 10,
+        smokeT: Math.random() * (def.smokeEvery ?? 0.3),
+        sparkT: Math.random() * (def.sparkEvery ?? 0.8),
+      });
+    }
+    while (this.fires.length > this.maxFires) this.fires.shift();
+  }
+
+  /** Intensità 0..1 del fuoco f: sale in fretta, poi cala nell'ultimo terzo della vita. */
+  _fireLevel(f) {
+    const up = Math.min(1, f.time / 0.25);
+    const down = Math.min(1, (f.life - f.time) / (f.life / 3));
+    return Math.max(0, Math.min(up, down));
+  }
+
+  /** Luci dei fuochi accesi (tremolanti), da chiamare a ogni disegno prima di Lights.draw. */
+  addFireLights(lights) {
+    for (const f of this.fires) {
+      const l = f.def.light;
+      if (!l) continue;
+      const t = f.time * (l.flickerSpeed ?? 14) + f.phase;
+      const flick = 1 - (l.flicker ?? 0.25) * (0.5 + 0.5 * Math.sin(t) * Math.sin(t * 0.37 + 1.3));
+      lights.add(f.x, f.y - 2, l, this._fireLevel(f) * flick, 0.85 + 0.15 * flick);
+    }
+  }
+
+  /** Fuochi: fiamma animata alla base, che si rimpicciolisce mentre si spegne. */
+  drawFires(ctx) {
+    for (const f of this.fires) {
+      const s = f.sprite;
+      const k = this._fireLevel(f);
+      if (k <= 0) continue;
+      const fps = f.def.fps ?? 10;
+      const frame = Math.floor(f.time * fps + f.phase) % s.frameCount;
+      ctx.globalAlpha = Math.min(1, k * 1.5);
+      const sx = (frame % s.cols) * s.fw;
+      const sy = Math.floor(frame / s.cols) * s.fh;
+      // si abbassa verso la base (origin) mentre si spegne
+      const h = Math.max(2, Math.round(s.fh * (0.45 + 0.55 * k)));
+      ctx.drawImage(s.image, sx, sy + s.fh - h, s.fw, h, f.x - s.origin[0], f.y - h + (s.fh - s.origin[1]), s.fw, h);
+    }
+    ctx.globalAlpha = 1;
   }
 
   /**
@@ -52,20 +119,22 @@ export class Effects {
       return;
     }
     if (d.decal) this.addDecal(d.decal, x, y, map);
-    if (d.fireball || d.glow) {
-      const sprite = d.fireball?.sprite ? this.assets.sprite(d.fireball.sprite) : null;
-      const duration = range(d.fireball?.duration, 0.5);
+    // lampo di luce: illumina terreno, muri e soldati attorno (si restringe mentre si spegne)
+    if (d.glow) this.lights?.flash(x, y, { shrink: 0.4, ...d.glow, life: d.glow.life ?? 0.3 });
+    if (d.fireball) {
+      const sprite = d.fireball.sprite ? this.assets.sprite(d.fireball.sprite) : null;
+      const duration = range(d.fireball.duration, 0.5);
       this.blasts.push({
         sprite,
         x: Math.round(x),
         y: Math.round(y),
         angle: Math.floor(Math.random() * 4) * (Math.PI / 2),
         time: 0,
-        duration: Math.max(duration, d.glow?.life ?? 0),
+        duration,
         fireTime: duration,
-        glow: d.glow || null,
       });
     }
+    if (d.fires) this._spawnFires(d.fires, x, y, map);
     for (const em of d.emitters || []) this.emit(em, x, y, 0, 0);
     for (const deb of d.debris || []) {
       const n = Math.round(range(deb.count, 6));
@@ -112,8 +181,12 @@ export class Effects {
         y,
         angle,
         life: range(d.life, 0.05),
-        glow: d.glow || null,
       });
+    }
+    // alone della vampata poco davanti alla volata
+    if (d.glow) {
+      const ahead = d.glow.offset ?? 2;
+      this.lights?.flash(x + Math.cos(angle) * ahead, y + Math.sin(angle) * ahead, { ...d.glow, life: d.glow.life ?? range(d.life, 0.05) });
     }
     const nx = Math.cos(angle);
     const ny = Math.sin(angle);
@@ -257,6 +330,7 @@ export class Effects {
     this.casings.length = 0;
     this.flashes.length = 0;
     this.blasts.length = 0;
+    this.fires.length = 0;
   }
 
   /** map: TileMap per far rimbalzare i bossoli sui tile solidi (opzionale). */
@@ -270,6 +344,30 @@ export class Effects {
       const b = this.blasts[i];
       b.time += dt;
       if (b.time >= b.duration) this.blasts.splice(i, 1);
+    }
+    for (let i = this.fires.length - 1; i >= 0; i--) {
+      const f = this.fires[i];
+      f.time += dt;
+      if (f.time >= f.life) {
+        this.fires.splice(i, 1);
+        continue;
+      }
+      // fumo e scintille, meno frequenti mentre si spegne
+      const k = this._fireLevel(f);
+      if (f.def.smoke) {
+        f.smokeT -= dt * Math.max(0.3, k);
+        if (f.smokeT <= 0) {
+          f.smokeT += f.def.smokeEvery ?? 0.3;
+          this.emit(f.def.smoke, f.x, f.y - 3, 0, 0);
+        }
+      }
+      if (f.def.sparks) {
+        f.sparkT -= dt * k;
+        if (f.sparkT <= 0) {
+          f.sparkT += f.def.sparkEvery ?? 0.8;
+          this.emit(f.def.sparks, f.x, f.y - 2, 0, -1);
+        }
+      }
     }
     for (let i = this.decals.length - 1; i >= 0; i--) {
       const d = this.decals[i];
@@ -366,31 +464,9 @@ export class Effects {
     ctx.globalAlpha = 1;
   }
 
-  /** Vampate di volata: prima l'alone di luce (additivo), poi lo sprite della fiamma. */
+  /** Vampate di volata (l'alone di luce lo disegna Lights). */
   drawFlashes(ctx) {
-    for (const f of this.flashes) {
-      const g = f.glow;
-      if (g) {
-        // alone centrato poco davanti alla volata: "bands" dischi concentrici sovrapposti,
-        // più luminoso al centro e sfumato a gradini verso il bordo (stile pixel-art)
-        const ahead = g.offset ?? 2;
-        const gx = Math.round(f.x + Math.cos(f.angle) * ahead);
-        const gy = Math.round(f.y + Math.sin(f.angle) * ahead);
-        const bands = Math.max(1, g.bands ?? 3);
-        const radius = g.radius ?? 8;
-        ctx.save();
-        ctx.globalCompositeOperation = 'lighter';
-        ctx.globalAlpha = (g.alpha ?? 0.25) / bands;
-        ctx.fillStyle = g.color || '#ffb627';
-        for (let b = 0; b < bands; b++) {
-          ctx.beginPath();
-          ctx.arc(gx, gy, Math.max(1, Math.round((radius * (bands - b)) / bands)), 0, Math.PI * 2);
-          ctx.fill();
-        }
-        ctx.restore();
-      }
-      drawSprite(ctx, f.sprite, f.frame, f.x, f.y, f.angle);
-    }
+    for (const f of this.flashes) drawSprite(ctx, f.sprite, f.frame, f.x, f.y, f.angle);
   }
 
   drawDecals(ctx) {
@@ -402,28 +478,9 @@ export class Effects {
     ctx.globalAlpha = 1;
   }
 
-  /**
-   * Esplosioni: alone di luce additivo (si spegne in glow.life secondi) e palla di fuoco,
-   * i cui frame scorrono lungo fireball.duration.
-   */
+  /** Esplosioni: palla di fuoco, i cui frame scorrono lungo fireball.duration (l'alone lo disegna Lights). */
   drawBlasts(ctx) {
     for (const b of this.blasts) {
-      const g = b.glow;
-      if (g && b.time < (g.life ?? 0.3)) {
-        const k = 1 - b.time / (g.life ?? 0.3);
-        const bands = Math.max(1, g.bands ?? 3);
-        const radius = (g.radius ?? 30) * (0.6 + 0.4 * k);
-        ctx.save();
-        ctx.globalCompositeOperation = 'lighter';
-        ctx.globalAlpha = ((g.alpha ?? 0.4) * k) / bands;
-        ctx.fillStyle = g.color || '#ffb627';
-        for (let i = 0; i < bands; i++) {
-          ctx.beginPath();
-          ctx.arc(b.x, b.y, Math.max(1, Math.round((radius * (bands - i)) / bands)), 0, Math.PI * 2);
-          ctx.fill();
-        }
-        ctx.restore();
-      }
       if (b.sprite && b.time < b.fireTime) {
         const frame = Math.min(b.sprite.frameCount - 1, Math.floor((b.time / b.fireTime) * b.sprite.frameCount));
         drawSprite(ctx, b.sprite, frame, b.x, b.y, b.angle);

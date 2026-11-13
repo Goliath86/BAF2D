@@ -18,7 +18,13 @@ Ordine = impatto stimato sul colpo d'occhio. Tutto procedurale (canvas), configu
   dal lato della luce e scuri dall'altro, occlusione alla base. Collisioni invariate.
 - Rimasto del punto 2: case del deserto con tetti/parapetti/scale/tende (tocca il generatore e la visibilità degli
   interni: da decidere), casse con coperchio disegnato a parte (ora hanno solo la faccia).
-- Prossimo passo proposto: punto 3 (luci dinamiche) o punto 4 (varietà delle mappe).
+- Fatto (2026-11-13): punto 3, luci dinamiche (`js/game/lights.js`, `game.json -> lights`): aloni a gradini
+  retinati per vampate ed esplosioni (illuminano anche soldati, muri e fumo), razzi in volo, fuochi che restano
+  accesi dopo le esplosioni (fiamma animata, fumo, scintille, luce tremolante), lampeggio delle bandiere in
+  cattura, ora del giorno nel menu (giorno, tramonto, notte) con fari dei mezzi e alone attorno al giocatore.
+- Rimasto del punto 3: torce e lampioni sulle mappe (decorazioni con luce: insieme al punto 4); di notte l'IA vede
+  come di giorno.
+- Prossimo passo proposto: punto 4 (varietà delle mappe), poi 5 (effetti).
 - Da misurare sul telefono anche il costo per frame della luce dei soldati (qualche drawImage su canvas piccoli
   per soldato + un livello delle ombre grande quanto la visuale).
 - Punto aperto: l'anteprima reale dell'editor si ricostruisce a ogni modifica e con la fusione costa ~0,4 s.
@@ -45,11 +51,11 @@ Ordine = impatto stimato sul colpo d'occhio. Tutto procedurale (canvas), configu
 - Casse con coperchio e fianco visibili, pile di casse di altezze diverse.
 
 ## 3. Luci dinamiche
-- Livello di luce sopra la scena: aloni additivi per vampate, esplosioni, incendi, razzi in volo, fari dei mezzi.
-- Le esplosioni illuminano muri e soldati vicini per qualche fotogramma.
-- Fuochi persistenti dopo le esplosioni (bruciano qualche secondo, fumo).
-- Possibilità di mappe al tramonto / notte (scurimento globale + luci), torce, lampioni.
-- Lampeggio delle luci sulle bandiere in cattura.
+- ~~Livello di luce sopra la scena: aloni additivi per vampate, esplosioni, incendi, razzi in volo, fari dei mezzi.~~ fatto
+- ~~Le esplosioni illuminano muri e soldati vicini per qualche fotogramma.~~ fatto
+- ~~Fuochi persistenti dopo le esplosioni (bruciano qualche secondo, fumo).~~ fatto
+- ~~Possibilità di mappe al tramonto / notte (scurimento globale + luci)~~ fatto; torce, lampioni: da fare.
+- ~~Lampeggio delle luci sulle bandiere in cattura.~~ fatto
 
 ## 4. Dettaglio e varietà delle mappe
 - Arena: pavimento meno uniforme: macchie d'olio, crepe, segnaletica a terra, tombini, griglie, scritte, cavi.
