@@ -1,4 +1,4 @@
-# BAF2D — itch.io page (v1.3.5)
+# BAF2D — itch.io page (v1.4.0)
 
 Copy each block into the matching field of the itch.io "Edit game" page.
 
@@ -10,12 +10,12 @@ BAF2D
 
 ## Short description or tagline
 
-Top-down pixel-art capture the flag: destructible maps, your own squad, vehicles and helicopters, medals, unlocks and a map editor.
+Top-down pixel-art capture the flag by day or by night: destructible maps, your own squad, vehicles and helicopters, medals, unlocks and a map editor.
 
 ## Classification / Kind of project
 
 - Classification: **Games**
-- Kind of project: **HTML** (upload `dist/BAF2D-1.3.5-html5.zip`, tick "This file will be played in the browser")
+- Kind of project: **HTML** (upload `dist/BAF2D-1.4.0-html5.zip`, tick "This file will be played in the browser")
 - Release status: **Released**
 
 ## Embed options (Uploads → HTML)
@@ -52,6 +52,10 @@ pick up better weapons and jump into vehicles. Every match feeds your career: sc
     palms, dry-stone walls and wide dirt roads built for vehicles, and <em>Countryside</em>: green farmland between
     two zig-zag trench lines with sandbag parapets, hedgerows, orchards, shell craters and a farmhouse in the middle.
     Every map is symmetric and has no dead ends: there is always another way round.</li>
+  <li><strong>Day, dusk or night.</strong> Pick the time of day for every match. At night the battlefield is lit only
+    by muzzle flashes, explosions, burning wrecks, torches and lamps, and vehicles drive with their headlights on.</li>
+  <li><strong>A battlefield that remembers.</strong> Explosions leave craters and fires that burn for a while, tanks
+    and jeeps leave track marks, spent casings pile up where the fighting was hardest.</li>
   <li><strong>Destructible maps.</strong> Crates, fences, hay bales, hedges, sandbags and walls crack and give way
     under fire: bullets chew through light cover, rockets breach brick and stone, tanks drive straight through
     fences and sandbags. Every firefight reshapes the battlefield.</li>
@@ -63,8 +67,9 @@ pick up better weapons and jump into vehicles. Every match feeds your career: sc
     rocket pods that flies over walls and trees. Armour shrugs off small arms fire: bring a rocket launcher or
     grenades. Ramming enemies works too.</li>
   <li><strong>Weapons.</strong> Assault rifle, shotgun, pistol, frag grenades, and a shoulder-fired
-    <strong>rocket launcher</strong> you carry next to your main gun. Fallen soldiers drop their weapons and grenades;
-    map pickups respawn.</li>
+    <strong>rocket launcher</strong> you carry next to your main gun. Ammunition is limited: scavenge it from fallen
+    soldiers, resupply at your flags or grab an ammo crate. Fallen soldiers drop their weapons and grenades; map
+    pickups respawn.</li>
   <li><strong>Squad AI.</strong> Bots move in pairs and spread across the flags, use cover, suppress, flank, dodge
     grenades, go and fetch a rocket launcher when enemy armour shows up, and drive vehicles to the flags. Up to
     8 vs 8.</li>
@@ -119,7 +124,7 @@ Keys can be remapped in Options, where you can also turn on <strong>auto reload<
   <li>Progress (rank, medals, your soldier, settings) is stored in your browser's local storage.</li>
   <li>The main menu runs a live thermal-camera drone feed over a city at war.</li>
   <li>On phones, play in landscape: the game asks for fullscreen on the first tap.</li>
-  <li>All graphics and sounds are generated in code: no external assets, about 0.5&nbsp;MB to download.</li>
+  <li>All graphics and sounds are generated in code: no external assets, about 0.7&nbsp;MB to download.</li>
 </ul>
 
 <h3>Credits</h3>
@@ -142,21 +147,57 @@ Source code licensed under the GNU GPL v3.</p>
 
 - Cover image: `arts/cover.png` (630 × 500, the size itch.io asks for).
 - Screenshots (1920 × 1080, in `arts/screenshots/`), suggested order and captions:
-  1. `main_menu.png` — The new main menu: a live thermal drone feed over a city at war.
-  2. `soldier_customization.png` — Build your soldier: call sign, starting weapon, camo, vest, gear.
-  3. `oasis_battle.png` — Firefight at the oasis: grenades, explosions and a flag to take back.
-  4. `medal_ingame.png` — Medals in battle: 16 feats, each with its own pixel-art medal.
-  5. `match_end.png` — Victory: leaderboard, medals of the match, promotion and new unlocks.
-  6. `medals.png` — Your medal collection.
-  7. `soldier_unlocks.png` — New camos and gear unlock as you rank up: preview them before you earn them.
-  8. `apache_strike.png` — Attack helicopter run: rockets and cannon fire on the enemy trench line.
-  9. `vehicle_combat.png` — Rocket tank vs jeep on the desert road.
-  10. `map_editor.png` — The map editor: paint tiles, place flags, bases, pickups and vehicles, then test the map.
-  11. `crossroads_firefight.png` — Holding the centre of Crossroads.
-  12. `promotion.png` — Rank up mid-match: 18 ranks from Private to General.
-  13. `apache_rocket.png` — Enemy gunship over the desert: a rocket launcher is your best friend.
-- Not in the list: `leaderboard.png` (superseded by `match_end.png`) and `editor.png` (superseded by
-  `map_editor.png`).
+  1. `night_countryside.png` — Night battle in the countryside: a tank takes a flag by the light of a burning wreck.
+  2. `dusk_desert.png` — Dusk in the desert village: torches, craters and fires after the fight.
+  3. `main_menu.png` — The main menu: a live thermal drone feed over a city at war.
+  4. `day_countryside.png` — Trench fighting in broad daylight, a downed helicopter in the field.
+  5. `night_arena.png` — Night in the Test Arena: lamps, fires and muzzle flashes are all the light you get.
+  6. `soldier_customization.png` — Build your soldier: call sign, starting weapon, camo, vest, gear.
+  7. `medal_ingame.png` — Medals in battle: 16 feats, each with its own pixel-art medal.
+  8. `match_end.png` — Victory: leaderboard, medals of the match, promotion and new unlocks.
+  9. `apache_strike.png` — Attack helicopter run: rockets and cannon fire on the enemy trench line.
+  10. `vehicle_combat.png` — Rocket tank vs jeep on the desert road.
+  11. `map_editor.png` — The map editor: paint tiles, place flags, bases, pickups and vehicles, then test the map.
+  12. `medals.png` — Your medal collection.
+  13. `soldier_unlocks.png` — New camos and gear unlock as you rank up: preview them before you earn them.
+- Not in the list: `leaderboard.png` (superseded by `match_end.png`), `editor.png` (superseded by
+  `map_editor.png`), and the pre-1.4 battle shots `oasis_battle.png`, `crossroads_firefight.png`, `promotion.png`,
+  `apache_rocket.png` (older graphics; replace them on the page with the new ones).
+
+## Release notes (devlog) — v1.4.0
+
+Title: **BAF2D 1.4.0 — Night battles and a battlefield that remembers**
+
+The biggest graphics update so far: soldiers you can read at a glance, walls with depth, dynamic lights, and a new
+choice before every match — day, dusk or night.
+
+**Time of day and lights**
+- Pick **Day**, **Dusk** or **Night** in *New game*. At night the map goes dark: muzzle flashes, explosions,
+  burning wrecks, torches in the houses and lamps along the Arena walls are your light. Vehicles drive with their
+  headlights on.
+- Explosions now light up everything around them for a moment, and leave small **fires** burning with smoke and
+  sparks. Rockets glow in flight. A light blinks on top of a flag while it's being captured.
+
+**Soldiers**
+- A light edge on the sunny side and a proper cast shadow make soldiers stand out on any ground.
+- More detailed gear, sharper weapons, a bigger head, and a **different silhouette for each team** (helmets and
+  radio packs for Blue, boonie hats and bedrolls for Red), so you can tell friend from foe even without colour.
+- Smooth rotation: soldiers keep clean outlines at any angle.
+- New animations: recoil, flinching when hit, grenade throws, sprinting with the rifle across the chest, and four
+  ways to fall — always away from the shot.
+
+**Maps**
+- Walls, rocks, crates, sandbags and hedges have a shaded front face and lit edges: the maps finally have depth.
+- Organic borders between terrains, animated water, and a lot of small detail: floor markings, oil stains and
+  manholes in the Arena; tracks, footprints, tarps and litter in the desert; grass tufts, flowers, logs, hay bales
+  and scarecrows in the countryside.
+- **Battle scars** stay for the whole match: craters, tank tracks, and the spent casings of every firefight.
+
+**Gameplay**
+- **Counted ammunition**: scavenge rounds from fallen soldiers' weapons, resupply at your flags and base, or grab
+  one of the ammo crates on every map. Bots do the same.
+
+Try a night match on Countryside and let me know in the comments how it looks!
 
 ## Release notes (devlog) — v1.3.5
 

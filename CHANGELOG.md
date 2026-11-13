@@ -3,6 +3,41 @@
 All notable changes to BAF2D. Versions follow [semantic versioning](https://semver.org/); the current version is
 in `config/game.json` (`version`) and shown in the bottom-right corner of the menu.
 
+## [1.4.0] — 2026-11-13
+
+### Added
+- **Time of day** (*New game* → *Time of day*): Day, Dusk or Night. At night the battlefield goes dark and is lit
+  by muzzle flashes, explosions, fires, torches and lamps; vehicles turn their headlights on and you can see a
+  short way around your soldier.
+- **Dynamic lights**: muzzle flashes and explosions light up the ground, walls, soldiers and smoke around them;
+  rockets glow in flight; a light blinks on top of a flag while it is being captured (in the capturing team's
+  colour, amber when contested).
+- **Lingering fires**: explosions leave small fires burning for a few seconds, with smoke, sparks and flickering
+  light; a destroyed vehicle burns longer.
+- **Battle scars**: craters stay where grenades and rockets went off, jeeps and tanks leave tyre and track marks,
+  and spent casings, magazines and debris stay on the ground for the whole match.
+- **Animations**: recoil kicks the upper body back, hit soldiers flash and flinch away from the shot, throwing a
+  grenade twists the torso, sprinting soldiers carry their rifle across the chest. Soldiers fall away from the shot
+  that killed them, in four different poses, and blood pools come in different shapes.
+- **Map detail**: worn floor markings, oil stains, cracks, manholes, grates and cables in the Arena; tyre tracks,
+  footprints, litter, tarps and old tyres in the desert; tufts of grass, wild flowers, fallen logs, hay bales and
+  scarecrows in the countryside; reeds around the water. Animated water with glints and ripples. Trees and palms
+  come in more sizes.
+- **Counted ammunition**: every weapon has a limited reserve. Walk over a dropped weapon of the same kind to take its
+  rounds, resupply at your base and at the flags you hold, or use the **ammo crates** placed on every map. The HUD
+  tells you where to resupply when you run dry. Bots manage their ammo too.
+
+### Changed
+- **Soldiers are much easier to read**: a light edge on the side facing the sun, a cast shadow that falls the same
+  way as the walls' shadows, more detailed gear (pouches, canteen, radio, sharper weapons), a bigger head.
+- **Each team has its own silhouette**, readable even without colour: Blue wears helmets with netting and assault
+  packs with a radio, Red wears wide-brimmed boonie hats and packs with a bedroll. Team colour now shows on the
+  pack cover, armbands and helmet band.
+- **Smoother rotation**: soldiers rotated at any angle keep clean outlines and details instead of turning grainy.
+- **Walls with height**: walls, rocks, crates, sandbags and hedges show a shaded south face, lit top edges and a
+  darker strip of ground at their base.
+- **Terrain borders** are organic (sand into road, grass into mud, shorelines with foam) instead of square steps.
+
 ## [1.3.5] — 2026-11-10
 
 ### Added
