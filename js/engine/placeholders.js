@@ -272,6 +272,22 @@ function drawHead(g, hx, hy, p, kit) {
   if (p.team) teamStripe(g, hx, hy, p, 3);
 }
 
+/**
+ * Pose dei caduti (soldier_dead), coordinate relative al centro del torso, testa a sinistra e piedi a destra.
+ * arms = mani [x, y] (prima il braccio in alto); legs = { foot, knee? }; head = centro della testa;
+ * side = su un fianco (torso più stretto); prone = a faccia in giù (si vede lo zaino).
+ */
+const DEAD_POSES = [
+  // supino, braccia aperte
+  { arms: [[3, -9], [-2, 8]], legs: [{ foot: [10, -4] }, { foot: [10, 3] }], head: [-6, 0] },
+  // supino, un braccio sopra la testa, una gamba piegata
+  { arms: [[-8, -7], [5, 7]], legs: [{ foot: [11, -2] }, { knee: [8, 5], foot: [11, 2] }], head: [-6, 1] },
+  // su un fianco, rannicchiato
+  { arms: [[4, 5], [2, 8]], legs: [{ knee: [8, 4], foot: [5, 8] }, { knee: [8, 6], foot: [7, 10] }], head: [-6, 2], side: true },
+  // a faccia in giù, braccia avanti oltre la testa
+  { arms: [[-11, -4], [-10, 4]], legs: [{ foot: [10, -3] }, { foot: [11, 3] }], head: [-6, 0], prone: true },
+];
+
 // ---------- Sprite ----------
 // Convenzione: gli sprite orientabili guardano verso DESTRA (angolo 0).
 
@@ -435,50 +451,73 @@ const SPRITE_SHAPES = {
    * Soldato a terra, supino, visto dall'alto: testa (elmetto) a SINISTRA, piedi a destra,
    * braccia aperte. Ruotato come la mira, risulta caduto all'indietro.
    */
-  soldier_dead(g, w, h, p) {
+  soldier_dead(g, w, h, p, frame) {
+    // frame = posa * frames + passo della caduta (0 = appena colpito, raccolto; ultimo = disteso)
+    const F = Math.max(1, p.frames || 1);
+    const pose = DEAD_POSES[Math.floor(frame / F) % DEAD_POSES.length];
+    const k = F > 1 ? (frame % F) / (F - 1) : 1;
+    const e = 1 - (1 - k) * (1 - k); // rallenta verso la fine: il corpo si adagia
     const cx = Math.floor(w / 2);
     const cy = Math.floor(h / 2);
-    const r = rng(23);
+    const r = rng(23 + Math.floor(frame / F));
     const tx = cx - 2; // centro del torso
+    const kit = p.kit === 'boonie' ? 'boonie' : 'helmet';
+    const L = (a, b) => Math.round(a + (b - a) * e);
+    // punto finale di un arto: da vicino all'attacco (raccolto) alla posa distesa
+    const limb = (from, to) => [L(from[0], to[0]), L(from[1], to[1])];
+    const pk = p.team || p.pack;
 
-    // gambe leggermente divaricate, con anfibi
-    line(g, tx + 3, cy - 2, cx + 8, cy - 4, p.trousers, 2);
-    line(g, tx + 3, cy + 1, cx + 8, cy + 3, p.trousers, 2);
-    rect(g, cx + 8, cy - 5, 2, 3, p.boot);
-    rect(g, cx + 8, cy + 3, 2, 3, p.boot);
-    rect(g, cx + 9, cy - 5, 1, 3, p.bootDark);
-    rect(g, cx + 9, cy + 3, 1, 3, p.bootDark);
+    // gambe (eventualmente piegate al ginocchio), con anfibi
+    for (const [i, lg] of pose.legs.entries()) {
+      const hip = [tx + 3, cy + (i ? 1 : -2)];
+      const foot = limb([hip[0] + 2, hip[1]], [tx + lg.foot[0], cy + lg.foot[1]]);
+      if (lg.knee) {
+        const knee = limb([hip[0] + 1, hip[1]], [tx + lg.knee[0], cy + lg.knee[1]]);
+        line(g, hip[0], hip[1], knee[0], knee[1], p.trousers, 2);
+        line(g, knee[0], knee[1], foot[0], foot[1], p.trousers, 2);
+      } else {
+        line(g, hip[0], hip[1], foot[0], foot[1], p.trousers, 2);
+      }
+      rect(g, foot[0], foot[1] - 1, 2, 3, p.boot);
+      rect(g, foot[0] + 1, foot[1] - 1, 1, 3, p.bootDark);
+    }
 
-    // braccia aperte, guanti
-    line(g, tx - 2, cy - 4, tx + 1, cy - 9, p.uniform, 2);
-    line(g, tx - 2, cy + 3, tx - 4, cy + 8, p.uniform, 2);
-    rect(g, tx + 1, cy - 10, 2, 2, p.glove);
-    rect(g, tx - 5, cy + 8, 2, 2, p.glove);
+    // braccia con guanti
+    for (const [i, arm] of pose.arms.entries()) {
+      const sh = [tx - 1, cy + (i ? 3 : -4)];
+      const hand = limb([sh[0] + 1, sh[1] + (i ? 1 : -1)], [tx + arm[0], cy + arm[1]]);
+      line(g, sh[0], sh[1], hand[0], hand[1], p.uniform, 2);
+      rect(g, hand[0], hand[1], 2, 2, p.glove);
+    }
 
-    // torso in mimetica con giubbotto
-    ellipse(g, tx, cy, 4, 5, p.uniform);
-    for (let k = 0; k < 10; k++) {
+    // torso in mimetica con giubbotto (a faccia in giù: zaino col telo della squadra sopra)
+    const ry = L(6, pose.side ? 4 : 5);
+    ellipse(g, tx, cy, 4, ry, p.uniform);
+    for (let n = 0; n < 8; n++) {
       const x = tx - 3 + Math.floor(r() * 7);
       const y = cy - 4 + Math.floor(r() * 9);
       const dx = (x + 0.5 - tx) / 4;
-      const dy = (y + 0.5 - cy) / 5;
-      if (dx * dx + dy * dy <= 0.7) rect(g, x, y, 1, 1, k % 2 ? p.camo : p.camo2);
+      const dy = (y + 0.5 - cy) / ry;
+      if (dx * dx + dy * dy <= 0.7) rect(g, x, y, 1, 1, n % 2 ? p.camo : p.camo2);
     }
-    rect(g, tx - 2, cy - 3, 5, 6, p.vest);
-    rect(g, tx - 1, cy - 3, 1, 2, p.vestDark);
-    rect(g, tx + 1, cy + 1, 1, 2, p.vestDark);
-
-    // mostrine di squadra sulle spalle
-    if (p.team) {
-      rect(g, tx - 3, cy - 5, 2, 2, p.team);
-      rect(g, tx - 3, cy + 3, 2, 2, p.team);
+    if (pose.prone) {
+      rect(g, tx - 2, cy - 3, 5, 6, pk);
+      rect(g, tx - 2, cy - 3, 5, 1, p.team ? p.teamLight : p.packDark);
+      rect(g, tx - 2, cy + 2, 5, 1, p.team ? p.teamDark : p.packDark);
+      rect(g, tx, cy - 1, 2, 1, p.packDark);
+    } else {
+      rect(g, tx - 2, cy - 3, 5, 6, p.vest);
+      rect(g, tx - 1, cy - 3, 1, 2, p.vestDark);
+      rect(g, tx + 1, cy + 1, 1, 2, p.vestDark);
+      if (p.team) {
+        // fasce alle braccia vicino alle spalle
+        rect(g, tx - 2, cy - 6, 2, 2, p.team);
+        rect(g, tx - 2, cy + 4, 2, 2, p.team);
+      }
     }
 
-    // elmetto
-    disc(g, tx - 6, cy, 3.5, p.helmetDark);
-    disc(g, tx - 6, cy, 2.7, p.helmet);
-    rect(g, tx - 7, cy - 2, 2, 1, p.helmetLight);
-    if (p.team) teamStripe(g, tx - 6, cy, p);
+    // testa: da sopra al torso (in piedi) a terra dietro le spalle
+    drawHead(g, L(tx - 1, tx + pose.head[0]), L(cy, cy + pose.head[1]), p, kit);
   },
 
   /**
@@ -486,17 +525,30 @@ const SPRITE_SHAPES = {
    * Macchia irregolare = unione di dischi con offset fissi.
    */
   pool(g, w, h, p, frame) {
+    // frame = variante * frames + passo (sheetVariants forme diverse, ognuna si allarga in "frames" passi)
     const n = p.frames || 6;
+    const v = Math.floor(frame / n);
+    frame %= n;
     const k = n > 1 ? frame / (n - 1) : 1;
     const cx = w / 2;
     const cy = h / 2;
     const maxR = Math.min(w, h) / 2 - 2;
     const rad = (2 + (maxR - 2) * k) / 1.3; // le macchie sporgono fino a 1.3 * rad: restano nel frame
-    const r = rng(5); // stesse macchie in ogni frame, solo più grandi
-    const blobs = [[0, 0, 1]];
-    for (let i = 0; i < 5; i++) {
+    const r = rng(5 + v * 17); // stesse macchie in ogni frame della variante, solo più grandi
+    const blobs = [[0, 0, 0.62]];
+    // lobi attorno a quella centrale (contorno irregolare), più una colata allungata in una direzione
+    const lobes = 5 + Math.floor(r() * 4);
+    for (let i = 0; i < lobes; i++) {
+      const a = (i / lobes) * Math.PI * 2 + r() * 0.6;
+      const d = 0.45 + r() * 0.35;
+      blobs.push([Math.cos(a) * d, Math.sin(a) * d, 0.22 + r() * 0.28]);
+    }
+    const flow = r() * Math.PI * 2;
+    for (let i = 1; i <= 3; i++) blobs.push([Math.cos(flow) * 0.32 * i, Math.sin(flow) * 0.32 * i, 0.42 - i * 0.08]);
+    // gocce staccate dal bordo
+    for (let i = 0; i < 3; i++) {
       const a = r() * Math.PI * 2;
-      blobs.push([Math.cos(a) * 0.55, Math.sin(a) * 0.55, 0.45 + r() * 0.3]);
+      blobs.push([Math.cos(a) * 1.15, Math.sin(a) * 1.15, 0.12]);
     }
     for (const [ox, oy, s] of blobs) disc(g, cx + ox * rad, cy + oy * rad, rad * s, p.dark || p.color);
     for (const [ox, oy, s] of blobs) disc(g, cx + ox * rad, cy + oy * rad, Math.max(1, rad * s - 1), p.color);
@@ -1120,7 +1172,8 @@ export function createSpritePlaceholder(def) {
   const fw = def.frameWidth || 16;
   const fh = def.frameHeight || 16;
   const p = def.placeholder || {};
-  const frames = p.frames || countFrames(def.animations);
+  // sheetVariants = varianti di forma, ognuna con "frames" frame (es. pose dei caduti, forme delle pozze)
+  const frames = (p.frames || countFrames(def.animations)) * Math.max(1, p.sheetVariants || 1);
   const painter = SPRITE_SHAPES[p.shape] || SPRITE_SHAPES.rect;
   const c = makeCanvas(fw * frames, fh);
   const g = c.getContext('2d', { willReadFrequently: !!p.autoOutline });

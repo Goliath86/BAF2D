@@ -118,23 +118,27 @@ export function rotated(sprite, frame, angle) {
   return e;
 }
 
-/** Sagoma nera del frame ruotato (ombre e luce sul bordo), creata alla prima richiesta. */
-function maskOf(e) {
-  if (e.mask) return e.mask;
+/** Sagoma del frame ruotato tinta di "color" (ombre, luce sul bordo, lampo dei colpi), creata alla prima richiesta. */
+function maskOf(e, color) {
+  e.mask ??= {};
+  if (e.mask[color]) return e.mask[color];
   const c = makeCanvas(e.canvas.width, e.canvas.height);
   const g = c.getContext('2d');
   g.drawImage(e.canvas, 0, 0);
   g.globalCompositeOperation = 'source-in';
-  g.fillStyle = '#000';
+  g.fillStyle = color;
   g.fillRect(0, 0, c.width, c.height);
-  e.mask = c;
+  e.mask[color] = c;
   return c;
 }
 
-/** Come drawSprite, con la rotazione di qualità; mask = disegna la sagoma nera. */
+/**
+ * Come drawSprite, con la rotazione di qualità. mask = sagoma invece dello sprite: true = nera, oppure il colore.
+ */
 export function drawRotated(ctx, sprite, frame, x, y, angle = 0, mask = false) {
   const e = rotated(sprite, frame, angle);
-  ctx.drawImage(mask ? maskOf(e) : e.canvas, Math.round(x) - e.o, Math.round(y) - e.o);
+  const img = mask ? maskOf(e, mask === true ? '#000' : mask) : e.canvas;
+  ctx.drawImage(img, Math.round(x) - e.o, Math.round(y) - e.o);
 }
 
 /** Numero di frame ruotati in cache (test e debug). */

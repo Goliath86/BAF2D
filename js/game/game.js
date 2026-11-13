@@ -18,7 +18,7 @@ import { Rockets } from './rockets.js';
 import { Destruction } from './destruction.js';
 import { keyName } from '../engine/input.js';
 import { UnitLighting } from '../engine/lighting.js';
-import { configureRotation } from '../engine/rotsprite.js';
+import { configureRotation, drawRotated } from '../engine/rotsprite.js';
 
 const STEP = 1 / 60; // update a timestep fisso
 const BULLET_SUBSTEP = 2; // px: passo massimo del controllo collisioni dei proiettili
@@ -1305,13 +1305,24 @@ export class Game {
 
     // corpo: lo sprite ha la testa a sinistra, quindi ruotato come la mira la testa finisce
     // dietro (caduto all'indietro), i piedi restano dov'era il soldato
+    // posa a caso tra le varianti dello sprite, ognuna con i suoi frame di caduta (death.fallTime)
     const back = p.cfg.deadOffset ?? 4;
-    const body = p.deadSprite ? { sprite: p.deadSprite, x: p.x - Math.cos(a) * back, y: p.y - Math.sin(a) * back, angle: a } : null;
+    const pick = (s) => Math.floor(Math.random() * s.variants) * (s.frameCount / s.variants);
+    const body = p.deadSprite
+      ? {
+          sprite: p.deadSprite,
+          x: p.x - Math.cos(a) * back,
+          y: p.y - Math.sin(a) * back,
+          from: { x: p.x, y: p.y }, // durante la caduta scivola da dov'era in piedi
+          angle: a + (Math.random() - 0.5) * 0.5,
+          pose: pick(p.deadSprite),
+        }
+      : null;
 
-    // pozza sotto il corpo (si allarga in poolTime secondi)
+    // pozza sotto il corpo (si allarga in poolTime secondi), forma a caso tra le varianti
     const poolSprite = g.poolSprite && this.assets.sprites.get(g.poolSprite);
     const pool = poolSprite
-      ? { sprite: poolSprite, x: p.x - Math.cos(a) * back, y: p.y - Math.sin(a) * back, angle: Math.floor(Math.random() * 4) * (Math.PI / 2) }
+      ? { sprite: poolSprite, x: p.x - Math.cos(a) * back, y: p.y - Math.sin(a) * back, angle: Math.floor(Math.random() * 4) * (Math.PI / 2), first: pick(poolSprite) }
       : null;
 
     // l'arma cade a terra davanti al corpo da un lato, le granate dall'altro: diventano oggetti raccoglibili
@@ -1553,14 +1564,24 @@ export class Game {
       if (c.pool) {
         // frame della pozza in base al tempo: si allarga fino all'ultimo frame
         const k = Math.min(1, c.time / poolTime);
-        const frame = Math.min(c.pool.sprite.frameCount - 1, Math.floor(k * c.pool.sprite.frameCount));
+        const n = c.pool.sprite.frameCount / c.pool.sprite.variants;
+        const frame = (c.pool.first ?? 0) + Math.min(n - 1, Math.floor(k * n));
         ctx.globalAlpha = this._corpseAlpha(c);
         drawSprite(ctx, c.pool.sprite, frame, c.pool.x, c.pool.y, c.pool.angle);
       }
     }
+    const fallTime = this.deathCfg.fallTime ?? 0;
     for (const c of this.corpses) {
       ctx.globalAlpha = this._corpseAlpha(c);
-      if (c.body) drawSprite(ctx, c.body.sprite, 0, c.body.x, c.body.y, c.body.angle);
+      const b = c.body;
+      if (!b) continue;
+      // caduta: frame dal soldato che si accascia al corpo disteso, mentre scivola all'indietro
+      const n = b.sprite.frameCount / b.sprite.variants;
+      const k = fallTime > 0 ? Math.min(1, c.time / fallTime) : 1;
+      const frame = (b.pose ?? 0) + Math.min(n - 1, Math.floor(k * n));
+      const x = b.from ? b.from.x + (b.x - b.from.x) * k : b.x;
+      const y = b.from ? b.from.y + (b.y - b.from.y) * k : b.y;
+      drawRotated(ctx, b.sprite, frame, x, y, b.angle);
     }
     ctx.restore();
   }

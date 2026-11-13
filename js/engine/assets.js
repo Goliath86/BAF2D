@@ -88,6 +88,8 @@ export class Assets {
       fh,
       cols,
       frameCount: cols * Math.max(1, Math.floor(image.height / fh)),
+      // varianti di forma in fila nel foglio (frame = variante * frameCount / variants + passo)
+      variants: Math.max(1, def.variants ?? def.placeholder?.sheetVariants ?? 1),
       origin: def.origin || [fw / 2, fh / 2],
       animations: def.animations || { default: { frames: [0], fps: 1 } },
     });

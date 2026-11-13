@@ -157,6 +157,7 @@
     "corpseFade": 2,
     "poolSprite": "blood_pool",
     "poolTime": 2.5,
+    "fallTime": 0.35,
     "dropWeapon": true,
     "dropGrenades": true,
     "dropDistance": 9
@@ -396,7 +397,13 @@
     "maxGrenades": 9,
     "autoReload": false,
     "sprint": { "factor": 1.4, "drain": 5, "recover": 6, "minRestart": 0.3 },
-    "suppressionDecay": 0.6
+    "suppressionDecay": 0.6,
+    "animation": {
+      "kickTime": 0.09,
+      "hitFlash": 0.12, "hitFlashAlpha": 0.7, "hitFlashColor": "#ffffff", "hitJolt": 1.5,
+      "throwTime": 0.35, "throwTwistDeg": 40,
+      "sprintBlend": 0.15, "sprintPortDeg": 30, "sprintSwayDeg": 7, "swaySpeed": 11
+    }
   },
 
   "squad": {

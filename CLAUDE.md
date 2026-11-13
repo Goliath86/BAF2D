@@ -189,7 +189,15 @@ tests/                test di regressione (node --test): static.test.mjs, browse
   zaino con sacco a pelo; `drawHead`), leggibile anche senza colore.
 - Rotazione di qualità dei soldati (`js/engine/rotsprite.js`, `game.json -> display.rotation`): `drawRotated()` =
   Scale2x ×4 + rotazione campionata, angoli a `steps` passi, cache LRU di `cacheSize` frame ruotati (+ sagome nere
-  per luce/ombre). Usata da `Player.draw` e `UnitLighting`; gli altri sprite usano ancora `drawSprite`.
+  per luce/ombre, `mask` = true o colore). Usata da `Player.draw`, `UnitLighting` e cadaveri; gli altri sprite
+  usano ancora `drawSprite`.
+- Animazioni disegnate del soldato (`game.json -> player.animation`, `player.fx`): rinculo del busto (`kickTime`,
+  `kickPx` dell'arma in weapons.json), lampo + sobbalzo quando colpito (`hitFlash*`, `hitJolt`, da `damage()`),
+  torsione del lancio (`throwTime`, `throwTwistDeg`), corsa col busto verso la marcia e fucile di traverso
+  (`sprintPortDeg`, `sprintSwayDeg`). `drawParts()` = [sprite, frame, angolo, dx, dy]: solo disegno.
+- Caduti: `deathAngle` = verso chi ha colpito (la testa cade lontano), sprite `soldier_dead` con `sheetVariants`
+  pose × `frames` fotogrammi di caduta (`DEAD_POSES`, `death.fallTime`, il corpo scivola da dov'era); pozza
+  `blood_pool` a `sheetVariants` forme. `sprite.variants` (assets.js) = varianti in fila nel foglio.
 - Luce dei soldati (`js/engine/lighting.js`, `game.json -> lighting`, `game.lighting`): direzione e colore dalle
   ombre del tileset (`tileset.shadow`), `shadow.length` = fattore su dx/dy. `drawShadows` = ombre portate di tutti i
   soldati su un livello grande quanto la visuale (prima dei soldati), `drawRim` = luce sul bordo dopo ogni soldato

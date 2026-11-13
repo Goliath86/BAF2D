@@ -154,6 +154,43 @@ describe('gioco nel browser', { skip: chrome ? false : 'Chrome non trovato (impo
     await shot('lighting-arena');
   });
 
+  it('animazioni del soldato: rinculo, colpito, lancio, caduta lontano dal colpo, pose dei caduti', async () => {
+    await openGame();
+    await T(`start('arena', { allies: 0, enemies: 0 })`);
+    await T('step(0.2)');
+    const r = await ev(`(() => {
+      const g = BAF2D, p = g.player, out = {};
+      // rinculo: dopo lo sparo il busto disegnato arretra lungo la mira
+      p.angle = 0; p.fx.kick = p.cfg.animation.kickTime;
+      const body = p.drawParts().at(-1);
+      out.kick = body[3];
+      p.fx.kick = 0;
+      // colpito da destra: lampo e sobbalzo verso sinistra
+      p.damage(1, { x: p.x + 50, y: p.y });
+      out.flash = p.fx.flash; out.joltX = p.fx.joltX;
+      // lancio: il busto ruota e torna
+      p.fx.throwT = p.cfg.animation.throwTime / 2;
+      out.twist = p.drawParts().at(-1)[2] - p.angle;
+      p.fx.throwT = 0;
+      // morte con il colpo da sotto: la testa del caduto (sinistra dello sprite) va lontano dal colpo = in alto
+      p.damage(999, { x: p.x, y: p.y + 60 });
+      out.deathAngle = p.deathAngle;
+      return out;
+    })()`);
+    assert.ok(r.kick < 0, `rinculo assente (dx del busto = ${r.kick})`);
+    assert.ok(r.flash > 0 && r.joltX < 0, `lampo/sobbalzo sbagliati: ${JSON.stringify(r)}`);
+    assert.ok(Math.abs(r.twist) > 0.3, `torsione del lancio assente (${r.twist})`);
+    // angolo verso la sorgente (in basso, +PI/2): la testa (angolo + PI) va in alto
+    assert.ok(Math.abs(r.deathAngle - Math.PI / 2) < 0.01, `caduta non lontana dal colpo (${r.deathAngle})`);
+    await T('step(0.1)');
+    const c = await ev(`(() => { const c = BAF2D.corpses.at(-1), s = c.body.sprite; return { pose: c.body.pose, n: s.frameCount / s.variants, variants: s.variants, pool: c.pool.first, pn: c.pool.sprite.frameCount / c.pool.sprite.variants }; })()`);
+    assert.ok(c.variants > 1, 'una sola posa dei caduti');
+    assert.equal(c.pose % c.n, 0, 'la posa deve partire dal primo frame della caduta');
+    assert.equal(c.pool % c.pn, 0, 'la pozza deve partire dal primo frame della sua forma');
+    await T('step(1)');
+    await shot('corpse');
+  });
+
   it('giocatore: sparo col mouse, ricarica con R che consuma la scorta', async () => {
     await openGame();
     await T(`start('arena', { allies: 0, enemies: 0 })`);

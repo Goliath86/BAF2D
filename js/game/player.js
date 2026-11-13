@@ -63,6 +63,8 @@ export class Player {
     // giocatore umano (Game._spawnPlayer): onDealt(bersaglio, danni, morto) = colpo a segno, onHurt(danni, source)
     this.onDealt = null;
     this.onHurt = null;
+    // animazioni disegnate (vedi _updateFx): tempi residui di rinculo, lampo, lancio; fusione della corsa
+    this.fx = { kick: 0, flash: 0, joltX: 0, joltY: 0, throwT: 0, sprint: 0, phase: 0 };
 
     // Busto: lo sprite dipende dall'arma impugnata (vedi equip)
     this.weapon = null;
@@ -260,11 +262,23 @@ export class Player {
     const dealt = before - this.health;
     const by = source?.by ?? source?.unit ?? null;
     if (by && by !== this && dealt > 0) this.damageLog.set(by, (this.damageLog.get(by) || 0) + dealt);
+    // da dove arriva il colpo (versore dalla sorgente al soldato), se si sa
+    const from = source && Number.isFinite(source.x) && Number.isFinite(source.y) ? [this.x - source.x, this.y - source.y] : null;
+    const fromLen = from ? Math.hypot(from[0], from[1]) : 0;
+    if (dealt > 0 && !this.dead) {
+      // lampo e sobbalzo lontano dal colpo
+      const A = this.cfg.animation || {};
+      this.fx.flash = A.hitFlash ?? 0.12;
+      const j = A.hitJolt ?? 1.5;
+      this.fx.joltX = fromLen > 0.5 ? (from[0] / fromLen) * j : 0;
+      this.fx.joltY = fromLen > 0.5 ? (from[1] / fromLen) * j : 0;
+    }
     if (this.dead) {
-      // morto: la ricarica si interrompe e il corpo cade all'indietro rispetto alla mira
+      // morto: la ricarica si interrompe e il corpo cade all'indietro, lontano da chi ha colpito (se si sa,
+      // altrimenti rispetto alla mira). Lo sprite del caduto ha la testa a sinistra: angolo = verso la sorgente.
       this.reload?.sound?.stop();
       this.reload = null;
-      this.deathAngle = this.angle;
+      this.deathAngle = fromLen > 0.5 ? Math.atan2(-from[1], -from[0]) : this.angle;
       this.killer = by;
       // come è morto (medaglie): bullet/grenade/rocket/runover/vehicle, arma e posizione di chi ha colpito
       this.killCause = source ? { cause: source.cause ?? null, weapon: source.weapon ?? null, x: source.x, y: source.y } : null;
@@ -308,6 +322,7 @@ export class Player {
     this.grenades--;
     this.throwCooldown = this.grenadeType.throwCooldown ?? 0.6;
     game.throwGrenade(this);
+    this.fx.throwT = this.cfg.animation?.throwTime ?? 0.35;
     return true;
   }
 
@@ -399,6 +414,7 @@ export class Player {
     this.x = p.x;
     this.y = p.y;
     this.moving = mag > 0.05;
+    this._updateFx(dt, mag);
 
     // Mira (calcolata dopo lo spostamento: per il mouse conta la posizione sullo schermo)
     const aim = ctrl.aim(this);
@@ -444,6 +460,7 @@ export class Player {
         this.shotQueued = false;
         this.ammo--;
         game.fire(this);
+        this.fx.kick = this.cfg.animation?.kickTime ?? 0.09;
         // rinculo: il colpo appena sparato usa la rosa di prima, i successivi si allargano
         this.bloom = Math.min(w.recoilMaxDeg ?? 0, this.bloom + (w.recoilDeg ?? 0));
         // bossolo: subito, o dopo casingDelay (es. azione della pompa)
@@ -559,17 +576,83 @@ export class Player {
     return { x: this.x + Math.cos(this.angle) * off, y: this.y + Math.sin(this.angle) * off };
   }
 
-  /** Parti disegnate, dal basso: [sprite, frame, angolo] (per ombra e luce sul bordo, vedi UnitLighting). */
+  /**
+   * Animazioni disegnate sopra agli sprite (player.animation in game.json): rinculo del busto a ogni colpo,
+   * lampo e sobbalzo quando si è colpiti, torsione del lancio della granata, corsa col fucile di traverso che
+   * oscilla col passo. Solo disegno: posizione e mira vere non cambiano.
+   */
+  _updateFx(dt, mag) {
+    const fx = this.fx;
+    fx.kick = Math.max(0, fx.kick - dt);
+    fx.flash = Math.max(0, fx.flash - dt);
+    fx.throwT = Math.max(0, fx.throwT - dt);
+    const blend = dt / (this.cfg.animation?.sprintBlend ?? 0.15);
+    fx.sprint = this.sprinting ? Math.min(1, fx.sprint + blend) : Math.max(0, fx.sprint - blend);
+    if (this.moving) fx.phase += dt * (this.cfg.animation?.swaySpeed ?? 11) * Math.max(0.35, mag);
+  }
+
+  /** Angolo e spostamento (px) del busto disegnato. */
+  _bodyPose() {
+    const A = this.cfg.animation || {};
+    const fx = this.fx;
+    let angle = this.angle;
+    let dx = 0;
+    let dy = 0;
+    // corsa: il busto segue la direzione di marcia, fucile di traverso, oscillazione col passo
+    if (fx.sprint > 0) {
+      const run = Math.atan2(this.vy, this.vx);
+      const target = run - (A.sprintPortDeg ?? 30) * DEG + Math.sin(fx.phase) * (A.sprintSwayDeg ?? 7) * DEG;
+      angle += angleDiff(target, angle) * fx.sprint;
+    }
+    // lancio della granata: la spalla destra va avanti e torna
+    const tt = A.throwTime ?? 0.35;
+    if (fx.throwT > 0 && tt > 0) angle -= Math.sin(Math.PI * (1 - fx.throwT / tt)) * (A.throwTwistDeg ?? 40) * DEG;
+    // rinculo: il busto arretra lungo la mira e torna
+    const kt = A.kickTime ?? 0.09;
+    if (fx.kick > 0 && kt > 0) {
+      const k = (fx.kick / kt) * (this.weapon.kickPx ?? 1);
+      dx -= Math.cos(this.angle) * k;
+      dy -= Math.sin(this.angle) * k;
+    }
+    return { angle, dx, dy };
+  }
+
+  /** Sobbalzo quando colpito (px), per gambe e busto. */
+  _jolt() {
+    const ft = this.cfg.animation?.hitFlash ?? 0.12;
+    if (this.fx.flash <= 0 || ft <= 0) return [0, 0];
+    const k = this.fx.flash / ft;
+    return [this.fx.joltX * k, this.fx.joltY * k];
+  }
+
+  /**
+   * Parti disegnate, dal basso: [sprite, frame, angolo, dx, dy] (anche per ombra e luce sul bordo, vedi
+   * UnitLighting).
+   */
   drawParts() {
+    const [jx, jy] = this._jolt();
     const parts = [];
-    if (this.legs) parts.push([this.legs, this.legsAnim.frame, this.legsAngle]);
-    parts.push([this.sprite, this.anim.frame, this.angle]);
+    if (this.legs) parts.push([this.legs, this.legsAnim.frame, this.legsAngle, jx, jy]);
+    const b = this._bodyPose();
+    parts.push([this.sprite, this.anim.frame, b.angle, b.dx + jx, b.dy + jy]);
     return parts;
   }
 
   draw(ctx) {
     if (this.dead || this.vehicle) return; // il corpo a terra è un cadavere di Game; a bordo si vede il mezzo
     // rotazione di qualità (rotsprite.js): i dettagli del soldato restano leggibili anche in diagonale
-    for (const [sprite, frame, angle] of this.drawParts()) drawRotated(ctx, sprite, frame, this.x, this.y, angle);
+    const parts = this.drawParts();
+    for (const [sprite, frame, angle, dx, dy] of parts) drawRotated(ctx, sprite, frame, this.x + dx, this.y + dy, angle);
+    // lampo quando colpito: sagoma chiara che svanisce
+    const A = this.cfg.animation || {};
+    const ft = A.hitFlash ?? 0.12;
+    if (this.fx.flash > 0 && ft > 0) {
+      ctx.save();
+      ctx.globalAlpha *= (A.hitFlashAlpha ?? 0.7) * (this.fx.flash / ft);
+      for (const [sprite, frame, angle, dx, dy] of parts) {
+        drawRotated(ctx, sprite, frame, this.x + dx, this.y + dy, angle, A.hitFlashColor || '#ffffff');
+      }
+      ctx.restore();
+    }
   }
 }

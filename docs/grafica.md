@@ -8,7 +8,12 @@ Ordine = impatto stimato sul colpo d'occhio. Tutto procedurale (canvas), configu
 - Fatto (2026-11-13): punto 1, primi tre sottopunti: luce sul bordo dei soldati dal lato della luce, ombra portata
   dei soldati nella direzione delle ombre dei muri (`js/engine/lighting.js`, `game.json -> lighting`), colore di
   squadra su zaino (telo), fasce alle braccia ed elmetto (fascia larga 2 px; tolte le mostrine sulle spalle).
-- Prossimo passo proposto: resto del punto 1 (dettaglio del busto, proporzioni, animazioni, cadaveri), poi punto 2.
+- Fatto (2026-11-13): resto del punto 1: busto più dettagliato, testa più grande con anello scuro, armi più
+  definite, sagoma per squadra (`teams.<id>.kit`), rotazione di qualità (`rotsprite.js`), animazioni disegnate
+  (rinculo, lampo e sobbalzo, lancio granata, corsa col fucile di traverso), caduta lontano dal colpo con 4 pose
+  e fotogrammi di caduta, pozze di sangue a 4 forme irregolari.
+- Rimasto del punto 1: accovacciato/riparato (serve prima la meccanica di gioco).
+- Prossimo passo proposto: punto 2 (muri con altezza e luce coerente con quella dei soldati).
 - Da misurare sul telefono anche il costo per frame della luce dei soldati (qualche drawImage su canvas piccoli
   per soldato + un livello delle ombre grande quanto la visuale).
 - Punto aperto: l'anteprima reale dell'editor si ricostruisce a ogni modifica e con la fusione costa ~0,4 s.
@@ -19,12 +24,12 @@ Ordine = impatto stimato sul colpo d'occhio. Tutto procedurale (canvas), configu
 - ~~Contorno scuro di 1 px + luce sul bordo (rim light) dal lato della luce: si staccano da erba e sabbia.~~ fatto
 - ~~Ombra portata più marcata e coerente con la direzione della luce dei muri.~~ fatto
 - ~~Colore di squadra più evidente: zaino, fascia al braccio, elmetto con telo colorato, non solo una striscia.~~ fatto
-- Più dettaglio sul busto: giberne, radio, borraccia, cinghie, tasche; arma più definita (canna, caricatore, ottica).
-- Proporzioni: testa/elmetto un filo più grandi per leggere la direzione a colpo d'occhio.
-- Animazioni: morte (caduta, non solo cambio sprite), colpito (sobbalzo + lampo), lancio granata, corsa con
-  braccia che oscillano, rinculo visibile sul busto, accovacciato/riparato.
-- Bot della propria squadra distinguibili dai nemici anche senza colore (sagoma/elmetto diverso).
-- Cadaveri: posizioni varie, arma sparsa, sangue che si allarga in modo irregolare (non sempre la stessa pozza).
+- ~~Più dettaglio sul busto: giberne, radio, borraccia, cinghie, tasche; arma più definita (canna, caricatore, ottica).~~ fatto
+- ~~Proporzioni: testa/elmetto un filo più grandi per leggere la direzione a colpo d'occhio.~~ fatto
+- ~~Animazioni: morte (caduta, non solo cambio sprite), colpito (sobbalzo + lampo), lancio granata, corsa con
+  braccia che oscillano, rinculo visibile sul busto~~ fatto; accovacciato/riparato: manca la meccanica di gioco.
+- ~~Bot della propria squadra distinguibili dai nemici anche senza colore (sagoma/elmetto diverso).~~ fatto
+- ~~Cadaveri: posizioni varie, arma sparsa, sangue che si allarga in modo irregolare (non sempre la stessa pozza).~~ fatto
 
 ## 2. Muri e oggetti con altezza (pseudo-3D)
 - Faccia frontale visibile sul lato sud di muri, case, rocce, sacchi di sabbia (vista leggermente dall'alto).

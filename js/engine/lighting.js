@@ -1,6 +1,6 @@
 // Luce unica della mappa applicata ai soldati: ombra portata e luce sul bordo (rim light).
-// La direzione viene dall'ombra dei tile del tileset (tileset.shadow = { dx, dy, color, alpha }), cosÃ¬ soldati e
-// muri proiettano l'ombra dalla stessa parte. Gli sprite ruotano liberamente: la luce non puÃ² essere "cotta"
+// La direzione viene dall'ombra dei tile del tileset (tileset.shadow = { dx, dy, color, alpha }), così soldati e
+// muri proiettano l'ombra dalla stessa parte. Gli sprite ruotano liberamente: la luce non può essere "cotta"
 // nello sprite, quindi si calcola a ogni disegno con le sagome dei frame ruotati (rotsprite.js, in cache).
 
 import { drawRotated } from './rotsprite.js';
@@ -19,8 +19,8 @@ function drawMask(ctx, sprite, frame, x, y, angle) {
 
 /**
  * cfg = game.json -> "lighting":
- *   shadow: { length (Ã— dx/dy del tileset), alpha (null = quella del tileset), color (null = del tileset), fallback: { dx, dy, color, alpha } }
- *   rim: { color, alpha, width } â€” luce sul bordo dal lato della luce (sopra al contorno scuro)
+ *   shadow: { length (× dx/dy del tileset), alpha (null = quella del tileset), color (null = del tileset), fallback: { dx, dy, color, alpha } }
+ *   rim: { color, alpha, width } — luce sul bordo dal lato della luce (sopra al contorno scuro)
  */
 export class UnitLighting {
   constructor(cfg = {}) {
@@ -65,7 +65,10 @@ export class UnitLighting {
       const x = u.x - view.x + sh.dx;
       const y = u.y - view.y + sh.dy;
       if (x < -32 || y < -32 || x > view.w + 32 || y > view.h + 32) continue;
-      for (const [sprite, frame, angle] of parts(u)) drawMask(g, sprite, frame, x, y, angle);
+      // stesso arrotondamento del soldato disegnato (round(x + dx)), poi lo spostamento intero dell'ombra
+      for (const [sprite, frame, angle, dx = 0, dy = 0] of parts(u)) {
+        drawMask(g, sprite, frame, Math.round(u.x + dx) - view.x + sh.dx, Math.round(u.y + dy) - view.y + sh.dy, angle);
+      }
       any = true;
     }
     if (!any) return;
@@ -79,14 +82,14 @@ export class UnitLighting {
   }
 
   /**
-   * Luce sul bordo di un soldato giÃ  disegnato: pixel della sagoma (gambe + busto) il cui vicino verso la luce
-   * Ã¨ vuoto. Va chiamata subito dopo aver disegnato il soldato.
+   * Luce sul bordo di un soldato già disegnato: pixel della sagoma (gambe + busto) il cui vicino verso la luce
+   * è vuoto. Va chiamata subito dopo aver disegnato il soldato.
    */
   drawRim(ctx, map, x, y, parts) {
     const rim = this.cfg.rim;
     if (!this.enabled || !rim || !rim.alpha) return;
     const sh = this.shadowOf(map);
-    // spostamento verso l'ombra: un pixel P Ã¨ illuminato se P - (dx, dy) (verso la luce) Ã¨ fuori dalla sagoma
+    // spostamento verso l'ombra: un pixel P è illuminato se P - (dx, dy) (verso la luce) è fuori dalla sagoma
     const w = rim.width || 1;
     let ox = Math.round(sh.ux * w * 1.3);
     let oy = Math.round(sh.uy * w * 1.3);
@@ -102,9 +105,17 @@ export class UnitLighting {
     const rx = Math.round(x);
     const ry = Math.round(y);
     const c = size / 2;
-    for (const [sprite, frame, angle] of parts) drawMask(g, sprite, frame, c, c, angle);
+    // posizione di ogni parte come nel disegno del soldato (round(x + dx)), relativa a round(x)
+    const at = (dx = 0, dy = 0) => [Math.round(x + dx) - rx + c, Math.round(y + dy) - ry + c];
+    for (const [sprite, frame, angle, dx, dy] of parts) {
+      const [px, py] = at(dx, dy);
+      drawMask(g, sprite, frame, px, py, angle);
+    }
     g.globalCompositeOperation = 'destination-out';
-    for (const [sprite, frame, angle] of parts) drawMask(g, sprite, frame, c + ox, c + oy, angle);
+    for (const [sprite, frame, angle, dx, dy] of parts) {
+      const [px, py] = at(dx, dy);
+      drawMask(g, sprite, frame, px + ox, py + oy, angle);
+    }
     g.globalCompositeOperation = 'source-in';
     g.fillStyle = rim.color || '#fff';
     g.fillRect(0, 0, size, size);

@@ -52,8 +52,13 @@
     "soldier_dead": {
       "extends": "soldier_rifle",
       "src": null,
+      "frameWidth": 28,
+      "frameHeight": 28,
+      "origin": [14, 14],
       "placeholder": {
         "shape": "soldier_dead",
+        "frames": 4,
+        "sheetVariants": 4,
         "trousers": "#4f5e33",
         "boot": "#3a2e22",
         "bootDark": "#1a140e"
@@ -67,7 +72,7 @@
       "frameWidth": 28,
       "frameHeight": 28,
       "origin": [14, 14],
-      "placeholder": { "shape": "pool", "frames": 8, "color": "#6e1010", "dark": "#4a0808", "light": "#9a2a22" }
+      "placeholder": { "shape": "pool", "frames": 8, "sheetVariants": 4, "color": "#6e1010", "dark": "#4a0808", "light": "#9a2a22" }
     },
     "pickup_rifle": {
       "src": null,
