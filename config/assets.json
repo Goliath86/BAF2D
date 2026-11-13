@@ -447,7 +447,7 @@
       "frameHeight": 48,
       "origin": [24, 24],
       "placeholder": {
-        "shape": "palm", "variants": 3, "frames": 6,
+        "shape": "palm", "variants": 6, "frames": 12,
         "color": "#4f8a3a", "light": "#78b04e", "dark": "#2f5a26",
         "trunk": "#7a5a36", "trunkLight": "#a07a48", "dates": "#c8781e", "shadowColor": "#000000"
       }
@@ -478,7 +478,7 @@
       "frameWidth": 44,
       "frameHeight": 44,
       "origin": [22, 22],
-      "placeholder": { "shape": "tree", "variants": 3, "frames": 6, "color": "#3f7a2e", "light": "#62a03e", "dark": "#24481c", "highlight": "#86c058", "shadowColor": "#000000" }
+      "placeholder": { "shape": "tree", "variants": 6, "frames": 12, "color": "#3f7a2e", "light": "#62a03e", "dark": "#24481c", "highlight": "#86c058", "shadowColor": "#000000" }
     },
     "tree_fruit": {
       "extends": "tree",
@@ -490,6 +490,38 @@
       "frameHeight": 16,
       "origin": [8, 8],
       "placeholder": { "shape": "bush", "variants": 3, "frames": 6, "color": "#3f7a30", "light": "#62a044", "dark": "#24481e", "flowers": "#f0f0f0", "shadowColor": "#000000" }
+    },
+    "log": {
+      "src": null, "frameWidth": 24, "frameHeight": 12, "origin": [12, 6],
+      "placeholder": { "shape": "log", "variants": 3, "frames": 6, "color": "#6a4a2c", "dark": "#3e2a18", "light": "#8a6a44", "cut": "#c8a070", "rings": "#8a6038", "shadowColor": "#000000" }
+    },
+    "branch": {
+      "src": null, "frameWidth": 14, "frameHeight": 10, "origin": [7, 5],
+      "placeholder": { "shape": "branch", "variants": 3, "frames": 6, "color": "#5a4028", "dark": "#4a3220", "leaf": "#9a8a3a", "shadowColor": "#000000" }
+    },
+    "hay_bale": {
+      "src": null, "frameWidth": 14, "frameHeight": 14, "origin": [7, 7],
+      "placeholder": { "shape": "hay_bale", "variants": 2, "frames": 4, "color": "#d0b050", "dark": "#9a7a2a", "light": "#ecd88a", "shadowColor": "#000000" }
+    },
+    "scarecrow": {
+      "src": null, "frameWidth": 16, "frameHeight": 12, "origin": [8, 6],
+      "placeholder": { "shape": "scarecrow", "variants": 2, "frames": 4, "wood": "#5a4028", "coat": "#6a4a6a", "coat2": "#3a5a7a", "coatDark": "#2a2030", "straw": "#d8bc60", "strawDark": "#9a7a2a", "shadowColor": "#000000" }
+    },
+    "tarp": {
+      "src": null, "frameWidth": 18, "frameHeight": 14, "origin": [9, 7],
+      "placeholder": { "shape": "tarp", "frames": 3, "colors": ["#5a6a4a", "#3a5a7a", "#8a4a3a"], "stake": "#3a2a1a", "shadowColor": "rgba(60,30,10,0.3)" }
+    },
+    "tire": {
+      "src": null, "frameWidth": 9, "frameHeight": 9, "origin": [4, 4],
+      "placeholder": { "shape": "tire", "frames": 2, "color": "#1e1e1e", "light": "#4a4a4a", "shadowColor": "rgba(0,0,0,0.35)" }
+    },
+    "torch": {
+      "src": null, "frameWidth": 8, "frameHeight": 8, "origin": [4, 4],
+      "placeholder": { "shape": "torch", "frames": 1, "base": "#3a2a1a", "flame": "#ff8a2a", "flameLight": "#ffd36b", "core": "#fff4c2" }
+    },
+    "lamp": {
+      "src": null, "frameWidth": 8, "frameHeight": 8, "origin": [4, 4],
+      "placeholder": { "shape": "lamp", "frames": 1, "frame": "#2a2e36", "glass": "#d8e8ff", "core": "#ffffff" }
     },
     "stone_grey": {
       "src": null,
@@ -512,6 +544,10 @@
       "src": null,
       "tileSize": 16,
       "shadow": { "color": "#05060a", "alpha": 0.35, "dx": 2, "dy": 3 },
+      "autoProps": [
+        { "type": "lamp", "on": ["floor"], "near": ["wall"], "chance": 0.06, "spacing": 1, "sameSpacing": 5, "clear": 1 },
+        { "type": "tire", "on": ["floor", "floor_alt"], "chance": 0.004, "spacing": 3 }
+      ],
       "scatter": [
         { "paint": "marking", "on": ["floor"], "colors": ["#8a7a3a"], "alpha": 0.5, "period": 9, "dash": 2, "wear": 0.3, "width": 2 },
         { "paint": "stain", "on": ["floor"], "chance": 0.035, "colors": ["#16181e", "#1b1e25"], "sheen": "#3e4c5c", "size": [3, 7], "alpha": 0.85 },
@@ -535,6 +571,12 @@
       "src": null,
       "tileSize": 16,
       "shadow": { "color": "#4a2a10", "alpha": 0.3, "dx": 3, "dy": 4 },
+      "autoProps": [
+        { "type": "torch", "on": ["house_floor", "house_floor2", "terracotta", "terracotta2"], "near": ["adobe", "adobe2", "plaster", "plaster2"], "chance": 0.16, "spacing": 1, "sameSpacing": 4, "clear": 1 },
+        { "type": "tarp", "on": ["terrain:sand"], "far": ["terrain:water", "terrain:road"], "chance": 0.012, "spacing": 1, "sameSpacing": 4 },
+        { "type": "tire", "on": ["terrain:sand", "terrain:road"], "chance": 0.005, "spacing": 3 },
+        { "type": "bush_dry", "on": ["terrain:sand"], "far": ["terrain:water"], "chance": 0.008, "spacing": 2 }
+      ],
       "scatter": [
         { "paint": "tracks", "on": ["terrain:road"], "chance": 0.35, "segment": 6, "colors": ["#9a7448", "#a27c50"], "gap": 6, "dither": 0.7, "alpha": 0.75 },
         { "paint": "footprints", "on": ["terrain:sand"], "chance": 0.03, "colors": ["#b8945e"], "alpha": 0.8 },
@@ -586,6 +628,14 @@
       "src": null,
       "tileSize": 16,
       "shadow": { "color": "#0e1a08", "alpha": 0.32, "dx": 3, "dy": 4 },
+      "autoProps": [
+        { "type": "torch", "on": ["planks"], "near": ["brick"], "chance": 0.16, "spacing": 1, "sameSpacing": 4, "clear": 1 },
+        { "type": "log", "on": ["terrain:grass"], "far": ["terrain:dirt", "terrain:trench"], "chance": 0.012, "spacing": 1, "sameSpacing": 3 },
+        { "type": "branch", "on": ["terrain:grass"], "chance": 0.012, "spacing": 2 },
+        { "type": "hay_bale", "on": ["terrain:field", "terrain:field_green"], "chance": 0.06, "spacing": 2 },
+        { "type": "scarecrow", "on": ["terrain:field", "terrain:field_green"], "chance": 0.025, "spacing": 1, "sameSpacing": 6 },
+        { "type": "bush_green", "on": ["terrain:grass"], "far": ["terrain:dirt"], "chance": 0.006, "spacing": 2 }
+      ],
       "scatter": [
         { "paint": "tracks", "on": ["terrain:dirt"], "chance": 0.4, "segment": 6, "colors": ["#6a5034", "#725838"], "gap": 6, "dither": 0.75, "alpha": 0.8 },
         { "paint": "tuft", "on": ["terrain:grass"], "chance": 0.1, "colors": ["#3e6a26", "#4e8030", "#78b04a"], "count": [3, 5], "height": [2, 4] },

@@ -2023,10 +2023,20 @@ export class Game {
    * Luci del fotogramma (game.json -> lights): fuochi, razzi in volo, bandiere in cattura (lampeggio del colore di
    * chi la sta prendendo, ambra se contesa) e, col buio, fari dei mezzi guidati e alone attorno al giocatore.
    */
-  _addLights() {
+  _addLights(view) {
     const L = this.lights;
     const c = this.config.lights || {};
     this.effects.addFireLights(L);
+    // decorazioni che fanno luce (torce, lampade: game.json -> props.types.<t>.light), tremolanti
+    for (const it of this.props.list) {
+      const l = it.def.light;
+      if (!l) continue;
+      const m = (l.radius ?? 20) * 1.4;
+      if (it.x < view.x - m || it.y < view.y - m || it.x > view.x + view.w + m || it.y > view.y + view.h + m) continue;
+      const t = this.lights.clock * (l.flickerSpeed ?? 10) + it.phase * 7;
+      const flick = 1 - (l.flicker ?? 0) * (0.5 + 0.5 * Math.sin(t) * Math.sin(t * 0.41 + 2.1));
+      L.add(it.x, it.y, l, flick, 0.92 + 0.08 * flick);
+    }
     if (c.rocket) for (const r of this.rockets.list) L.add(r.x, r.y, c.rocket);
     if (c.flag) {
       const H = this.ctf.look?.poleHeight ?? 22;
@@ -2123,7 +2133,7 @@ export class Game {
     this.props.drawOverhead(ctx, view, wind); // chiome delle palme sopra i soldati
     for (const v of this.vehicles) if (v.high) v.draw(ctx); // elicotteri in volo sopra a tutto
     // luci: buio dell'ora del giorno e aloni (illuminano terreno, muri, soldati e fumo)
-    this._addLights();
+    this._addLights(view);
     this.lights.draw(ctx, view);
     if (!this.attract) this._drawSquadMarks(ctx);
     if (this.debug) this._drawBotDebug(ctx);

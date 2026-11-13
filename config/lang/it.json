@@ -571,7 +571,15 @@
       "tree": "Albero",
       "tree_fruit": "Albero da frutto",
       "bush_green": "Cespuglio verde",
-      "stone_grey": "Sassi grigi"
+      "stone_grey": "Sassi grigi",
+      "log": "Tronco caduto",
+      "branch": "Ramo spezzato",
+      "hay_bale": "Balla di fieno",
+      "scarecrow": "Spaventapasseri",
+      "tarp": "Telo",
+      "tire": "Pneumatico",
+      "torch": "Torcia",
+      "lamp": "Lampada"
     },
     "weather": {
       "desert_wind": "Vento del deserto",

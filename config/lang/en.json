@@ -571,7 +571,15 @@
       "tree": "Tree",
       "tree_fruit": "Fruit tree",
       "bush_green": "Green bush",
-      "stone_grey": "Grey stones"
+      "stone_grey": "Grey stones",
+      "log": "Fallen log",
+      "branch": "Broken branch",
+      "hay_bale": "Hay bale",
+      "scarecrow": "Scarecrow",
+      "tarp": "Tarp",
+      "tire": "Tire",
+      "torch": "Torch",
+      "lamp": "Lamp"
     },
     "weather": {
       "desert_wind": "Desert wind",

@@ -8,7 +8,7 @@
 // "variantWeights" (opzionale, accanto a "tile") = pesi delle varianti.
 
 import { LocalizedError } from './errors.js';
-import { paintScatter } from './scatter.js';
+import { paintScatter, matcher } from './scatter.js';
 
 /** Numero pseudo-casuale stabile 0..1 per la cella (x, y) e un "sale". */
 export function cellRandom(x, y, salt = 0) {
@@ -126,11 +126,58 @@ export class TileMap {
       }
     }
 
+    if (opts.autoProps !== false) this._autoProps();
+
     // distruzione: tile originali (reset alla rivincita), crepe (0..1 + colore) e macerie dei tile distrutti
     this.original = Int32Array.from(this.tiles);
     this.cracks = new Map(); // indice cella -> { level, color }
     this.debris = new Map(); // indice cella -> [colori]
     this._prerender(level, !!opts.deferred);
+  }
+
+  /**
+   * Decorazioni sparse in automatico (tileset.autoProps = [{ type, on, near, far, chance, salt, clear, spacing,
+   * sameSpacing }]): aggiunte a this.props come quelle della legend, stabili per cella. Solo su tile non solidi,
+   * lontano da bandiere, basi, oggetti raccoglibili e mezzi ("clear" celle, default 2), dalle altre decorazioni
+   * ("spacing", default 1) e da quelle dello stesso tipo ("sameSpacing", default = spacing).
+   */
+  _autoProps() {
+    const rules = this.tileset.autoProps;
+    if (!rules?.length) return;
+    const s = this.size;
+    const busy = [...this.flags, ...Object.values(this.spawns), ...this.pickups, ...this.vehicles].map((o) => [o.x / s - 0.5, o.y / s - 0.5]);
+    const taken = new Map(this.props.map((p) => [`${p.tx},${p.ty}`, p.type]));
+    const near = (tx, ty, d, type = null) => {
+      for (let y = ty - d; y <= ty + d; y++) {
+        for (let x = tx - d; x <= tx + d; x++) {
+          const t = taken.get(`${x},${y}`);
+          if (t !== undefined && (type === null || t === type)) return true;
+        }
+      }
+      return false;
+    };
+    const N8 = [[-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]];
+    rules.forEach((rule, ri) => {
+      const isOn = matcher(rule.on) || (() => true);
+      const isNear = matcher(rule.near);
+      const isFar = matcher(rule.far);
+      const salt = rule.salt ?? 1700 + ri * 53;
+      const clear = rule.clear ?? 2;
+      for (let ty = 1; ty < this.rows - 1; ty++) {
+        for (let tx = 1; tx < this.cols - 1; tx++) {
+          if (cellRandom(tx, ty, salt) >= (rule.chance ?? 0.01)) continue;
+          const t = this.tileAt(tx, ty);
+          if (!t || t.solid || !isOn(t)) continue;
+          if (isNear && !N8.some(([dx, dy]) => isNear(this.tileAt(tx + dx, ty + dy)))) continue;
+          if (isFar && N8.some(([dx, dy]) => isFar(this.tileAt(tx + dx, ty + dy)))) continue;
+          if (busy.some(([bx, by]) => Math.abs(bx - tx) <= clear && Math.abs(by - ty) <= clear)) continue;
+          const sp = rule.spacing ?? 1;
+          if (near(tx, ty, sp) || near(tx, ty, rule.sameSpacing ?? sp, String(rule.type))) continue;
+          taken.set(`${tx},${ty}`, String(rule.type));
+          this.props.push({ type: String(rule.type), x: (tx + 0.5) * s, y: (ty + 0.5) * s, tx, ty, auto: true });
+        }
+      }
+    });
   }
 
   /** Torna alla mappa del livello (nuova partita): tile originali, niente crepe né macerie. */

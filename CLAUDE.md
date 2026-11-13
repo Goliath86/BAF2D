@@ -446,6 +446,11 @@ tests/                test di regressione (node --test): static.test.mjs, browse
   far, edge, chance, colors, alpha, ... } (paint: stain, crack, manhole, grate, cable, marking, tracks, footprints,
   bits, tuft; `on`/`near`/`far` = nomi di tile o `terrain:<t>`); stabili per cella, fusi a mano sui pixel della
   regione (interi: a pezzi = intera) e dipinti anche dalle celle a un passo (sbordano).
+  Decorazioni automatiche: `tileset.autoProps` = [{ type, on, near, far, chance, clear, spacing, sameSpacing }]
+  -> `TileMap._autoProps` (costruttore, `opts.autoProps: false` per non farlo) aggiunge a `map.props` (con
+  `auto: true`) tipi di `game.json -> props.types`; un tipo con `light` (torcia, lampada) fa luce tremolante
+  (`Game._addLights`). Nuovi sprite procedurali: log, branch, hay_bale, scarecrow, tarp, tire, torch, lamp;
+  alberi e palme a 6 varianti di dimensioni diverse.
   Fusione dei terreni: tile con `"terrain"` + `tileset.terrains` { <terreno>: { amp, bias, spill, variants, rim:
   { <altro terreno | "*">: { colors, width, dither } } } } + `tileset.blend` { amp, scale, variants, variantScale }.
   Ogni pixel delle celle di confine sceglie il terreno con copertura (appartenenza ammorbidita 3x3 + smoothstep tra

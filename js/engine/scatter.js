@@ -11,7 +11,8 @@
 
 import { cellRandom } from './tilemap.js';
 
-function matcher(list) {
+/** Filtro di tile da una lista di nomi e "terrain:<t>" (null se la lista manca). */
+export function matcher(list) {
   if (!list) return null;
   const names = new Set();
   const terrains = new Set();

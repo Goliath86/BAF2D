@@ -139,6 +139,30 @@ describe('configurazione', () => {
     }
   });
 
+  test('dettagli a terra e decorazioni automatiche: disegni, tile, terreni e tipi esistono', () => {
+    const paints = ['stain', 'crack', 'manhole', 'grate', 'cable', 'marking', 'tracks', 'footprints', 'bits', 'tuft'];
+    for (const [ts, def] of Object.entries(assets.tilesets)) {
+      const names = new Set(def.tiles.map((t) => t.name));
+      const terrains = def.terrains || {};
+      const refs = (list, where) => {
+        for (const s of [].concat(list || [])) {
+          if (s.startsWith('terrain:')) assert.ok(terrains[s.slice(8)], `tileset ${ts}, ${where}: terreno "${s}"`);
+          else assert.ok(names.has(s), `tileset ${ts}, ${where}: tile "${s}"`);
+        }
+      };
+      (def.scatter || []).forEach((r, i) => {
+        assert.ok(paints.includes(r.paint), `tileset ${ts}, scatter[${i}]: disegno "${r.paint}"`);
+        for (const k of ['on', 'near', 'far']) refs(r[k], `scatter[${i}].${k}`);
+      });
+      (def.autoProps || []).forEach((r, i) => {
+        const type = game.props.types[r.type];
+        assert.ok(type, `tileset ${ts}, autoProps[${i}]: tipo "${r.type}" non è in game.json -> props.types`);
+        assert.ok(assets.sprites[type.sprite], `props.types.${r.type}: sprite "${type.sprite}"`);
+        for (const k of ['on', 'near', 'far']) refs(r[k], `autoProps[${i}].${k}`);
+      });
+    }
+  });
+
   test('effetti: i tipi di impatto dei tile esistono', () => {
     for (const [ts, def] of Object.entries(assets.tilesets)) {
       for (const t of def.tiles) {

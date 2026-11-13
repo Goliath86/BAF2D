@@ -29,6 +29,7 @@ export class Lights {
     this.ambient = null; // { color, darkness, tint } (null = giorno)
     this.cache = new Map(); // "raggio|colore|bande" -> canvas dell'alone
     this.layer = null; // buio della visuale
+    this.clock = 0; // tempo per il tremolio delle luci fisse
   }
 
   /** Ora del giorno: chiave di cfg.times (null/assente = giorno pieno). */
@@ -62,11 +63,12 @@ export class Lights {
    * radiusK = fattore sul raggio (es. tremolio dei fuochi).
    */
   add(x, y, def, k = 1, radiusK = 1) {
-    if (!def || k <= 0) return;
+    if (!def || !(k > 0) || !Number.isFinite(radiusK) || !Number.isFinite(x) || !Number.isFinite(y)) return;
     this.frame.push({ x, y, def, k, radiusK });
   }
 
   update(dt) {
+    this.clock += dt;
     for (let i = this.flashes.length - 1; i >= 0; i--) {
       const f = this.flashes[i];
       f.time += dt;

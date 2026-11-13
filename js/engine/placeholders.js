@@ -1068,12 +1068,13 @@ const SPRITE_SHAPES = {
     const S = p.shadowColor || '#000';
     const cx = w / 2;
     const cy = h / 2;
-    const fronds = 7 + Math.floor(r() * 3);
+    const fronds = 6 + Math.floor(r() * 4);
     const a0 = r() * Math.PI * 2;
+    const size = n > 1 ? 0.72 + (0.28 * (i % n)) / (n - 1) : 1; // varianti di dimensioni diverse
     const px = (x, y, c) => rect(g, Math.round(x), Math.round(y), 1, 1, shadow ? S : c);
     for (let f = 0; f < fronds; f++) {
       const a = a0 + (f / fronds) * Math.PI * 2 + (r() - 0.5) * 0.5;
-      const len = w * 0.32 + r() * w * 0.14;
+      const len = (w * 0.32 + r() * w * 0.14) * size;
       const bend = (r() - 0.5) * 0.5; // curvatura della foglia
       for (let t = 2; t < len; t += 0.7) {
         const k = t / len;
@@ -1142,7 +1143,8 @@ const SPRITE_SHAPES = {
     const S = p.shadowColor || '#000';
     const cx = w / 2;
     const cy = h / 2;
-    const R = Math.min(w, h) * 0.4;
+    // varianti di dimensioni diverse (dalla più piccola alla più grande)
+    const R = Math.min(w, h) * 0.4 * (n > 1 ? 0.68 + (0.32 * (i % n)) / (n - 1) : 1);
     const clumps = [];
     const k = 6 + Math.floor(r() * 4);
     for (let j = 0; j < k; j++) {
@@ -1167,6 +1169,154 @@ const SPRITE_SHAPES = {
       rect(g, x, y, 1, 1, r() < 0.5 ? p.dark : p.highlight || p.light);
     }
     if (p.fruit) for (let j = 0; j < 5; j++) rect(g, Math.round(cx + (r() - 0.5) * R * 1.4), Math.round(cy + (r() - 0.5) * R * 1.4), 1, 1, p.fruit);
+  },
+
+  /** Tronco caduto lungo l'asse x: corteccia a strisce, monconi di rami, sezione chiara con anelli a un capo. */
+  log(g, w, h, p, i) {
+    const n = p.variants ?? 3;
+    const shadow = i >= n;
+    const r = rng((i % n) * 71 + 7);
+    const S = p.shadowColor || '#000';
+    const cy = Math.floor(h / 2);
+    const len = Math.round(w * (0.6 + 0.35 * ((i % n) / Math.max(1, n - 1))));
+    const x0 = Math.floor((w - len) / 2);
+    const th = 2 + Math.floor(r() * 2); // semispessore
+    rect(g, x0, cy - th, len, th * 2 + 1, shadow ? S : p.dark);
+    // moncone di ramo
+    const bx = x0 + 3 + Math.floor(r() * (len - 8));
+    const side = r() < 0.5 ? -1 : 1;
+    line(g, bx, cy + side * th, bx + 2, cy + side * (th + 3), shadow ? S : p.dark);
+    if (shadow) return;
+    rect(g, x0, cy - th + 1, len, th * 2 - 1, p.color);
+    rect(g, x0, cy - th + 1, len, 1, p.light);
+    for (let x = x0 + 2; x < x0 + len - 2; x += 3 + Math.floor(r() * 3)) rect(g, x, cy - th + 2 + Math.floor(r() * 2), 2, 1, p.dark);
+    // sezione tagliata con anelli
+    rect(g, x0 + len - 2, cy - th, 2, th * 2 + 1, p.cut || p.light);
+    rect(g, x0 + len - 1, cy - 1, 1, 2, p.rings || p.dark);
+    rect(g, bx + 2, cy + side * (th + 3), 1, 1, p.light);
+  },
+
+  /** Ramo spezzato: rametti che si diramano da un asse, qualche foglia secca. */
+  branch(g, w, h, p, i) {
+    const n = p.variants ?? 3;
+    const shadow = i >= n;
+    const r = rng((i % n) * 37 + 19);
+    const S = p.shadowColor || '#000';
+    const y = Math.floor(h / 2) + Math.round((r() - 0.5) * 2);
+    line(g, 1, y, w - 2, y + Math.round((r() - 0.5) * 3), shadow ? S : p.color);
+    for (let k = 0; k < 3; k++) {
+      const x = 3 + Math.floor(r() * (w - 6));
+      const dy = r() < 0.5 ? -1 : 1;
+      const l = 2 + Math.floor(r() * 3);
+      line(g, x, y, x + l, y + dy * l, shadow ? S : p.dark);
+      if (!shadow && p.leaf && r() < 0.7) rect(g, x + l, y + dy * l, 1, 1, p.leaf);
+    }
+  },
+
+  /** Balla di fieno rotonda vista dall'alto: disco con giri a spirale e fili sciolti. */
+  hay_bale(g, w, h, p, i) {
+    const n = p.variants ?? 2;
+    const shadow = i >= n;
+    const r = rng((i % n) * 29 + 3);
+    const cx = w / 2;
+    const cy = h / 2;
+    const R = Math.min(w, h) / 2 - 1.5;
+    disc(g, cx, cy, R, shadow ? p.shadowColor || '#000' : p.dark);
+    if (shadow) return;
+    disc(g, cx - 0.4, cy - 0.4, R - 0.8, p.color);
+    for (let t = 0; t < 14; t += 0.35) {
+      const rr = (t / 14) * (R - 1.5);
+      rect(g, Math.round(cx + Math.cos(t * 2.2) * rr), Math.round(cy + Math.sin(t * 2.2) * rr), 1, 1, p.dark);
+    }
+    disc(g, cx - R * 0.35, cy - R * 0.35, R * 0.35, p.light);
+    for (let k = 0; k < 4; k++) {
+      const a = r() * Math.PI * 2;
+      rect(g, Math.round(cx + Math.cos(a) * (R + 0.5)), Math.round(cy + Math.sin(a) * (R + 0.5)), 1, 1, p.light);
+    }
+  },
+
+  /** Spaventapasseri visto dall'alto: palo con traversa, giacca, cappello di paglia a tesa larga, paglia alle mani. */
+  scarecrow(g, w, h, p, i) {
+    const n = p.variants ?? 2;
+    const shadow = i >= n;
+    const S = p.shadowColor || '#000';
+    const cx = Math.floor(w / 2);
+    const cy = Math.floor(h / 2);
+    rect(g, cx - 7, cy, 15, 1, shadow ? S : p.wood); // traversa
+    rect(g, cx - 5, cy - 3, 11, 6, shadow ? S : (i % n) % 2 ? p.coat2 || p.coat : p.coat); // giacca con le maniche
+    disc(g, cx + 0.5, cy + 0.5, 2.6, shadow ? S : p.straw); // cappello
+    if (shadow) return;
+    rect(g, cx - 5, cy + 2, 11, 1, p.coatDark || p.wood);
+    rect(g, cx - 5, cy - 3, 1, 6, p.coatDark || p.wood);
+    rect(g, cx + 3, cy - 2, 1, 1, p.patch || '#c8a050'); // toppa
+    disc(g, cx + 0.5, cy + 0.5, 1.2, p.strawDark || p.wood);
+    for (const sx of [-7, 7]) {
+      rect(g, cx + sx, cy - 1, 1, 1, p.straw);
+      rect(g, cx + sx, cy + 1, 1, 1, p.straw);
+    }
+  },
+
+  /** Telo steso a terra con pieghe e picchetti agli angoli (colori: variante -> colors). */
+  tarp(g, w, h, p, i) {
+    const cols = p.colors || ['#5a6a4a'];
+    const c = cols[i % cols.length];
+    const r = rng(i * 23 + 5);
+    const x0 = 2;
+    const y0 = 2;
+    const tw = w - 4;
+    const tht = h - 4;
+    rect(g, x0 + 1, y0 + 1, tw, tht, p.shadowColor || 'rgba(0,0,0,0.3)');
+    rect(g, x0, y0, tw, tht, c);
+    // pieghe e bordo arrotolato
+    for (let k = 0; k < 3; k++) {
+      const y = y0 + 2 + Math.floor(r() * (tht - 4));
+      rect(g, x0 + 1, y, tw - 2, 1, p.fold || 'rgba(0,0,0,0.22)');
+      rect(g, x0 + 1, y - 1, tw - 2, 1, 'rgba(255,255,255,0.12)');
+    }
+    rect(g, x0, y0, tw, 1, 'rgba(255,255,255,0.18)');
+    for (const [x, y] of [[x0 - 1, y0 - 1], [x0 + tw, y0 - 1], [x0 - 1, y0 + tht], [x0 + tw, y0 + tht]]) rect(g, x, y, 1, 1, p.stake || '#3a2a1a');
+  },
+
+  /** Pneumatico abbandonato: anello scuro col battistrada, ombra inclusa. */
+  tire(g, w, h, p, i) {
+    const cx = w / 2;
+    const cy = h / 2;
+    const R = Math.min(w, h) / 2 - 1;
+    // anello (il centro resta trasparente: si vede il terreno), ombra solo sotto l'anello
+    const ring = (ox, oy, c) => {
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const d = Math.hypot(x + 0.5 - cx - ox, y + 0.5 - cy - oy);
+          if (d <= R && d > R - 2.2) rect(g, x, y, 1, 1, c);
+        }
+      }
+    };
+    ring(1, 1, p.shadowColor || 'rgba(0,0,0,0.35)');
+    ring(0, 0, p.color);
+    rect(g, Math.round(cx - R + 1), Math.round(cy - 1), 1, 1, p.light);
+    if (i % 2) rect(g, Math.round(cx + R - 2), Math.round(cy), 1, 1, p.light);
+  },
+
+  /** Torcia su un palo (vista dall'alto): base di legno, braciere, fiamma con cuore chiaro. */
+  torch(g, w, h, p) {
+    const cx = Math.floor(w / 2);
+    const cy = Math.floor(h / 2);
+    disc(g, cx + 1.5, cy + 1.5, 2.2, p.shadowColor || 'rgba(0,0,0,0.35)');
+    disc(g, cx + 0.5, cy + 0.5, 2.4, p.base);
+    disc(g, cx + 0.5, cy + 0.5, 1.8, p.flame);
+    rect(g, cx, cy - 1, 1, 2, p.flameLight);
+    rect(g, cx, cy, 1, 1, p.core);
+  },
+
+  /** Lampada (Arena): plafoniera vista dall'alto con griglia e vetro chiaro. */
+  lamp(g, w, h, p) {
+    const cx = w / 2;
+    const cy = h / 2;
+    disc(g, cx + 1, cy + 1, 3, p.shadowColor || 'rgba(0,0,0,0.35)');
+    disc(g, cx, cy, 3, p.frame);
+    disc(g, cx, cy, 2, p.glass);
+    rect(g, Math.round(cx) - 2, Math.round(cy), 4, 1, p.frame);
+    rect(g, Math.round(cx) - 1, Math.round(cy) - 1, 1, 1, p.core);
   },
 
   /** Sasso con ombra inclusa (non ondeggia). */
