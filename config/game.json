@@ -88,7 +88,8 @@
     "targetHeight": 216,
     "minScale": 1,
     "maxScale": 10,
-    "background": "#0b0b12"
+    "background": "#0b0b12",
+    "rotation": { "steps": 96, "cacheSize": 3000 }
   },
 
   "audio": {
@@ -107,8 +108,8 @@
   },
 
   "teams": {
-    "blue": { "color": "#3d7cf0", "dark": "#1c3c8c", "light": "#a4c4ff" },
-    "red": { "color": "#e0402e", "dark": "#7a1a12", "light": "#ffa08c" }
+    "blue": { "color": "#3d7cf0", "dark": "#1c3c8c", "light": "#a4c4ff", "kit": "helmet" },
+    "red": { "color": "#e0402e", "dark": "#7a1a12", "light": "#ffa08c", "kit": "boonie" }
   },
 
   "ctf": {

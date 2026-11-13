@@ -18,6 +18,7 @@ import { Rockets } from './rockets.js';
 import { Destruction } from './destruction.js';
 import { keyName } from '../engine/input.js';
 import { UnitLighting } from '../engine/lighting.js';
+import { configureRotation } from '../engine/rotsprite.js';
 
 const STEP = 1 / 60; // update a timestep fisso
 const BULLET_SUBSTEP = 2; // px: passo massimo del controllo collisioni dei proiettili
@@ -76,6 +77,7 @@ export class Game {
     this.props = new Props(config.props, assets);
     this.weather = new Weather(null);
     this.lighting = new UnitLighting(config.lighting); // ombra portata e luce sul bordo dei soldati
+    configureRotation(config.display?.rotation); // rotazione di qualità dei soldati (passi, cache)
     this.crosshair = assets.sprites.get('crosshair') || null;
     this.camera = new Camera(config.camera);
 

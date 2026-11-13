@@ -60,7 +60,14 @@ export class Assets {
           this._loadSprite(`${name}@${team}`, {
             ...def,
             src: def.src ? def.src.replaceAll('{team}', team) : null,
-            placeholder: { ...def.placeholder, team: t.color, teamDark: t.dark || t.color, teamLight: t.light || t.color },
+            placeholder: {
+              ...def.placeholder,
+              team: t.color,
+              teamDark: t.dark || t.color,
+              teamLight: t.light || t.color,
+              // equipaggiamento della squadra (sagoma del soldato procedurale), se lo sprite non lo fissa
+              kit: def.placeholder?.kit ?? t.kit,
+            },
           })
         );
       }

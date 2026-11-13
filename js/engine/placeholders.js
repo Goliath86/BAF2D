@@ -110,10 +110,19 @@ const GUNS = {
   rifle: {
     length: 14,
     draw(g, x, cy, p, noMag = false) {
-      rect(g, x, cy - 1, 14, 2, p.gun);
-      rect(g, x + 3, cy - 1, 8, 1, p.gunLight);
-      if (!noMag) rect(g, x + 6, cy + 1, 2, 2, p.gunDark); // caricatore
-      rect(g, x + 13, cy - 1, 1, 2, p.gunDark); // volata
+      rect(g, x, cy - 1, 3, 2, p.gunDark); // calcio
+      rect(g, x + 3, cy - 1, 6, 2, p.gun); // castello
+      rect(g, x + 3, cy - 1, 6, 1, p.gunLight);
+      rect(g, x + 4, cy - 1, 2, 1, p.optic || '#3a4a52'); // ottica
+      rect(g, x + 5, cy - 1, 1, 1, p.opticGlass || '#7ab0c0');
+      if (!noMag) {
+        rect(g, x + 6, cy + 1, 2, 2, p.gunDark); // caricatore curvo
+        rect(g, x + 6, cy + 1, 1, 1, p.gun);
+      }
+      rect(g, x + 9, cy - 1, 3, 2, p.gun); // astina
+      rect(g, x + 9, cy, 3, 1, p.gunDark);
+      rect(g, x + 12, cy - 1, 2, 1, p.gun); // canna sottile
+      rect(g, x + 13, cy - 1, 1, 1, p.gunDark); // volata
     },
   },
   shotgun: {
@@ -121,12 +130,15 @@ const GUNS = {
     draw(g, x, cy, p) {
       rect(g, x, cy - 1, 3, 2, p.wood); // calcio
       rect(g, x, cy, 3, 1, p.woodDark);
+      rect(g, x + 1, cy - 1, 1, 1, p.woodLight || p.wood);
       rect(g, x + 3, cy - 1, 4, 2, p.gun); // castello
       rect(g, x + 3, cy - 1, 4, 1, p.gunLight);
+      rect(g, x + 5, cy, 1, 1, p.shell || '#a8322a'); // finestra d'espulsione con la cartuccia
       rect(g, x + 7, cy - 1, 7, 1, p.gun); // canna
       rect(g, x + 7, cy, 7, 1, p.gunDark); // serbatoio tubolare
-      rect(g, x + 9, cy - 1, 3, 2, p.wood); // pompa
+      rect(g, x + 9, cy - 1, 3, 2, p.wood); // pompa zigrinata
       rect(g, x + 9, cy, 3, 1, p.woodDark);
+      rect(g, x + 10, cy - 1, 1, 2, p.woodDark);
       rect(g, x + 13, cy - 1, 1, 1, p.gunDark); // volata
     },
   },
@@ -134,7 +146,8 @@ const GUNS = {
     length: 5,
     draw(g, x, cy, p) {
       rect(g, x, cy - 1, 5, 2, p.gun);
-      rect(g, x + 1, cy - 1, 3, 1, p.gunLight);
+      rect(g, x + 1, cy - 1, 3, 1, p.gunLight); // carrello
+      rect(g, x + 2, cy - 1, 1, 1, p.gun); // finestra d'espulsione
       rect(g, x + 4, cy - 1, 1, 2, p.gunDark); // volata
     },
   },
@@ -213,12 +226,50 @@ function reloadPose(frame, n, cycles) {
   return { t, pull, reach: Math.sin(Math.PI * c), returning: c >= 0.5 };
 }
 
-/** Fascia di squadra sull'elmetto (centro hx,hy), da spalla a spalla, larga 2 px. */
-function teamStripe(g, hx, hy, p) {
-  rect(g, hx - 1, hy - 3, 2, 7, p.team);
-  rect(g, hx - 1, hy - 3, 2, 1, p.teamDark);
-  rect(g, hx - 1, hy + 3, 2, 1, p.teamDark);
-  rect(g, hx - 1, hy - 2, 1, 2, p.teamLight);
+/** Fascia di squadra sul copricapo (centro hx,hy), da spalla a spalla, larga 2 px, lunga 2*half+1. */
+function teamStripe(g, hx, hy, p, half = 3) {
+  rect(g, hx - 1, hy - half, 2, half * 2 + 1, p.team);
+  rect(g, hx - 1, hy - half, 2, 1, p.teamDark);
+  rect(g, hx - 1, hy + half, 2, 1, p.teamDark);
+  rect(g, hx - 1, hy - half + 1, 1, 2, p.teamLight);
+}
+
+/**
+ * Testa vista dall'alto (guarda a destra), centro hx,hy. kit "helmet" = elmetto con rete mimetica, bordo
+ * frontale e attacco del visore; "boonie" = cappello a tesa larga (sagoma più grande e piatta) con corona.
+ */
+function drawHead(g, hx, hy, p, kit) {
+  const r = rng(31);
+  // anello scuro attorno alla testa: la stacca dalle spalle (stessa famiglia di colori)
+  const ring = p.headOutline || '#1e1c12';
+  if (kit === 'boonie') {
+    disc(g, hx, hy, 4.9, ring);
+    disc(g, hx, hy, 4.2, p.brim || p.helmetLight); // tesa
+    disc(g, hx, hy + 0.6, 3.6, p.helmet); // tesa in ombra sotto
+    disc(g, hx, hy, 3.6, p.brim || p.helmetLight);
+    disc(g, hx - 0.5, hy, 2.8, p.helmetDark); // corona, un filo arretrata
+    disc(g, hx - 1, hy - 0.5, 2.2, p.helmet);
+    rect(g, hx - 2, hy - 2, 1, 1, p.helmetLight);
+    for (let k = 0; k < 5; k++) {
+      const a = r() * Math.PI * 2;
+      rect(g, Math.floor(hx + Math.cos(a) * 3.4), Math.floor(hy + Math.sin(a) * 3.4), 1, 1, k % 2 ? p.camo : p.camo2);
+    }
+    if (p.team) teamStripe(g, hx, hy, p, 2);
+    return;
+  }
+  disc(g, hx, hy, 4.5, ring);
+  disc(g, hx, hy, 3.8, p.helmetDark);
+  disc(g, hx - 0.5, hy - 0.5, 3.1, p.helmet); // calotta illuminata da sopra a sinistra
+  // rete mimetica: punti scuri e chiari sparsi sulla calotta
+  for (let k = 0; k < 7; k++) {
+    const x = hx - 3 + Math.floor(r() * 7);
+    const y = hy - 3 + Math.floor(r() * 7);
+    if ((x + 0.5 - hx) ** 2 + (y + 0.5 - hy) ** 2 <= 7) rect(g, x, y, 1, 1, k % 2 ? p.helmetDark : p.camo2);
+  }
+  rect(g, hx - 2, hy - 3, 2, 1, p.helmetLight);
+  rect(g, hx - 3, hy - 2, 1, 2, p.helmetLight);
+  rect(g, hx + 4, hy - 1, 1, 2, p.gunDark); // attacco del visore notturno
+  if (p.team) teamStripe(g, hx, hy, p, 3);
 }
 
 // ---------- Sprite ----------
@@ -238,33 +289,60 @@ const SPRITE_SHAPES = {
     const kind = GUNS[p.weapon] ? p.weapon : 'rifle';
 
     const bx = cx - 1; // centro del busto (leggermente arretrato rispetto al pivot)
+    // equipaggiamento (game.json -> teams.<id>.kit): sagome diverse per squadra, leggibili anche senza colore
+    // "helmet" = elmetto con rete + zaino d'assalto con radio; "boonie" = cappello a tesa larga + zaino con
+    // sacco a pelo arrotolato di traverso
+    const kit = p.kit === 'boonie' ? 'boonie' : 'helmet';
+    // telo dello zaino: colore della squadra nelle varianti "@squadra", altrimenti quello dello zaino
+    const pk = p.team || p.pack;
+    const pkDark = p.team ? p.teamDark : p.packDark;
+    const pkLight = p.team ? p.teamLight : p.pack;
 
-    // zaino (dietro, verso sinistra); nelle varianti di squadra coperto da un telo del colore della squadra
-    if (p.team) {
-      rect(g, bx - 6, cy - 3, 3, 6, p.team);
-      rect(g, bx - 6, cy - 3, 1, 6, p.teamDark);
-      rect(g, bx - 5, cy - 3, 2, 1, p.teamLight);
-      rect(g, bx - 5, cy, 2, 1, p.teamDark); // cinghia del telo
+    // zaino (dietro, verso sinistra)
+    if (kit === 'boonie') {
+      rect(g, bx - 8, cy - 4, 5, 8, pk);
+      rect(g, bx - 8, cy - 4, 1, 8, pkDark);
+      rect(g, bx - 7, cy - 4, 4, 1, pkLight);
+      rect(g, bx - 6, cy + 1, 3, 1, pkDark); // fibbia della tasca
+      // sacco a pelo arrotolato in fondo allo zaino, di traverso
+      rect(g, bx - 10, cy - 5, 2, 10, p.roll || '#7a6a48');
+      rect(g, bx - 10, cy - 5, 1, 10, p.rollDark || '#544830');
+      rect(g, bx - 10, cy - 2, 2, 1, p.packDark); // cinghie del rotolo
+      rect(g, bx - 10, cy + 2, 2, 1, p.packDark);
     } else {
-      rect(g, bx - 6, cy - 3, 3, 6, p.pack);
-      rect(g, bx - 6, cy - 3, 1, 6, p.packDark);
-      rect(g, bx - 5, cy - 1, 2, 1, p.packDark);
+      rect(g, bx - 7, cy - 3, 4, 6, pk);
+      rect(g, bx - 7, cy - 3, 1, 6, pkDark);
+      rect(g, bx - 6, cy - 3, 3, 1, pkLight);
+      rect(g, bx - 6, cy, 3, 1, pkDark); // cinghia del telo
+      // radio in fondo allo zaino, con la base dell'antenna
+      rect(g, bx - 7, cy + 2, 3, 2, p.radio || '#2e3226');
+      rect(g, bx - 6, cy + 2, 1, 1, p.radioLight || '#55604a');
+      rect(g, bx - 8, cy + 3, 1, 1, p.gunDark);
     }
 
     // spalle in mimetica
-    ellipse(g, bx, cy, 3, 6, p.uniform);
-    for (let k = 0; k < 14; k++) {
-      const x = bx - 3 + Math.floor(r() * 6);
+    ellipse(g, bx, cy, 3.5, 6, p.uniform);
+    for (let k = 0; k < 9; k++) {
+      const x = bx - 3 + Math.floor(r() * 7);
       const y = cy - 6 + Math.floor(r() * 12);
-      const dx = (x + 0.5 - bx) / 3;
+      const dx = (x + 0.5 - bx) / 3.5;
       const dy = (y + 0.5 - cy) / 6;
       if (dx * dx + dy * dy <= 0.8) rect(g, x, y, 1, 1, k % 2 ? p.camo : p.camo2);
     }
 
-    // giubbotto tattico con tasche
-    rect(g, bx - 2, cy - 4, 3, 8, p.vest);
-    rect(g, bx, cy - 4, 1, 2, p.vestDark);
-    rect(g, bx, cy + 2, 1, 2, p.vestDark);
+    // spallacci dello zaino sopra le spalle
+    rect(g, bx - 3, cy - 5, 3, 1, pkDark);
+    rect(g, bx - 3, cy + 4, 3, 1, pkDark);
+
+    // giubbotto tattico: piastra centrale e giberne dei caricatori che sporgono sotto l'elmetto
+    rect(g, bx - 2, cy - 5, 4, 10, p.vest);
+    rect(g, bx - 1, cy - 5, 1, 2, p.vestDark);
+    rect(g, bx + 1, cy - 5, 1, 2, p.vestDark);
+    rect(g, bx - 1, cy + 3, 1, 2, p.vestDark);
+    rect(g, bx + 1, cy + 3, 1, 2, p.vestDark);
+    // borraccia al fianco (dietro, in basso) col tappo
+    disc(g, bx - 3, cy + 5.5, 1.4, p.canteen || '#55603a');
+    rect(g, bx - 3, cy + 5, 1, 1, p.canteenCap || '#2a2e1e');
 
     const grip = GRIPS[kind](cx, cy, bx);
     const pose = reloadPose(frame, p.reloadFrames || 0, grip.reloadCycles);
@@ -312,13 +390,7 @@ const SPRITE_SHAPES = {
     }
     rect(g, lGlove[0], lGlove[1], 2, 2, p.glove);
 
-    // elmetto
-    disc(g, bx, cy, 3.5, p.helmetDark);
-    disc(g, bx, cy, 2.7, p.helmet);
-    rect(g, bx - 2, cy - 2, 2, 1, p.helmetLight);
-    rect(g, bx - 2, cy - 1, 1, 1, p.helmetLight);
-    rect(g, bx + 2, cy - 1, 1, 2, p.helmetDark); // bordo frontale
-    if (p.team) teamStripe(g, bx, cy, p);
+    drawHead(g, bx, cy, p, kit);
   },
 
   /**

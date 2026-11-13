@@ -1,4 +1,5 @@
-import { Animator, drawSprite } from '../engine/assets.js';
+import { Animator } from '../engine/assets.js';
+import { drawRotated } from '../engine/rotsprite.js';
 
 const DEG = Math.PI / 180;
 
@@ -568,6 +569,7 @@ export class Player {
 
   draw(ctx) {
     if (this.dead || this.vehicle) return; // il corpo a terra è un cadavere di Game; a bordo si vede il mezzo
-    for (const [sprite, frame, angle] of this.drawParts()) drawSprite(ctx, sprite, frame, this.x, this.y, angle);
+    // rotazione di qualità (rotsprite.js): i dettagli del soldato restano leggibili anche in diagonale
+    for (const [sprite, frame, angle] of this.drawParts()) drawRotated(ctx, sprite, frame, this.x, this.y, angle);
   }
 }

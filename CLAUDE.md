@@ -70,6 +70,7 @@ js/soldier_art.js     drawSoldier(look, cfg, weapon): ritratto frontale del sold
 js/settings.js        Settings: impostazioni del giocatore in localStorage (lang, volume, keys, newGame)
 js/engine/
   lighting.js         UnitLighting: ombra portata e luce sul bordo dei soldati (direzione dalle ombre del tileset)
+  rotsprite.js        drawRotated: rotazione di qualità della pixel art (Scale2x ×4), cache per angolo
   loader.js           loadJSON / loadImage / loadArrayBuffer (errori = LocalizedError)
   errors.js           LocalizedError(key, params, fallbackMessage)
   i18n.js             I18n: load(cfg), t(key, params), applyToDOM() per [data-i18n], error(e)
@@ -183,7 +184,12 @@ tests/                test di regressione (node --test): static.test.mjs, browse
   area a terra = canvas in cache per raggio/colore.
 - Squadre negli sprite: `"teamColored": true` in assets.json -> `Assets.load(cfg, teams)` genera `nome@squadra`
   (placeholder con `team`/`teamDark`/`teamLight`, `{team}` nel src); `assets.sprite(nome, team)` sceglie la variante.
-  Soldato procedurale: fascia sull'elmetto (`teamStripe`), telo sullo zaino e fasce alle braccia.
+  Soldato procedurale: fascia sull'elmetto (`teamStripe`), telo sullo zaino e fasce alle braccia; sagoma per
+  squadra da `teams.<id>.kit` (`helmet` = elmetto con rete + zaino con radio, `boonie` = cappello a tesa larga +
+  zaino con sacco a pelo; `drawHead`), leggibile anche senza colore.
+- Rotazione di qualità dei soldati (`js/engine/rotsprite.js`, `game.json -> display.rotation`): `drawRotated()` =
+  Scale2x ×4 + rotazione campionata, angoli a `steps` passi, cache LRU di `cacheSize` frame ruotati (+ sagome nere
+  per luce/ombre). Usata da `Player.draw` e `UnitLighting`; gli altri sprite usano ancora `drawSprite`.
 - Luce dei soldati (`js/engine/lighting.js`, `game.json -> lighting`, `game.lighting`): direzione e colore dalle
   ombre del tileset (`tileset.shadow`), `shadow.length` = fattore su dx/dy. `drawShadows` = ombre portate di tutti i
   soldati su un livello grande quanto la visuale (prima dei soldati), `drawRim` = luce sul bordo dopo ogni soldato
