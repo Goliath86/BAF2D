@@ -71,6 +71,8 @@ js/settings.js        Settings: impostazioni del giocatore in localStorage (lang
 js/engine/
   lighting.js         UnitLighting: ombra portata e luce sul bordo dei soldati (direzione dalle ombre del tileset)
   rotsprite.js        drawRotated: rotazione di qualità della pixel art (Scale2x ×4), cache per angolo
+  scatter.js          paintScatter: dettagli a terra cotti nella mappa (tileset.scatter: segnaletica, olio, crepe,
+                      tombini, griglie, cavi, tracce, impronte, rifiuti, ciuffi, canne, sassolini, fiori)
 js/game/lights.js     Lights: luci dinamiche (aloni a gradini retinati in cache, lampi e luci del fotogramma) e buio
                       dell'ora del giorno (game.json -> lights.times)
   loader.js           loadJSON / loadImage / loadArrayBuffer (errori = LocalizedError)
@@ -440,6 +442,10 @@ tests/                test di regressione (node --test): static.test.mjs, browse
   (`tileset.shadow`, `_drawShadows`), poi altezza finta (`_drawHeight`, `tileset.height` = { face, shade, color,
   lip, rim, dark, ao }, `height` del tile = px della faccia sud, 0 = piatto; `_heightAt`): faccia sud in ombra,
   bordi della cima chiari/scuri secondo la luce di `tileset.shadow`, occlusione alla base. Collisioni invariate.
+  Dettagli a terra (`scatter.js`, dopo la fusione, solo con `blend`): `tileset.scatter` = regole { paint, on, near,
+  far, edge, chance, colors, alpha, ... } (paint: stain, crack, manhole, grate, cable, marking, tracks, footprints,
+  bits, tuft; `on`/`near`/`far` = nomi di tile o `terrain:<t>`); stabili per cella, fusi a mano sui pixel della
+  regione (interi: a pezzi = intera) e dipinti anche dalle celle a un passo (sbordano).
   Fusione dei terreni: tile con `"terrain"` + `tileset.terrains` { <terreno>: { amp, bias, spill, variants, rim:
   { <altro terreno | "*">: { colors, width, dither } } } } + `tileset.blend` { amp, scale, variants, variantScale }.
   Ogni pixel delle celle di confine sceglie il terreno con copertura (appartenenza ammorbidita 3x3 + smoothstep tra

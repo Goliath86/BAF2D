@@ -8,6 +8,7 @@
 // "variantWeights" (opzionale, accanto a "tile") = pesi delle varianti.
 
 import { LocalizedError } from './errors.js';
+import { paintScatter } from './scatter.js';
 
 /** Numero pseudo-casuale stabile 0..1 per la cella (x, y) e un "sale". */
 export function cellRandom(x, y, salt = 0) {
@@ -289,6 +290,7 @@ export class TileMap {
     g.clearRect(px, py, w, h);
     this._drawTiles(g, () => true, r);
     this._drawBlend(g, r);
+    if (this.blend) paintScatter(g, this, r); // dettagli a terra (tileset.scatter); non nelle anteprime
     this._drawDebris(g, r);
     this._drawEdges(g, r);
     this._drawShadows(g, r);
