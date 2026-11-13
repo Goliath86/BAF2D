@@ -168,36 +168,55 @@ Source code licensed under the GNU GPL v3.</p>
 
 Title: **BAF2D 1.4.0 — Night battles and a battlefield that remembers**
 
-The biggest graphics update so far: soldiers you can read at a glance, walls with depth, dynamic lights, and a new
-choice before every match — day, dusk or night.
+Type: Major update. Attach `night_countryside.png` (cover of the post), `dusk_desert.png` and `night_arena.png`.
 
-**Time of day and lights**
-- Pick **Day**, **Dusk** or **Night** in *New game*. At night the map goes dark: muzzle flashes, explosions,
-  burning wrecks, torches in the houses and lamps along the Arena walls are your light. Vehicles drive with their
-  headlights on.
-- Explosions now light up everything around them for a moment, and leave small **fires** burning with smoke and
-  sparks. Rockets glow in flight. A light blinks on top of a flag while it's being captured.
+This is the biggest graphics update BAF2D has had so far. Soldiers are easier to read, walls have depth, light is
+dynamic, and every match now starts with a new choice: day, dusk or night. Everything is still drawn in code, and
+the whole game is still under 1 MB.
 
-**Soldiers**
-- A light edge on the sunny side and a proper cast shadow make soldiers stand out on any ground.
-- More detailed gear, sharper weapons, a bigger head, and a **different silhouette for each team** (helmets and
-  radio packs for Blue, boonie hats and bedrolls for Red), so you can tell friend from foe even without colour.
-- Smooth rotation: soldiers keep clean outlines at any angle.
-- New animations: recoil, flinching when hit, grenade throws, sprinting with the rifle across the chest, and four
-  ways to fall — always away from the shot.
+**Day, dusk or night**
+- Pick **Day**, **Dusk** or **Night** in *New game*. At night the map goes dark, and your only light comes from
+  muzzle flashes, explosions, burning wrecks, torches inside the houses and lamps along the Arena walls. Vehicles
+  drive with their headlights on, and you can see a short way around your own soldier.
+- Explosions light up the ground, walls, soldiers and smoke around them for a moment. They also leave small
+  **fires** that keep burning with smoke and sparks. A destroyed vehicle burns for a while.
+- Rockets glow in flight. A light blinks on top of a flag while it's being captured, in the colour of the team
+  taking it, or amber when the flag is contested.
 
-**Maps**
-- Walls, rocks, crates, sandbags and hedges have a shaded front face and lit edges: the maps finally have depth.
-- Organic borders between terrains, animated water, and a lot of small detail: floor markings, oil stains and
-  manholes in the Arena; tracks, footprints, tarps and litter in the desert; grass tufts, flowers, logs, hay bales
-  and scarecrows in the countryside.
-- **Battle scars** stay for the whole match: craters, tank tracks, and the spent casings of every firefight.
+**Soldiers you can read at a glance**
+- Each soldier has a light edge on the sunny side and a cast shadow that falls the same way as the walls' shadows,
+  so they stand out on sand, grass or concrete.
+- Their gear is more detailed (pouches, canteen, radio), weapons are sharper and the head is bigger, so you can
+  tell where a soldier is looking.
+- **Each team has its own silhouette**: Blue wears helmets with netting and carries radio packs, Red wears boonie
+  hats and carries packs with a bedroll. You can tell friend from foe even without looking at the colours.
+- Soldiers now rotate smoothly and keep clean outlines at any angle.
+- **New animations**: recoil kicks the body back, hit soldiers flash and flinch, grenade throws twist the torso,
+  and sprinters carry their rifle across the chest. Soldiers fall away from the shot that killed them, in four
+  different poses.
 
-**Gameplay**
-- **Counted ammunition**: scavenge rounds from fallen soldiers' weapons, resupply at your flags and base, or grab
-  one of the ammo crates on every map. Bots do the same.
+**Maps with depth and detail**
+- Walls, rocks, crates, sandbags and hedges have a shaded front face, lit top edges and a darker strip of ground
+  at their base. The maps finally look three-dimensional.
+- Terrains now blend into each other with natural edges: sand into road, grass into mud, foam along the shore.
+  The water is animated, with glints and ripples.
+- There is a lot more small detail:
+  - **Arena**: worn floor markings, oil stains, manholes and cables.
+  - **Desert**: tyre tracks, footprints, tarps and litter.
+  - **Countryside**: grass tufts, wild flowers, fallen logs, hay bales and scarecrows.
+  - Trees and palms come in more sizes.
+- **Battle scars** stay until the end of the match: craters where the grenades landed, tank tracks across the
+  roads, and spent casings piling up wherever the fighting was hardest.
 
-Try a night match on Countryside and let me know in the comments how it looks!
+**Gameplay: counted ammunition**
+- Ammo is no longer infinite. You can take rounds from dropped weapons of the same kind, resupply at your base and
+  at the flags you hold, or use one of the **ammo crates** placed on every map. When you run dry, the HUD tells you
+  where to resupply. Bots manage their ammo too.
+
+Your rank, medals and soldier carry over from previous versions.
+
+Next up are richer explosions, dust kicked up by vehicles and running soldiers, and bullet impacts that look
+different for each material. Try a night match on Countryside and tell me in the comments how it looks!
 
 ## Release notes (devlog) — v1.3.5
 
