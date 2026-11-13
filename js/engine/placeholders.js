@@ -213,12 +213,12 @@ function reloadPose(frame, n, cycles) {
   return { t, pull, reach: Math.sin(Math.PI * c), returning: c >= 0.5 };
 }
 
-/** Striscia di squadra sull'elmetto (centro hx,hy), da spalla a spalla. */
+/** Fascia di squadra sull'elmetto (centro hx,hy), da spalla a spalla, larga 2 px. */
 function teamStripe(g, hx, hy, p) {
-  rect(g, hx, hy - 3, 1, 7, p.team);
-  rect(g, hx, hy - 3, 1, 1, p.teamDark);
-  rect(g, hx, hy + 3, 1, 1, p.teamDark);
-  rect(g, hx, hy - 1, 1, 1, p.teamLight);
+  rect(g, hx - 1, hy - 3, 2, 7, p.team);
+  rect(g, hx - 1, hy - 3, 2, 1, p.teamDark);
+  rect(g, hx - 1, hy + 3, 2, 1, p.teamDark);
+  rect(g, hx - 1, hy - 2, 1, 2, p.teamLight);
 }
 
 // ---------- Sprite ----------
@@ -239,10 +239,17 @@ const SPRITE_SHAPES = {
 
     const bx = cx - 1; // centro del busto (leggermente arretrato rispetto al pivot)
 
-    // zaino (dietro, verso sinistra)
-    rect(g, bx - 6, cy - 3, 3, 6, p.pack);
-    rect(g, bx - 6, cy - 3, 1, 6, p.packDark);
-    rect(g, bx - 5, cy - 1, 2, 1, p.packDark);
+    // zaino (dietro, verso sinistra); nelle varianti di squadra coperto da un telo del colore della squadra
+    if (p.team) {
+      rect(g, bx - 6, cy - 3, 3, 6, p.team);
+      rect(g, bx - 6, cy - 3, 1, 6, p.teamDark);
+      rect(g, bx - 5, cy - 3, 2, 1, p.teamLight);
+      rect(g, bx - 5, cy, 2, 1, p.teamDark); // cinghia del telo
+    } else {
+      rect(g, bx - 6, cy - 3, 3, 6, p.pack);
+      rect(g, bx - 6, cy - 3, 1, 6, p.packDark);
+      rect(g, bx - 5, cy - 1, 2, 1, p.packDark);
+    }
 
     // spalle in mimetica
     ellipse(g, bx, cy, 3, 6, p.uniform);
@@ -280,12 +287,16 @@ const SPRITE_SHAPES = {
     line(g, R.shoulder[0], R.shoulder[1], rHand[0], rHand[1], p.uniform, 2);
     line(g, L.shoulder[0], L.shoulder[1], lHand[0], lHand[1], p.uniform, 2);
 
-    // mostrine di squadra sulle spalle (solo nelle varianti "@squadra", vedi teamColored)
+    // fasce di squadra sulle braccia (solo nelle varianti "@squadra", vedi teamColored)
     if (p.team) {
-      rect(g, bx - 1, cy - 6, 2, 2, p.team);
-      rect(g, bx - 1, cy + 4, 2, 2, p.team);
-      rect(g, bx - 1, cy - 5, 2, 1, p.teamDark);
-      rect(g, bx - 1, cy + 5, 2, 1, p.teamDark);
+      const band = (s, h) => {
+        const x = Math.round(s[0] + (h[0] - s[0]) * 0.4);
+        const y = Math.round(s[1] + (h[1] - s[1]) * 0.4);
+        rect(g, x, y, 2, 2, p.team);
+        rect(g, x, y, 1, 1, p.teamLight);
+      };
+      band(R.shoulder, rHand);
+      band(L.shoulder, lHand);
     }
 
     // arma (canna centrata sull'asse dello sprite); il caricatore manca a metà ricarica

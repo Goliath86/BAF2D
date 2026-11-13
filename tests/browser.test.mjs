@@ -124,6 +124,36 @@ describe('gioco nel browser', { skip: chrome ? false : 'Chrome non trovato (impo
     assert.deepEqual(r.owners, s0.owners, 'bandiere non ripristinate');
   });
 
+  it('luce dei soldati: ombra dal lato delle ombre dei muri, luce sul bordo dal lato opposto', async () => {
+    await openGame();
+    await T(`start('arena', { allies: 0, enemies: 0 })`);
+    await T('step(0.2)');
+    // luminosità attorno al giocatore con e senza luce: più scuro verso l'ombra, più chiaro verso la luce
+    const r = await ev(`(() => {
+      const g = BAF2D, L = g.lighting, sh = L.shadowOf(g.map);
+      const grab = () => {
+        g.render();
+        const px = Math.round(g.player.x) - Math.round(g.camera.x), py = Math.round(g.player.y) - Math.round(g.camera.y);
+        return { px, py, d: g.display.ctx.getImageData(px - 16, py - 16, 32, 32).data };
+      };
+      L.enabled = false; const off = grab();
+      L.enabled = true; const on = grab();
+      let darker = 0, brighter = 0;
+      for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) {
+        const i = (y * 32 + x) * 4;
+        const dl = (on.d[i] + on.d[i + 1] + on.d[i + 2]) - (off.d[i] + off.d[i + 1] + off.d[i + 2]);
+        const side = (x - 16) * sh.ux + (y - 16) * sh.uy; // > 0 = verso l'ombra
+        if (dl < -20 && side > 0) darker++;
+        if (dl > 20 && side < 0) brighter++;
+      }
+      return { darker, brighter, sh };
+    })()`);
+    assert.ok(r.sh.dx > 0 || r.sh.dy > 0, `ombra senza direzione: ${JSON.stringify(r.sh)}`);
+    assert.ok(r.darker >= 8, `ombra portata quasi assente (${r.darker} pixel più scuri dal lato dell'ombra)`);
+    assert.ok(r.brighter >= 4, `luce sul bordo quasi assente (${r.brighter} pixel più chiari dal lato della luce)`);
+    await shot('lighting-arena');
+  });
+
   it('giocatore: sparo col mouse, ricarica con R che consuma la scorta', async () => {
     await openGame();
     await T(`start('arena', { allies: 0, enemies: 0 })`);

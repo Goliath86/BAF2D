@@ -558,9 +558,16 @@ export class Player {
     return { x: this.x + Math.cos(this.angle) * off, y: this.y + Math.sin(this.angle) * off };
   }
 
+  /** Parti disegnate, dal basso: [sprite, frame, angolo] (per ombra e luce sul bordo, vedi UnitLighting). */
+  drawParts() {
+    const parts = [];
+    if (this.legs) parts.push([this.legs, this.legsAnim.frame, this.legsAngle]);
+    parts.push([this.sprite, this.anim.frame, this.angle]);
+    return parts;
+  }
+
   draw(ctx) {
     if (this.dead || this.vehicle) return; // il corpo a terra è un cadavere di Game; a bordo si vede il mezzo
-    if (this.legs) drawSprite(ctx, this.legs, this.legsAnim.frame, this.x, this.y, this.legsAngle);
-    drawSprite(ctx, this.sprite, this.anim.frame, this.x, this.y, this.angle);
+    for (const [sprite, frame, angle] of this.drawParts()) drawSprite(ctx, sprite, frame, this.x, this.y, angle);
   }
 }

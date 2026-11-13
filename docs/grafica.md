@@ -2,18 +2,23 @@
 
 Ordine = impatto stimato sul colpo d'occhio. Tutto procedurale (canvas), configurabile da JSON.
 
-## Da dove ripartire (aggiornato al 2026-11-12)
+## Da dove ripartire (aggiornato al 2026-11-13)
 - Fatto: bordi tra i terreni (fusione dei terreni, commit 30fa221): confini organici, fasce di riva/schiuma/orlo,
   varianti mescolate a chiazze, cache + preriscaldamento delle mappe (dettagli in CLAUDE.md, voce "Tile").
-- Prossimo passo proposto: punto 1 (soldati più leggibili), poi punto 2 (muri con altezza e luce coerente).
+- Fatto (2026-11-13): punto 1, primi tre sottopunti: luce sul bordo dei soldati dal lato della luce, ombra portata
+  dei soldati nella direzione delle ombre dei muri (`js/engine/lighting.js`, `game.json -> lighting`), colore di
+  squadra su zaino (telo), fasce alle braccia ed elmetto (fascia larga 2 px; tolte le mostrine sulle spalle).
+- Prossimo passo proposto: resto del punto 1 (dettaglio del busto, proporzioni, animazioni, cadaveri), poi punto 2.
+- Da misurare sul telefono anche il costo per frame della luce dei soldati (qualche drawImage su canvas piccoli
+  per soldato + un livello delle ombre grande quanto la visuale).
 - Punto aperto: l'anteprima reale dell'editor si ricostruisce a ogni modifica e con la fusione costa ~0,4 s.
 - Da misurare: tempo di disegno delle mappe con la fusione su un telefono vero.
 - Per vedere il risultato: `node --test` salva gli screenshot delle partite in `tests/output/`.
 
 ## 1. Soldati più leggibili (priorità alta)
-- Contorno scuro di 1 px + luce sul bordo (rim light) dal lato della luce: si staccano da erba e sabbia.
-- Ombra portata più marcata e coerente con la direzione della luce dei muri.
-- Colore di squadra più evidente: zaino, fascia al braccio, elmetto con telo colorato, non solo una striscia.
+- ~~Contorno scuro di 1 px + luce sul bordo (rim light) dal lato della luce: si staccano da erba e sabbia.~~ fatto
+- ~~Ombra portata più marcata e coerente con la direzione della luce dei muri.~~ fatto
+- ~~Colore di squadra più evidente: zaino, fascia al braccio, elmetto con telo colorato, non solo una striscia.~~ fatto
 - Più dettaglio sul busto: giberne, radio, borraccia, cinghie, tasche; arma più definita (canna, caricatore, ottica).
 - Proporzioni: testa/elmetto un filo più grandi per leggere la direzione a colpo d'occhio.
 - Animazioni: morte (caduta, non solo cambio sprite), colpito (sobbalzo + lampo), lancio granata, corsa con

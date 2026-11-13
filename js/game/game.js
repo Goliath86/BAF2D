@@ -17,6 +17,7 @@ import { VehicleBrain } from './vehicle_ai.js';
 import { Rockets } from './rockets.js';
 import { Destruction } from './destruction.js';
 import { keyName } from '../engine/input.js';
+import { UnitLighting } from '../engine/lighting.js';
 
 const STEP = 1 / 60; // update a timestep fisso
 const BULLET_SUBSTEP = 2; // px: passo massimo del controllo collisioni dei proiettili
@@ -74,6 +75,7 @@ export class Game {
     // decorazioni della mappa (game.json -> props) e meteo del livello (preparati in setup)
     this.props = new Props(config.props, assets);
     this.weather = new Weather(null);
+    this.lighting = new UnitLighting(config.lighting); // ombra portata e luce sul bordo dei soldati
     this.crosshair = assets.sprites.get('crosshair') || null;
     this.camera = new Camera(config.camera);
 
@@ -2031,9 +2033,15 @@ export class Game {
     // carcasse dei mezzi a terra, sotto tutto il resto
     for (const v of this.vehicles) if (v.destroyed && !v.high) v.draw(ctx);
     const liveVehicles = this.vehicles.filter((v) => !v.destroyed && !v.high);
-    const sorted = [...this.ctf.flags, ...liveVehicles, ...this.units.filter((u) => !u.dead && !u.vehicle)].sort((a, b) => a.y - b.y);
+    const soldiers = this.units.filter((u) => !u.dead && !u.vehicle);
+    // ombre portate dei soldati tutte insieme, sotto a soldati, mezzi e pennoni
+    this.lighting.drawShadows(ctx, this.map, view, soldiers, (u) => u.drawParts());
+    const sorted = [...this.ctf.flags, ...liveVehicles, ...soldiers].sort((a, b) => a.y - b.y);
     for (const o of sorted) {
-      if (o.draw) o.draw(ctx);
+      if (o.drawParts) {
+        o.draw(ctx);
+        this.lighting.drawRim(ctx, this.map, o.x, o.y, o.drawParts());
+      } else if (o.draw) o.draw(ctx);
       else this.ctf.drawFlag(ctx, o);
     }
     if (!this.attract) this._drawSquadMarks(ctx);

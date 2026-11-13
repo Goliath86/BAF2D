@@ -101,6 +101,11 @@
     "lockLandscape": true
   },
 
+  "lighting": {
+    "shadow": { "length": 0.7, "alpha": 0.42, "fallback": { "dx": 2, "dy": 3, "color": "#05060a", "alpha": 0.35 } },
+    "rim": { "color": "#fff2cc", "alpha": 0.55, "width": 1 }
+  },
+
   "teams": {
     "blue": { "color": "#3d7cf0", "dark": "#1c3c8c", "light": "#a4c4ff" },
     "red": { "color": "#e0402e", "dark": "#7a1a12", "light": "#ffa08c" }

@@ -69,6 +69,7 @@ js/soldier_art.js     drawSoldier(look, cfg, weapon): ritratto frontale del sold
                       portata; mimetiche PATTERNS, armi di profilo ruotate WEAPONS, tattici, testa/barba/occhiali)
 js/settings.js        Settings: impostazioni del giocatore in localStorage (lang, volume, keys, newGame)
 js/engine/
+  lighting.js         UnitLighting: ombra portata e luce sul bordo dei soldati (direzione dalle ombre del tileset)
   loader.js           loadJSON / loadImage / loadArrayBuffer (errori = LocalizedError)
   errors.js           LocalizedError(key, params, fallbackMessage)
   i18n.js             I18n: load(cfg), t(key, params), applyToDOM() per [data-i18n], error(e)
@@ -182,7 +183,12 @@ tests/                test di regressione (node --test): static.test.mjs, browse
   area a terra = canvas in cache per raggio/colore.
 - Squadre negli sprite: `"teamColored": true` in assets.json -> `Assets.load(cfg, teams)` genera `nome@squadra`
   (placeholder con `team`/`teamDark`/`teamLight`, `{team}` nel src); `assets.sprite(nome, team)` sceglie la variante.
-  Soldato procedurale: striscia sull'elmetto (`teamStripe`) + mostrine sulle spalle.
+  Soldato procedurale: fascia sull'elmetto (`teamStripe`), telo sullo zaino e fasce alle braccia.
+- Luce dei soldati (`js/engine/lighting.js`, `game.json -> lighting`, `game.lighting`): direzione e colore dalle
+  ombre del tileset (`tileset.shadow`), `shadow.length` = fattore su dx/dy. `drawShadows` = ombre portate di tutti i
+  soldati su un livello grande quanto la visuale (prima dei soldati), `drawRim` = luce sul bordo dopo ogni soldato
+  (sagoma meno sagoma spostata verso l'ombra). Usano `unit.drawParts()` = [[sprite, frame, angolo]] e le sagome
+  nere `spriteMask(sprite)` (in cache sullo sprite). Gli sprite ruotano liberamente: la luce non è nello sprite.
 - Morte e rientro: `Player.update`/`draw` non fanno nulla da morto. `Game._onPlayerDeath` crea un cadavere in
   `this.corpses` (corpo `deadSprite` + pozza, max `death.maxCorpses`, spariscono dopo `corpseTime` s con dissolvenza
   `corpseFade`; arma e granate diventano pickup), toglie i ticket e avvia
