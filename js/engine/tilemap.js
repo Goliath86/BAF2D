@@ -278,9 +278,13 @@ export class TileMap {
    * blocchi di celle in pezzi brevi: la partita che parte dopo la trova in cache. Per il menu, quando si sceglie
    * una mappa. Restituisce una funzione che annulla il lavoro non ancora fatto.
    */
-  static prewarm(level, tileset, block = [24, 4]) {
+  static prewarm(level, tileset, block = [24, 4], onDone = null) {
     const none = () => {};
-    if (!tileset?.terrains || renderCache.get(level)?.has(tileset)) return none;
+    const done = () => onDone?.();
+    if (!tileset?.terrains || renderCache.get(level)?.has(tileset)) {
+      if (onDone) setTimeout(done, 0); // niente da disegnare (senza fusione o già in cache)
+      return none;
+    }
     let map;
     try {
       map = new TileMap(level, tileset, { deferred: true });
@@ -295,7 +299,8 @@ export class TileMap {
     // pezzi da ~8 ms in coda (setTimeout): tra un pezzo e l'altro il browser disegna i fotogrammi del menu.
     // (requestIdleCallback con la scena del menu sempre animata arriva troppo di rado)
     const step = () => {
-      if (cancelled || renderCache.get(level)?.has(tileset)) return; // annullato o già disegnata da una partita
+      if (cancelled) return;
+      if (renderCache.get(level)?.has(tileset)) return done(); // già disegnata da una partita
       const end = performance.now() + 8;
       do {
         map._renderRegion(bx, by, Math.min(map.cols - 1, bx + bw - 1), Math.min(map.rows - 1, by + bh - 1));
@@ -306,7 +311,10 @@ export class TileMap {
         }
       } while (by < map.rows && performance.now() < end);
       if (by < map.rows) setTimeout(step, 0);
-      else map._storeCache(level);
+      else {
+        map._storeCache(level);
+        done();
+      }
     };
     setTimeout(step, 0);
     return () => {

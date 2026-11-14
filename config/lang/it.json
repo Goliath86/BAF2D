@@ -3,6 +3,27 @@
     "name": "Italiano"
   },
   "loading": "Caricamento...",
+  "loadingScreen": { "config": "Lettura degli ordini", "assets": "Disegno del campo di battaglia", "audio": "Sintonia delle radio", "ready": "Istruzioni alle squadre" },
+  "briefing": {
+    "title": "Operazione",
+    "versus": "{allies} contro {enemies}",
+    "deploying": "Schieramento delle squadre",
+    "ready": "Pronti - premi un tasto",
+    "readyTouch": "Pronti - tocca per iniziare",
+    "tip": "Consiglio: {tip}"
+  },
+  "tips": [
+    "Resta vicino a una bandiera per alzarla: se nell'area c'è anche un nemico, non si muove.",
+    "Le bandiere in tuo possesso riforniscono le munizioni; anche la base.",
+    "Premi T per mandare la squadra alla bandiera sotto il mirino, di nuovo per richiamarla.",
+    "I muri fermano proiettili e schegge: riparati dietro prima di ricaricare.",
+    "Le granate rimbalzano sui muri: lanciale dietro l'angolo.",
+    "Contro un carro il lanciarazzi è l'arma migliore. Cercalo a terra.",
+    "Correndo vai veloce ma non spari: fermati prima dello scontro.",
+    "Passando sopra un'arma uguale alla tua ne prendi i colpi.",
+    "Staccionate, siepi e sacchi di sabbia si rompono sotto il fuoco: nessun riparo dura per sempre.",
+    "Sotto il fuoco di soppressione la mira peggiora: cambia posizione."
+  ],
   "start": {
     "hintTouch": "Stick SX: muovi · Stick DX: mira · Pulsanti tondi: ricarica, granata\n(spingi lo stick DX oltre il cerchio tratteggiato per sparare)",
     "objective": "Conquista le bandiere restando vicino ad esse. Ogni morte e ogni bandiera in mano al nemico costano ticket: la squadra che li esaurisce perde."
@@ -126,6 +147,7 @@
     "message": "Ruota il dispositivo in orizzontale"
   },
   "matchEnd": {
+    "place": "{map} - dove si è combattuto di più",
     "medals": "Medaglie",
     "victory": "VITTORIA",
     "defeat": "SCONFITTA",

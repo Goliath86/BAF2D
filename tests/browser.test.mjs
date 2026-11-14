@@ -69,6 +69,38 @@ describe('gioco nel browser', { skip: chrome ? false : 'Chrome non trovato (impo
     // la scena o la partita dimostrativa dietro al menu gira per un po' senza errori
     await new Promise((r) => setTimeout(r, 1500));
     await page.screenshot(path.join(OUT, 'menu.png'));
+    assert.ok(await ev(`document.getElementById('overlay-loading').classList.contains('hidden')`), 'schermata di caricamento rimasta');
+  });
+
+  it('menu: anteprime "come in partita", briefing che copre la preparazione e poi fa partire il gioco', async () => {
+    await openGame();
+    const until = async (expr, ms = 20000) => {
+      const t0 = Date.now();
+      while (!(await ev(expr))) {
+        if (Date.now() - t0 > ms) return false;
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      return true;
+    };
+    // le anteprime ricche arrivano una alla volta e cambiano i pixel della card
+    const before = await ev(`document.querySelector('.map-card[data-level="desert"] canvas').toDataURL()`);
+    assert.ok(await until(`document.querySelectorAll('.map-card.rich').length === ${game.levels.length}`), 'anteprime ricche non arrivate');
+    const after = await ev(`document.querySelector('.map-card[data-level="desert"] canvas').toDataURL()`);
+    assert.notEqual(before, after, "l'anteprima ricca non cambia la card");
+    // "Inizia": il briefing si apre, la partita si prepara ferma, un tasto la fa partire
+    await ev(`BAF2D_MENU._open('newGame'); BAF2D_MENU.choice.level = 'countryside'; BAF2D_MENU.choice.allies = 0; BAF2D_MENU.choice.enemies = 1;
+      document.querySelector('[data-action="start"]').click()`);
+    assert.ok(await ev(`!document.getElementById('overlay-briefing').classList.contains('hidden')`), 'briefing non visibile');
+    assert.ok(await until('BAF2D_MENU.briefing?.ready === true', 10000), 'la partita non si prepara');
+    assert.equal(await ev('BAF2D.suspended'), true, 'il gioco corre sotto al briefing');
+    assert.ok((await ev(`document.getElementById('briefing-map').width`)) > 100, 'mappa del briefing non disegnata');
+    await page.screenshot(path.join(OUT, 'briefing.png'));
+    await page.key('Enter');
+    assert.equal(await ev('BAF2D_MENU.briefing'), null, 'il briefing non si chiude con un tasto');
+    assert.equal(await ev('BAF2D.suspended'), false, 'il gioco non riparte dopo il briefing');
+    assert.equal(await ev('BAF2D_MENU.mode'), 'playing');
+    assert.ok(await until(`document.getElementById('overlay-briefing').classList.contains('hidden')`, 3000), 'briefing rimasto a schermo');
+    await ev('BAF2D.suspended = true');
   });
 
   for (const lvl of game.levels) {
@@ -114,6 +146,14 @@ describe('gioco nel browser', { skip: chrome ? false : 'Chrome non trovato (impo
     await page.screenshot(path.join(OUT, 'match-end.png'));
     const rows = await ev(`document.querySelectorAll('#overlay-matchend .score-row:not(.score-head)').length`);
     assert.equal(rows, 8, 'righe della classifica (giocatore + 7 bot)');
+    // illustrazione: la zona con più caduti, grande quanto la visuale, con le croci dei caduti
+    const art = await ev(`(() => { const c = document.getElementById('matchend-art'), g = BAF2D;
+      return { w: c.width, h: c.height, vw: g.display.width, vh: g.display.height, deaths: g.deathSpots.length,
+        place: document.getElementById('matchend-place').textContent }; })()`);
+    assert.ok(art.deaths > 0, 'nessun caduto registrato');
+    assert.equal(art.w, art.vw, 'illustrazione larga quanto la visuale');
+    assert.equal(art.h, art.vh, 'illustrazione alta quanto la visuale');
+    assert.ok(art.place.length > 0, 'didascalia dell\'illustrazione vuota');
     // rivincita
     await T('autopilot(false)');
     await ev(`document.querySelector('#overlay-matchend [data-action="rematch"]').click()`);

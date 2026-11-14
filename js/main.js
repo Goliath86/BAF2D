@@ -27,6 +27,23 @@ function hideMessage() {
   $('overlay-message').classList.add('hidden');
 }
 
+/** Schermata di caricamento: fase (testo di loadingScreen.<step>) e barra a pixel (0..1). */
+function loadingStep(i18n, step, ratio) {
+  $('loading-status').textContent = i18n.t(`loadingScreen.${step}`);
+  $('loading-progress').style.width = `${Math.round(ratio * 100)}%`;
+}
+
+/** Fine del caricamento: la schermata sfuma (o sparisce subito se c'è un errore da mostrare). */
+function hideLoading(now = false) {
+  const ov = $('overlay-loading');
+  if (now) {
+    ov.classList.add('hidden');
+    return;
+  }
+  ov.classList.add('closing');
+  setTimeout(() => ov.classList.add('hidden'), 450);
+}
+
 async function enterFullscreenLandscape(mobileCfg) {
   if (!mobileCfg?.requestFullscreen) return;
   const el = document.documentElement;
@@ -66,7 +83,9 @@ async function boot() {
     await i18n.load(config.i18n, settings.get('lang', null));
     i18nReady = true;
     i18n.applyToDOM();
-    showMessage(i18n.t('loading'));
+    loadingStep(i18n, 'config', 0.15);
+    const tips = i18n.list('tips');
+    if (tips.length) $('loading-tip').textContent = i18n.t('briefing.tip', { tip: tips[Math.floor(Math.random() * tips.length)] });
 
     const levelList = config.levels || [];
     if (!levelList.length) throw new LocalizedError('errors.noLevels', {}, 'No levels defined in game.json ("levels")');
@@ -82,6 +101,7 @@ async function boot() {
       config.medals ? loadJSON(config.medals) : {}, // medaglie (imprese in partita, collezione salvata)
       ...levelList.map((l) => loadJSON(l.file)),
     ]);
+    loadingStep(i18n, 'assets', 0.45);
     const levels = levelList.map((l, i) => ({ ...l, data: levelData[i] }));
     const testLevel = readTestLevel(config.editor);
     const weapons = new Weapons(weaponsCfg);
@@ -105,10 +125,12 @@ async function boot() {
       }
     }
 
+    loadingStep(i18n, 'audio', 0.7);
     const audio = new AudioManager(assetsCfg.sounds, config.audio);
     audio.setVolume(settings.get('volume', audio.volume));
     await audio.load();
 
+    loadingStep(i18n, 'ready', 0.9);
     // ?debug=1 nell'URL: mostra i pulsanti touch di debug (es. togli/ridai vita)
     const urlDebug = new URLSearchParams(location.search).get('debug') === '1';
     const input = new Input(display, config.input, { debug: urlDebug });
@@ -142,6 +164,8 @@ async function boot() {
     game.onRestart = () => menu.onRestart();
 
     hideMessage();
+    $('loading-progress').style.width = '100%';
+    hideLoading();
     menu.showMain();
     if (testId) menu.openNewGame(testId);
     game.start();
@@ -150,6 +174,7 @@ async function boot() {
     window.BAF2D_MENU = menu;
   } catch (e) {
     console.error(e);
+    hideLoading(true);
     // Se i file lingua non sono disponibili si usa il testo inglese di riserva dell'errore
     showMessage(i18nReady ? i18n.error(e) : e.message);
   }

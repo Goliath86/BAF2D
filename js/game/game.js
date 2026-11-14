@@ -149,6 +149,7 @@ export class Game {
     this.squadOrder = { type: 'follow' };
     // elenco delle uccisioni (HUD): { killer, kTeam, victim, vTeam, how, mine, age }
     this.killFeed = [];
+    this.deathSpots = [];
     // schermata di rientro (DOM, menu.js): aperta/chiusa con questi callback quando il giocatore muore/rientra
     this.onDeployOpen = null;
     this.onDeployClose = null;
@@ -229,6 +230,7 @@ export class Game {
     this.ended = null; // { time, shown, outcome } a partita finita
     this.squadOrder = { type: 'follow' };
     this.killFeed = [];
+    this.deathSpots = []; // { x, y, team } dei caduti (illustrazione di fine partita)
     this._spawnBots();
     this._snapCamera();
   }
@@ -1342,6 +1344,9 @@ export class Game {
   /** Il soldato "victim" è morto: riga dell'elenco (chi, con cosa, chi). */
   _feedDeath(victim) {
     if (this.attract) return;
+    // punti dei caduti per l'illustrazione di fine partita (battleArt)
+    this.deathSpots.push({ x: victim.x, y: victim.y, team: victim.team });
+    if (this.deathSpots.length > 400) this.deathSpots.shift();
     const k = victim.killer && victim.killer !== victim ? victim.killer : null;
     const fc = this.hud?.cfg?.killFeed || {};
     this.killFeed.push({
@@ -2497,6 +2502,63 @@ export class Game {
   }
 
   /** Opzione del giocatore: numeri dei danni sopra i bersagli colpiti. */
+  /**
+   * Illustrazione di fine partita: la scena disegnata dove si è combattuto di più (il punto con più caduti
+   * entro matchEnd.art.radius px; senza caduti, il giocatore) con croci a pixel del colore della squadra sui
+   * caduti. Restituisce un canvas grande quanto la visuale (null senza mappa). La visuale del gioco non cambia.
+   */
+  battleArt() {
+    if (!this.map) return null;
+    const { display } = this;
+    const W = display.width;
+    const H = display.height;
+    const art = this.matchCfg.art || {};
+    const R = art.radius ?? 90;
+    const spots = this.deathSpots || [];
+    let hx = this.player.x;
+    let hy = this.player.y;
+    let best = -1;
+    for (const a of spots) {
+      let n = 0;
+      for (const b of spots) if (Math.abs(a.x - b.x) < R && Math.abs(a.y - b.y) < R) n++;
+      if (n > best) {
+        best = n;
+        hx = a.x;
+        hy = a.y;
+      }
+    }
+    const cam = { x: this.camera.x, y: this.camera.y };
+    const shake = this.shake.time;
+    this.shake.time = 0;
+    this.camera.x = Math.max(0, Math.min(this.map.pixelWidth - W, hx - W / 2));
+    this.camera.y = Math.max(0, Math.min(this.map.pixelHeight - H, hy - H / 2));
+    this.render();
+    const c = document.createElement('canvas');
+    c.width = W;
+    c.height = H;
+    const g = c.getContext('2d');
+    g.drawImage(display.canvas, 0, 0, W, H, 0, 0, W, H);
+    const ox = Math.round(this.camera.x);
+    const oy = Math.round(this.camera.y);
+    this.camera.x = cam.x;
+    this.camera.y = cam.y;
+    this.shake.time = shake;
+    this.render();
+    // croci dei caduti: 5x5 a pixel, contorno scuro
+    const X = [[0, 0], [1, 1], [2, 2], [3, 3], [4, 4], [4, 0], [3, 1], [1, 3], [0, 4]];
+    for (const d of spots) {
+      const x = Math.round(d.x - ox) - 2;
+      const y = Math.round(d.y - oy) - 2;
+      if (x < -5 || y < -5 || x > W || y > H) continue;
+      g.fillStyle = art.outline || '#0b0b12';
+      for (const [i, j] of X) g.fillRect(x + i - 1, y + j, 3, 1);
+      for (const [i, j] of X) g.fillRect(x + i, y + j - 1, 1, 3);
+      g.fillStyle = this.teams[d.team]?.light || '#ffffff';
+      for (const [i, j] of X) g.fillRect(x + i, y + j, 1, 1);
+    }
+    return c;
+  }
+
   /** Grana della pellicola sopra la scena (opzione del giocatore). */
   setGrain(on) {
     this.atmosphere.grain = !!on;

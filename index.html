@@ -197,8 +197,15 @@
   <!-- titolo e sottotitolo in base all'esito (matchEnd.victory/defeat/draw), classifica e carriera: menu.js -->
   <div id="overlay-matchend" class="overlay hidden">
     <div class="panel matchend-panel">
-      <h1 id="matchend-title" class="matchend-title"></h1>
-      <p id="matchend-subtitle"></p>
+      <!-- illustrazione: la zona dei combattimenti più intensi con i caduti (Game.battleArt) e l'esito sopra -->
+      <div class="matchend-art">
+        <canvas id="matchend-art"></canvas>
+        <div class="matchend-head">
+          <h1 id="matchend-title" class="matchend-title"></h1>
+          <p id="matchend-subtitle"></p>
+        </div>
+        <p id="matchend-place" class="matchend-place"></p>
+      </div>
       <div id="scoreboard" class="scoreboard"></div>
       <div id="matchend-medals" class="medal-strip"></div>
       <div id="matchend-career" class="career"></div>
@@ -209,6 +216,30 @@
     </div>
   </div>
 
+  <!-- briefing all'avvio della partita (Menu.launch): mappa che scorre, condizioni, obiettivo, consiglio -->
+  <div id="overlay-briefing" class="overlay briefing hidden">
+    <div class="briefing-view"><canvas id="briefing-map" class="briefing-map"></canvas></div>
+    <div class="briefing-card">
+      <p class="briefing-kicker" data-i18n="briefing.title"></p>
+      <h2 id="briefing-name" class="briefing-name"></h2>
+      <ul id="briefing-tags" class="briefing-tags"></ul>
+      <p class="briefing-objective" data-i18n="start.objective"></p>
+      <div class="pixel-bar briefing-bar"><span></span></div>
+      <p id="briefing-status" class="briefing-status"></p>
+      <p id="briefing-tip" class="briefing-tip"></p>
+    </div>
+  </div>
+
+  <!-- caricamento all'avvio (main.js): logo, barra a pixel, fase, consiglio -->
+  <div id="overlay-loading" class="overlay loading">
+    <div class="loading-box">
+      <h1 class="loading-logo">BAF2D</h1>
+      <div class="pixel-bar"><span id="loading-progress"></span></div>
+      <p id="loading-status" class="loading-status"></p>
+      <p id="loading-tip" class="loading-tip"></p>
+    </div>
+  </div>
+
   <div id="overlay-rotate" class="overlay">
     <div class="panel">
       <div class="rotate-icon"></div>
@@ -216,7 +247,7 @@
     </div>
   </div>
 
-  <div id="overlay-message" class="overlay">
+  <div id="overlay-message" class="overlay hidden">
     <div class="panel"><p id="message-text"></p></div>
   </div>
 

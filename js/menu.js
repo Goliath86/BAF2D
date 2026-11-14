@@ -8,6 +8,7 @@ import { keyName } from './engine/input.js';
 import { MenuScene } from './menu_scene.js';
 import { drawSoldier, PORTRAIT } from './soldier_art.js';
 import { DeployScreen } from './deploy.js';
+import { mapPicture, mapThumb } from './map_preview.js';
 
 // scelte del soldato nell'ordine della schermata (il nome è a parte)
 const SOLDIER_FIELDS = ['weapon', 'camo', 'vest', 'vestColor', 'headgear', 'eyewear', 'beard', 'beardColor', 'skin', 'gloves', 'boots', 'headset', 'shemagh', 'kneepads'];
@@ -160,6 +161,112 @@ export class Menu {
     this._play();
   }
 
+  /**
+   * "Inizia" dal pulsante: schermata di briefing (mappa che scorre, nome, condizioni, obiettivo, consiglio) che
+   * copre la preparazione della partita; il gioco resta fermo finché non si chiude (menu.briefing.minTime s o un
+   * tasto/tocco dopo che la partita è pronta). startMatch() resta sincrona (la usano anche i test).
+   */
+  launch() {
+    if (this.briefing) return;
+    const lvl = this._level(this.choice.level);
+    if (!lvl) return;
+    // gesti dell'utente: schermo intero e audio vanno chiesti adesso, non dopo i fotogrammi d'attesa
+    if (this.input.isTouchDevice) this.fullscreen?.();
+    this.audio.unlock();
+    const bc = this.cfg.briefing || {};
+    const b = (this.briefing = { start: performance.now(), ready: false, timer: 0 });
+    this._fillBriefing(lvl);
+    const ov = $('overlay-briefing');
+    ov.classList.remove('hidden', 'closing', 'ready');
+    // due fotogrammi: la schermata si vede prima del lavoro pesante (fusione dei terreni se non in cache)
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (this.briefing !== b) return;
+      this.startMatch();
+      this.game.suspended = true;
+      this.input.enabled = false;
+      this._briefingMap();
+      b.ready = true;
+      ov.classList.add('ready');
+      $('briefing-status').textContent = this.i18n.t(this.input.mode === 'touch' ? 'briefing.readyTouch' : 'briefing.ready');
+      const wait = Math.max(0, (bc.minTime ?? 2.2) * 1000 - (performance.now() - b.start));
+      b.timer = setTimeout(() => this._endBriefing(), wait);
+    }));
+  }
+
+  /** Testi del briefing: mappa, squadra, bot, ora, meteo, obiettivo e un consiglio a caso. */
+  _fillBriefing(lvl) {
+    const { i18n } = this;
+    const c = this.choice;
+    $('briefing-name').textContent = this._levelText(lvl, 'name');
+    const tags = $('briefing-tags');
+    tags.textContent = '';
+    const tag = (text, color) => {
+      const t = el('li', 'briefing-tag', text);
+      if (color) t.style.setProperty('--team', color);
+      tags.append(t);
+    };
+    tag(i18n.t(`teams.${c.team}`), this.config.teams?.[c.team]?.color);
+    tag(i18n.t('briefing.versus', { allies: c.allies + 1, enemies: c.enemies }));
+    tag(i18n.t(`newGame.times.${this.timeIds[c.timeOfDay]}`));
+    const wid = this.weatherIds[c.weather];
+    const w = wid === 'level' || !wid ? lvl.data.weather : wid === 'clear' ? null : wid;
+    tag(w ? i18n.t(`editor.weather.${w}`) : i18n.t('newGame.weathers.clear'));
+    $('briefing-status').textContent = i18n.t('briefing.deploying');
+    const tips = i18n.list('tips');
+    $('briefing-tip').textContent = tips.length ? i18n.t('briefing.tip', { tip: tips[Math.floor(Math.random() * tips.length)] }) : '';
+    const cv = $('briefing-map');
+    cv.getAnimations?.().forEach((a) => a.cancel());
+    cv.style.opacity = '0';
+  }
+
+  /**
+   * Illustrazione della mappa della partita appena preparata (come appare in gioco, con il colore del meteo) a
+   * pixel ingranditi, che scorre lentamente dalla base del giocatore verso il centro.
+   */
+  _briefingMap() {
+    const { game } = this;
+    if (!game.map) return;
+    const cv = $('briefing-map');
+    const { canvas } = mapPicture({ map: game.map, props: game.props, grade: game.atmosphere.grade, config: this.config });
+    cv.width = canvas.width;
+    cv.height = canvas.height;
+    cv.getContext('2d').drawImage(canvas, 0, 0);
+    const bc = this.cfg.briefing || {};
+    const k = bc.scale ?? 2;
+    cv.style.width = `${canvas.width * k}px`;
+    cv.style.height = `${canvas.height * k}px`;
+    const box = cv.parentElement.getBoundingClientRect();
+    const from = { x: game.player.x, y: game.player.y };
+    const to = { x: game.map.pixelWidth / 2, y: game.map.pixelHeight / 2 };
+    const at = (p, f) => {
+      const x = p.x + (to.x - p.x) * f;
+      const y = p.y + (to.y - p.y) * f;
+      // il punto al centro del riquadro, senza uscire dalla mappa
+      const tx = Math.min(0, Math.max(box.width - canvas.width * k, box.width / 2 - x * k));
+      const ty = Math.min(0, Math.max(box.height - canvas.height * k, box.height / 2 - y * k));
+      return `translate(${Math.round(tx)}px, ${Math.round(ty)}px)`;
+    };
+    cv.style.opacity = '1';
+    cv.animate?.([{ transform: at(from, 0) }, { transform: at(from, bc.pan ?? 0.6) }], { duration: (bc.panTime ?? 14) * 1000, easing: 'linear', fill: 'forwards' });
+  }
+
+  /** Chiude il briefing (dissolvenza a tendina) e fa partire il gioco. */
+  _endBriefing() {
+    const b = this.briefing;
+    if (!b || !b.ready) return;
+    clearTimeout(b.timer);
+    this.briefing = null;
+    const ov = $('overlay-briefing');
+    ov.classList.add('closing');
+    setTimeout(() => {
+      if (!this.briefing) ov.classList.add('hidden');
+    }, (this.cfg.briefing?.outTime ?? 0.45) * 1000);
+    if (this.mode === 'playing') {
+      this.game.suspended = false;
+      this._play();
+    }
+  }
+
   pause() {
     if (this.mode !== 'playing') return;
     this.mode = 'paused';
@@ -218,6 +325,16 @@ export class Menu {
     // finita per tempo scaduto: sottotitolo apposito (vince chi aveva più ticket)
     const byTime = this.game.ctf?.result?.reason === 'time';
     $('matchend-subtitle').textContent = this.i18n.t(`matchEnd.${outcome}${byTime ? 'Time' : ''}Subtitle`);
+    // illustrazione: dove si è combattuto di più, con i caduti
+    const art = this.game.battleArt();
+    const cv = $('matchend-art');
+    if (art) {
+      cv.width = art.width;
+      cv.height = art.height;
+      cv.getContext('2d').drawImage(art, 0, 0);
+    }
+    const lvl = this._level(this.choice.level);
+    $('matchend-place').textContent = lvl ? this.i18n.t('matchEnd.place', { map: this._levelText(lvl, 'name') }) : '';
     const summary = this.game.matchSummary;
     this._renderScoreboard($('scoreboard'), summary);
     this._renderCareer($('matchend-career'), summary.xpAfter, summary.xpBefore);
@@ -264,6 +381,15 @@ export class Menu {
     const fill = el('span');
     fill.style.width = `${Math.round(p.ratio * 100)}%`;
     bar.append(fill);
+    // fine partita: la barra si riempie dai punti di inizio partita (da zero se promosso)
+    if (xpBefore !== null && xp > xpBefore) {
+      const was = ranks.indexFor(xpBefore) === p.index ? ranks.progress(xpBefore).ratio : 0;
+      fill.style.width = `${Math.round(was * 100)}%`;
+      bar.classList.add('animated');
+      setTimeout(() => {
+        fill.style.width = `${Math.round(p.ratio * 100)}%`;
+      }, (this.cfg.careerFillDelay ?? 0.6) * 1000);
+    }
     const parts = [];
     if (xpBefore !== null) parts.push(i18n.t('career.gained', { xp: xp - xpBefore }));
     parts.push(p.next ? i18n.t('career.progress', { xp, next: p.next.xp }) : i18n.t('career.xp', { xp }));
@@ -302,6 +428,7 @@ export class Menu {
       list.slice(c * per, (c + 1) * per).forEach((rec, i) => {
         const pos = c * per + i + 1;
         const row = el('div', 'score-row');
+        row.style.setProperty('--i', String(pos)); // entrata in sequenza (CSS)
         if (rec === summary.player) row.classList.add('me');
         if (pos === 1) row.classList.add('first');
         row.style.setProperty('--team', teams[rec.team]?.color || '#888');
@@ -377,7 +504,7 @@ export class Menu {
 
   _updatePauseButton() {
     const b = $('pause-button');
-    b.classList.toggle('hidden', this.mode !== 'playing');
+    b.classList.toggle('hidden', this.mode !== 'playing' || !!this.briefing);
     // sotto l'HUD in alto a sinistra (vita e granate)
     const top = this.game.hud ? Math.round(this.game.hud.topHeight(this.display)) : 40;
     b.style.top = `${top + 4}px`;
@@ -407,6 +534,7 @@ export class Menu {
     proc.append(this._proceduralThumb(), this._mapInfo());
     list.append(proc);
     this.procCard = proc;
+    this._richThumbs();
   }
 
   _mapInfo() {
@@ -415,36 +543,44 @@ export class Menu {
     return info;
   }
 
-  /** Anteprima: la mappa pre-renderizzata dal TileMap, rimpicciolita, con basi e bandiere. */
+  /**
+   * Anteprima veloce: la mappa senza fusione dei terreni, rimpicciolita, con basi e bandiere. Poco dopo l'avvio
+   * _richThumbs la ridisegna sul posto "come in partita" (fusione, decorazioni, colore della mappa).
+   */
   _thumbnail(level) {
-    const k = this.cfg.thumbTile ?? 4;
-    const map = new TileMap(level, this.assets.tileset(level.tileset), { blend: false }); // a 4 px per tile non si vede
-    const c = el('canvas', 'map-thumb');
-    c.width = map.cols * k;
-    c.height = map.rows * k;
-    const g = c.getContext('2d');
-    g.imageSmoothingEnabled = true;
-    g.drawImage(map.canvas, 0, 0, c.width, c.height);
-    g.imageSmoothingEnabled = false;
-    const teams = this.config.teams || {};
-    const dot = (x, y, size, color) => {
-      const px = Math.round((x / map.size) * k - size / 2);
-      const py = Math.round((y / map.size) * k - size / 2);
-      g.fillStyle = '#0b0b12';
-      g.fillRect(px - 1, py - 1, size + 2, size + 2);
-      g.fillStyle = color;
-      g.fillRect(px, py, size, size);
+    const map = new TileMap(level, this.assets.tileset(level.tileset), { blend: false });
+    return mapThumb({ level, map, ...this._thumbOpts(), target: el('canvas', 'map-thumb') });
+  }
+
+  _thumbOpts() {
+    return { k: this.cfg.thumbTile ?? 4, teams: this.config.teams || {}, neutral: this.config.ctf?.look?.neutralColor || '#f0f0f0' };
+  }
+
+  /**
+   * Anteprime ricche, una mappa alla volta: TileMap.prewarm la disegna a pezzi (resta in cache anche per la
+   * partita), poi la si illustra e si ridisegna la card. Parte dopo menu.previews.delay ms dall'avvio.
+   */
+  _richThumbs() {
+    const pv = this.cfg.previews || {};
+    if (pv.rich === false) return;
+    const queue = this.mapCards.slice();
+    const next = () => {
+      const item = queue.shift();
+      if (!item) return;
+      const { lvl, card } = item;
+      const tileset = this.assets.tileset(lvl.data.tileset);
+      TileMap.prewarm(lvl.data, tileset, undefined, () => {
+        try {
+          const { canvas, map } = mapPicture({ level: lvl.data, assets: this.assets, config: this.config });
+          mapThumb({ level: lvl.data, map, picture: canvas, ...this._thumbOpts(), target: card.querySelector('canvas') });
+          card.classList.add('rich');
+        } catch (e) {
+          console.warn(`Map preview "${lvl.id}" not drawn`, e);
+        }
+        setTimeout(next, pv.gap ?? 60);
+      });
     };
-    for (const [team, p] of Object.entries(map.spawns)) dot(p.x, p.y, k + 2, teams[team]?.color || '#fff');
-    const owners = level.flags || {};
-    for (const f of map.flags) {
-      const owner = owners[f.id]?.owner;
-      dot(f.x, f.y, k, teams[owner]?.light || this.config.ctf?.look?.neutralColor || '#f0f0f0');
-    }
-    c.dataset.cols = map.cols;
-    c.dataset.rows = map.rows;
-    c.dataset.flags = map.flags.length;
-    return c;
+    setTimeout(next, pv.delay ?? 800);
   }
 
   /** Anteprima della mappa procedurale: rumore a blocchi con un "?" disegnato a pixel. */
@@ -1058,7 +1194,7 @@ export class Menu {
       if (!t || t.disabled) return;
       if (t.dataset.go) this._open(t.dataset.go);
       else if (t.hasAttribute('data-back')) this._back();
-      else if (t.dataset.action === 'start') this.startMatch();
+      else if (t.dataset.action === 'start') this.launch();
       else if (t.dataset.action === 'resume') this.resume();
       else if (t.dataset.action === 'quit') this.showMain();
       else if (t.dataset.action === 'resetKeys') this._resetKeys();
@@ -1084,6 +1220,13 @@ export class Menu {
       else if (a === 'menu') this.showMain();
     });
 
+    // briefing: un clic/tocco a partita pronta lo chiude (e non arriva al gioco: niente colpi né stick)
+    const brief = $('overlay-briefing');
+    brief.addEventListener('pointerdown', (e) => e.stopPropagation());
+    brief.addEventListener('click', () => {
+      if (this.briefing?.ready) this._endBriefing();
+    });
+
     // pausa da touch
     const pb = $('pause-button');
     pb.addEventListener('pointerdown', (e) => e.stopPropagation()); // niente stick sotto il pulsante
@@ -1105,6 +1248,13 @@ export class Menu {
       if (e.code === 'Escape') this._cancelRebind();
       else if (e.code === 'Delete') this._assignKey(null);
       else if (!this._reserved(e.code)) this._assignKey(e.code);
+      return;
+    }
+    // briefing: tasti fermati; a partita pronta un tasto lo chiude
+    if (this.briefing) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (!e.repeat && this.briefing.ready) this._endBriefing();
       return;
     }
     const pauseKey = (this.input.bindings.pause || []).includes(e.code);

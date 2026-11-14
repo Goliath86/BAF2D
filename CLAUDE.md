@@ -67,6 +67,7 @@ js/menu_art.js        disegni della scena: primitive a pixel, rumore stabile (ha
 js/soldier_art.js     drawSoldier(look, cfg, weapon): ritratto frontale del soldato del giocatore (128x196, pixel art
                       procedurale: maschere + scale di 6 toni da ramp(colore), ombra cilindrica, contorno e ombra
                       portata; mimetiche PATTERNS, armi di profilo ruotate WEAPONS, tattici, testa/barba/occhiali)
+js/map_preview.js     mapPicture (mappa intera con fusione, decorazioni e colore) e mapThumb (card di "Nuova partita")
 js/settings.js        Settings: impostazioni del giocatore in localStorage (lang, volume, keys, newGame)
 js/engine/
   lighting.js         UnitLighting: ombra portata e luce sul bordo dei soldati (direzione dalle ombre del tileset)
@@ -284,6 +285,21 @@ tests/                test di regressione (node --test): static.test.mjs, browse
   fa `preventDefault` da disabilitato (i pulsanti HTML ricevono Invio/Spazio). Tasto `pause` (Esc/P) gestito dal Menu
   in capture; su touch `#pause-button` sotto l'HUD.
 - Versione del gioco: `game.json -> version` (in basso a destra nel menu).
+- Caricamento e briefing: `#overlay-loading` (main.js `loadingStep(i18n, fase, 0..1)` con testi
+  `loadingScreen.<fase>`, consiglio a caso da `tips`, `hideLoading()` a tendina; gli errori usano ancora
+  `#overlay-message`). Pulsante "Inizia" -> `Menu.launch()`: `#overlay-briefing` (nome, etichette, obiettivo,
+  consiglio), due fotogrammi e poi `startMatch()` (sincrona, la usano i test) con `game.suspended = true`;
+  `_briefingMap` = `mapPicture` della partita che scorre (`menu.briefing`: minTime, scale, pan, panTime);
+  `_endBriefing` (dopo `minTime` o un tasto/tocco a partita pronta) fa partire il gioco. `menu.briefing` attivo =
+  tasti fermati in `_onKey`, pulsante di pausa nascosto.
+- Anteprime delle mappe: `_thumbnail` veloce (senza fusione), poi `_richThumbs` (`menu.previews`) una mappa alla
+  volta: `TileMap.prewarm(level, tileset, block, onDone)` + `mapPicture` + `mapThumb` sul canvas della card
+  (classe `rich`).
+- Fine partita: `Game.battleArt()` = scena ridisegnata nel punto con più caduti (`game.deathSpots` da
+  `_feedDeath`, `matchEnd.art.radius`) + croci a pixel, nel `#matchend-art` in testa al pannello con titolo e
+  didascalia `matchEnd.place`; HUD nascosto con `body.match-over`. Transizioni in CSS a `steps()` (schermate,
+  pannello, tendina `shutter-in/out`, righe `--i`, barra del grado `.career-bar.animated`), spente con
+  `prefers-reduced-motion`.
 - Sfondo del menu principale: `game.json -> menu.background` = `"scene"` (scena animata, `menu.scene` = file di
   config) o altro = partita dimostrativa (attract). Con la scena `Menu.showMain` chiama `game.unload()` (niente
   mappa né update) e `_updateScene()` la accende solo con `mode === 'menu'` e menu visibile (spenta in partita e
@@ -582,6 +598,8 @@ tests/                test di regressione (node --test): static.test.mjs, browse
 - Fatto anche: editor di mappe (`editor.html`) con salvataggio/caricamento JSON, controllo e prova nel gioco.
 - Fatto anche: atmosfera (correzione di colore per mappa, vignettatura, grana opzionale, nuvole, pioggia con
   pozzanghere, nebbia, ciclo dal giorno alla notte, meteo scelto dal menu).
+- Fatto anche: menu rifinito (anteprime come in partita, caricamento e briefing stilizzati, transizioni,
+  illustrazione della battaglia a fine partita).
 - Fatto anche: munizioni contate per tutte le armi dei soldati (scorta, raccolta da armi uguali a terra,
   rifornimento alle bandiere possedute e alla base, bot che vanno a rifornirsi).
 - Non ancora presenti: mappa procedurale, asset grafici reali.

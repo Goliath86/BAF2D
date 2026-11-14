@@ -49,6 +49,9 @@
     "background": "scene",
     "scene": "config/menu_scene.json",
     "thumbTile": 4,
+    "previews": { "rich": true, "delay": 800, "gap": 60 },
+    "briefing": { "minTime": 2.2, "outTime": 0.45, "scale": 2, "pan": 0.6, "panTime": 14 },
+    "careerFillDelay": 0.6,
     "volumeSound": "dry_fire",
     "attract": { "level": "crossroads", "team": "blue", "allies": 3, "enemies": 4, "panelOffset": 0.5 },
     "storageKey": "baf2d.settings",
@@ -248,7 +251,8 @@
 
   "matchEnd": {
     "delay": 2,
-    "restartDelay": 0.8
+    "restartDelay": 0.8,
+    "art": { "radius": 90, "outline": "#0b0b12" }
   },
 
   "hud": {

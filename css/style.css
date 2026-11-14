@@ -1704,3 +1704,391 @@ body.mode-touch .pause-button:not(.hidden) {
     transform: rotate(-90deg);
   }
 }
+
+/* ---------- Caricamento, briefing, transizioni (punto 9) ---------- */
+
+/* barra a pixel: tacche piene separate da un pixel vuoto */
+.pixel-bar {
+  height: 16px;
+  padding: 2px;
+  border: 2px solid var(--menu-line);
+  background: #05050a;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.6);
+}
+
+.pixel-bar span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: repeating-linear-gradient(90deg, var(--menu-gold) 0 6px, transparent 6px 8px);
+  transition: width 0.3s steps(6);
+}
+
+/* chiusura "a tendina" verso la riga centrale (caricamento, briefing) */
+.overlay.closing {
+  animation: shutter-out 0.45s steps(6) forwards;
+  pointer-events: none;
+}
+
+@keyframes shutter-out {
+  to {
+    clip-path: inset(50% 0 50% 0);
+  }
+}
+
+@keyframes shutter-in {
+  from {
+    clip-path: inset(50% 0 50% 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* caricamento all'avvio */
+#overlay-loading {
+  z-index: 30;
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.22) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at 50% 45%, #141428 0%, #0b0b12 70%);
+}
+
+.loading-box {
+  width: min(440px, 86vw);
+  text-align: left;
+}
+
+.loading-logo {
+  font-size: 64px;
+  letter-spacing: 10px;
+  line-height: 1;
+  margin-bottom: 22px;
+  color: var(--menu-accent);
+  text-shadow: 4px 4px 0 var(--menu-accent-dark), 8px 8px 0 rgba(0, 0, 0, 0.5);
+}
+
+.loading-status,
+.briefing-status {
+  margin-top: 10px;
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--menu-gold);
+  min-height: 1.4em;
+}
+
+.loading-status::after {
+  content: "";
+  animation: dots 1.2s steps(4) infinite;
+}
+
+@keyframes dots {
+  0% { content: ""; }
+  25% { content: "."; }
+  50% { content: ".."; }
+  75% { content: "..."; }
+}
+
+.loading-tip,
+.briefing-tip {
+  margin-top: 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--menu-dim);
+}
+
+/* briefing: la mappa scorre su tutto lo schermo, la scheda in basso a sinistra */
+#overlay-briefing {
+  z-index: 25;
+  align-items: flex-end;
+  justify-content: flex-start;
+  padding: 24px;
+  padding-left: max(24px, env(safe-area-inset-left));
+  background: #05050a;
+  text-align: left;
+  animation: shutter-in 0.35s steps(6) both;
+}
+
+#overlay-briefing.closing {
+  animation: shutter-out 0.45s steps(6) forwards;
+}
+
+.briefing-view {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.briefing-map {
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+  transition: opacity 0.6s steps(4);
+}
+
+.briefing-view::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.2) 0 1px, transparent 1px 3px),
+    linear-gradient(20deg, rgba(5, 5, 10, 0.75) 0%, rgba(5, 5, 10, 0.1) 40%, rgba(5, 5, 10, 0) 65%),
+    radial-gradient(ellipse at 60% 40%, transparent 55%, rgba(0, 0, 0, 0.45) 100%);
+}
+
+.briefing-card {
+  position: relative;
+  width: min(520px, 92vw);
+  padding: 16px 20px 14px;
+  background: rgba(9, 9, 16, 0.9);
+  border: 4px solid var(--menu-line);
+  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.6);
+}
+
+.briefing-card p {
+  white-space: pre-line;
+}
+
+.briefing-kicker {
+  font-size: 12px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--menu-gold);
+}
+
+.briefing-name {
+  margin-top: 4px;
+  font-size: 30px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--menu-accent);
+  text-shadow: 3px 3px 0 var(--menu-accent-dark);
+}
+
+.briefing-tags {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0;
+}
+
+.briefing-tag {
+  padding: 2px 8px;
+  border: 2px solid var(--team, #3a3a52);
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.briefing-objective {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #c8c8d8;
+}
+
+.briefing-bar {
+  margin-top: 12px;
+}
+
+/* la barra corre durante la preparazione, poi si riempie */
+.briefing .pixel-bar span {
+  animation: brief-load 1.6s steps(16) forwards;
+}
+
+.briefing.ready .pixel-bar span {
+  animation: none;
+  width: 100%;
+}
+
+@keyframes brief-load {
+  from { width: 0; }
+  to { width: 85%; }
+}
+
+.briefing.ready .briefing-status {
+  animation: blink 1s steps(2, start) infinite;
+}
+
+/* fine partita: illustrazione della battaglia in testa al pannello, HUD nascosto */
+body.match-over #ui {
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+
+.matchend-panel {
+  background: rgba(9, 9, 16, 0.93);
+}
+
+.matchend-art {
+  position: relative;
+  margin: -18px -24px 10px;
+  border-bottom: 4px solid var(--menu-line);
+  overflow: hidden;
+  background: #05050a;
+}
+
+#matchend-art {
+  position: static;
+  display: block;
+  width: 100%;
+  height: clamp(80px, 17vh, 190px);
+  object-fit: cover;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+}
+
+#overlay-matchend[data-outcome="defeat"] #matchend-art,
+#overlay-matchend[data-outcome="draw"] #matchend-art {
+  filter: grayscale(0.75) brightness(0.8);
+}
+
+.matchend-head {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 36px 16px 6px;
+  background: linear-gradient(rgba(9, 9, 16, 0), rgba(9, 9, 16, 0.92));
+}
+
+.panel .matchend-head p {
+  margin: 2px 0 0;
+}
+
+.panel .matchend-place {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  margin: 0;
+  padding: 2px 6px;
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  background: rgba(5, 5, 10, 0.7);
+  color: var(--menu-dim);
+}
+
+.career-bar.animated span {
+  transition: width 1.4s steps(28);
+}
+
+/* transizioni a scatti (stile pixel); niente con "riduci movimento" */
+@media (prefers-reduced-motion: no-preference) {
+  .menu-screen.active {
+    animation: screen-in 0.22s steps(5) both;
+  }
+
+  .menu-panel {
+    animation: panel-in 0.25s steps(5) both;
+    transition: width 0.18s steps(4);
+  }
+
+  .map-card.rich .map-thumb {
+    animation: fade-in 0.4s steps(4);
+  }
+
+  .matchend-panel {
+    animation: panel-drop 0.45s steps(6) both;
+  }
+
+  .scoreboard .score-row:not(.score-head) {
+    animation: row-in 0.3s steps(4) both;
+    animation-delay: calc(var(--i, 0) * 70ms + 0.35s);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay.closing,
+  #overlay-briefing,
+  #overlay-briefing.closing {
+    animation-duration: 0.01s;
+  }
+}
+
+@keyframes screen-in {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes panel-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes panel-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* schermi bassi (telefoni in landscape): briefing e illustrazione più compatti */
+@media (max-height: 540px) {
+  #overlay-briefing {
+    padding: 10px;
+  }
+
+  .briefing-card {
+    padding: 10px 14px;
+  }
+
+  .briefing-name {
+    font-size: 20px;
+  }
+
+  .briefing-objective {
+    display: none;
+  }
+
+  .briefing-tags {
+    margin: 6px 0;
+  }
+
+  .loading-logo {
+    font-size: 40px;
+    margin-bottom: 14px;
+  }
+
+  .matchend-art {
+    margin: -8px -14px 6px;
+  }
+
+  #matchend-art {
+    height: clamp(64px, 22vh, 110px);
+  }
+
+  .matchend-head {
+    padding: 20px 10px 4px;
+  }
+
+  /* illustrazione bassa: la didascalia coprirebbe il titolo */
+  .panel .matchend-place {
+    display: none;
+  }
+}

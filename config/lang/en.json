@@ -3,6 +3,27 @@
     "name": "English"
   },
   "loading": "Loading...",
+  "loadingScreen": { "config": "Reading orders", "assets": "Drawing the battlefield", "audio": "Tuning the radios", "ready": "Briefing the squads" },
+  "briefing": {
+    "title": "Operation",
+    "versus": "{allies} vs {enemies}",
+    "deploying": "Deploying the squads",
+    "ready": "Ready - press any key",
+    "readyTouch": "Ready - tap to start",
+    "tip": "Tip: {tip}"
+  },
+  "tips": [
+    "Stand next to a flag to raise it: if an enemy is in the area too, nobody moves.",
+    "Flags you hold refill your ammo; the base does too.",
+    "Press T to send your squad to the flag under the crosshair, again to bring them back.",
+    "Walls stop bullets and shrapnel: duck behind them before reloading.",
+    "Grenades bounce off walls: throw them around corners.",
+    "Against a tank the rocket launcher is your best weapon. Look for one on the ground.",
+    "Sprinting is fast but you cannot shoot. Stop before the fight.",
+    "Walking over a weapon like yours picks up its ammo.",
+    "Wooden fences, hedges and sandbags break under fire: no cover lasts forever.",
+    "Under suppressing fire your aim gets worse: change position."
+  ],
   "start": {
     "hintTouch": "Left stick: move · Right stick: aim · Round buttons: reload, grenade\n(push the right stick past the dashed circle to fire)",
     "objective": "Capture the flags by staying close to them. Every death and every flag held by the enemy costs tickets: the team that runs out loses."
@@ -126,6 +147,7 @@
     "message": "Rotate your device to landscape"
   },
   "matchEnd": {
+    "place": "{map} - where the fighting was fiercest",
     "medals": "Medals",
     "victory": "VICTORY",
     "defeat": "DEFEAT",

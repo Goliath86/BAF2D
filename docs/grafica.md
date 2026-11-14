@@ -54,7 +54,13 @@ Ordine = impatto stimato sul colpo d'occhio. Tutto procedurale (canvas), configu
   riflesso e cerchi, suono continuo; nebbia a banchi; ciclo lento "dal giorno alla notte" (`lights.cycles`).
 - Rimasto del punto 8: riflessi veri nelle pozzanghere (soldati, luci), temporale con lampi; la pioggia non cambia
   il gameplay (né la nebbia la vista dell'IA).
-- Prossimo passo proposto: punto 9 (menu).
+- Fatto (2026-11-14): punto 9. Anteprime delle mappe "come in partita" (fusione dei terreni, decorazioni,
+  correzione di colore; `js/map_preview.js`, preparate una alla volta dopo l'avvio con `TileMap.prewarm`),
+  schermata di caricamento con barra a pixel, fasi e consigli, briefing all'avvio della partita (mappa che scorre,
+  condizioni, obiettivo, consiglio; copre la preparazione), transizioni a scatti tra le schermate (pannello,
+  schermate, chiusura a tendina, righe della classifica in sequenza, barra del grado che si riempie), fine
+  partita con l'illustrazione della zona dei combattimenti più intensi e le croci dei caduti (`Game.battleArt`).
+- Tutti i 9 punti fatti. Restano i pezzi elencati sopra come "Rimasto".
 - Da misurare sul telefono: costo della correzione di colore (qualche riempimento con modi di fusione a tutto
   schermo) e preparazione delle tessere di nebbia/nuvole (rumore 512x512 al primo uso, poi in cache).
 - Da misurare sul telefono anche il costo per frame della luce dei soldati (qualche drawImage su canvas piccoli
@@ -135,9 +141,9 @@ Ordine = impatto stimato sul colpo d'occhio. Tutto procedurale (canvas), configu
 - ~~Ciclo giorno/sera lento (opzionale per mappa).~~ fatto (scelta "Dal giorno alla notte" nel menu)
 
 ## 9. Menu e schermate
-- Anteprime delle mappe più belle (con la fusione dei terreni e i prop, non solo i tile).
-- Transizioni tra le schermate, schermata di caricamento stilizzata.
-- Schermata di fine partita con illustrazione/sfondo della mappa.
+- ~~Anteprime delle mappe più belle (con la fusione dei terreni e i prop, non solo i tile).~~ fatto
+- ~~Transizioni tra le schermate, schermata di caricamento stilizzata.~~ fatto (anche briefing all'avvio)
+- ~~Schermata di fine partita con illustrazione/sfondo della mappa.~~ fatto (zona dei combattimenti più intensi)
 
 ## Note tecniche
 - Ogni miglioria procedurale va misurata sul telefono (prerender delle mappe, disegno dei soldati per frame).
