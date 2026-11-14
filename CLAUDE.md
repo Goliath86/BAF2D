@@ -241,8 +241,15 @@ tests/                test di regressione (node --test): static.test.mjs, browse
   `Squad.plan` fa un gruppo fisso (`playerSquad`, `follow` = giocatore o `flag`), `squad.replan()`;
   `BotBrain._followTick` = formazione dietro al giocatore (`bots.ai.squadFollow`), chi segue non sale sui mezzi.
   Segni verdi sopra i compagni (`_drawSquadMarks`).
-- HUD del fronte: minimappa (`hud.minimap`, sotto l'arma: mappa con i crolli, bandiere, compagni, squadra, nemici
-  della lavagna di squadra entro `enemyMemory` s, mezzi, ordine), riga dell'ordine, elenco delle uccisioni
+- HUD del fronte: minimappa (`hud.minimap`, sotto l'arma: carta tattica `Hud._miniTexture` = colore medio per
+  tile scurito, muri chiari in rilievo, acqua; rifatta quando cambia `map.version` (setTile/reset); bandierine,
+  mezzi per tipo `vehicles.json -> minimapIcon`, compagni, squadra, nemici della lavagna di squadra entro
+  `enemyMemory` s, ordine, freccia del giocatore, rettangolo della visuale), indicatori a bordo schermo
+  (`hud.edge`, `Game._edgeHud`: bandiere e compagni di squadra fuori vista), numeri dei danni (`hud.damageNumbers`,
+  opzione Settings `damageNumbers`, `game.setDamageNumbers`, `hud.damageNumber` da `_onPlayerHit`), mirino a scelta
+  (`hud.crosshair.styles`, Settings `crosshair`, `game.setCrosshairStyle`, `_drawCrosshairShape` usata anche
+  dall'anteprima del menu), icone a pixel `ICONS` in hud.js (granata, cartuccia della scorta), popup e fascia
+  delle promozioni con rimbalzo; riga dell'ordine, elenco delle uccisioni
   (`Game.killFeed` da `_feedDeath` accanto a `scores.onDeath`, testo da `_killHow`; `hud.killFeed`, compatto su touch),
   barra del fiato, vignetta della soppressione (`hud.suppression`).
 - Corsa: `player.sprint` { factor, drain, recover, minRestart } (anche i bot), `ctrl.sprint` (Maiusc, su touch stick

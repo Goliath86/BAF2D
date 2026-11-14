@@ -354,6 +354,58 @@ describe('gioco nel browser', { skip: chrome ? false : 'Chrome non trovato (impo
     assert.equal(await ev(`(BAF2D.vehicles.find((v) => v.def.sprite === 'tank' && v.destroyed)?.flames().length) ?? 0`), 0, 'fiamme della carcassa ancora accese');
   });
 
+  it('HUD: minimappa tattica rifatta coi crolli, indicatori a bordo schermo, numeri dei danni, mirini', async () => {
+    await openGame('lang=it');
+    await T(`start('crossroads', { allies: 2, enemies: 2 })`);
+    await T('step(0.3)');
+    const r = await ev(`(() => { const g = BAF2D, h = g.hud, out = {};
+      g.render();
+      const mini = h._mini;
+      out.mini = !!mini && mini.canvas.width === (h.cfg.minimap?.width ?? 72);
+      // un muro che crolla cambia la versione della mappa: la minimappa si rifà
+      let wall = null;
+      for (let y = 1; y < g.map.rows - 1 && !wall; y++) for (let x = 1; x < g.map.cols - 1 && !wall; x++) if (g.map.blocksShotTile(x, y)) wall = [x, y];
+      const v0 = g.map.version || 0;
+      g.map.setTile(wall[0], wall[1], g.map.tileAt(wall[0], wall[1] + 1)?.id ?? 0);
+      g.render();
+      out.version = (g.map.version || 0) > v0 && h._mini.version === g.map.version;
+      // bordo schermo: almeno una bandiera fuori vista
+      const e = g._edgeHud();
+      out.offscreen = e.flags.filter((f) => f.x < e.view.x || f.y < e.view.y || f.x > e.view.x + e.view.w || f.y > e.view.y + e.view.h).length;
+      // numeri dei danni: spenti di default, poi accesi; i colpi sullo stesso bersaglio si sommano
+      out.defaultOff = !h.showNumbers;
+      g.setDamageNumbers(true);
+      const t = g.units.find((u) => u.team !== g.player.team);
+      h.damageNumber(t.x, t.y, 10, 'hit', t);
+      h.damageNumber(t.x, t.y, 15, 'kill', t);
+      out.merged = h.numbers.length === 1 && h.numbers[0].n === 25 && h.numbers[0].kind === 'kill';
+      g.render();
+      // mirini: ogni stile si disegna e un nome sconosciuto torna al primo
+      const c = document.createElement('canvas'); c.width = c.height = 30;
+      out.styles = (g.config.hud.crosshair.styles || []).map((s) => { const q = c.getContext('2d'); q.clearRect(0, 0, 30, 30);
+        g._drawCrosshairShape(q, 15, 15, 3, s); return q.getImageData(0, 0, 30, 30).data.some((v, i) => i % 4 === 3 && v > 0); });
+      g.setCrosshairStyle('nessuno');
+      out.fallback = g.crosshairStyle === g.config.hud.crosshair.styles[0];
+      g.setCrosshairStyle('circle');
+      out.circle = g.crosshairStyle;
+      g.setCrosshairStyle(g.config.hud.crosshair.styles[0]);
+      g.setDamageNumbers(false);
+      return out; })()`);
+    assert.ok(r.mini, 'minimappa non disegnata');
+    assert.ok(r.version, 'minimappa non rifatta dopo un crollo');
+    assert.ok(r.offscreen > 0, 'nessuna bandiera fuori vista da indicare');
+    assert.ok(r.defaultOff, 'numeri dei danni accesi di default');
+    assert.ok(r.merged, 'numeri dei danni sullo stesso bersaglio non sommati');
+    assert.ok(r.styles.length >= 2 && r.styles.every(Boolean), `mirini non disegnati: ${JSON.stringify(r.styles)}`);
+    assert.ok(r.fallback, 'stile di mirino sconosciuto accettato');
+    assert.equal(r.circle, 'circle');
+    await shot('hud');
+    // opzioni del menu: un pulsante per mirino e la scelta dei numeri dei danni
+    const opts = await ev(`({ cross: document.querySelectorAll('#crosshair-choice [data-value]').length, nums: document.querySelectorAll('#damagenumbers-choice [data-value]').length })`);
+    assert.equal(opts.cross, game.hud.crosshair.styles.length, 'pulsanti dei mirini');
+    assert.equal(opts.nums, 2);
+  });
+
   it('animazioni del soldato: rinculo, colpito, lancio, caduta lontano dal colpo, pose dei caduti', async () => {
     await openGame();
     await T(`start('arena', { allies: 0, enemies: 0 })`);

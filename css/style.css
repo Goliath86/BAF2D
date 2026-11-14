@@ -927,6 +927,23 @@ button {
   box-shadow: 4px 4px 0 var(--menu-gold-dark);
 }
 
+/* scelta del mirino: pulsanti quadrati con l'anteprima a pixel netti */
+.crosshair-choice .seg {
+  min-width: 52px;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.crosshair-preview {
+  position: static;
+  width: 30px;
+  height: 30px;
+  image-rendering: pixelated;
+  background: #3a3a44;
+}
+
 .seg.team::before {
   content: "";
   display: inline-block;

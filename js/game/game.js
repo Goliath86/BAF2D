@@ -88,6 +88,7 @@ export class Game {
     this.effects.marks = this.marks;
     configureRotation(config.display?.rotation); // rotazione di qualità dei soldati (passi, cache)
     this.crosshair = assets.sprites.get('crosshair') || null;
+    this.crosshairStyle = this.config.hud?.crosshair?.styles?.[0] || 'dynamic'; // opzione (setCrosshairStyle)
     this.camera = new Camera(config.camera);
 
     // Morte e rientro (game.json -> death), fine partita (matchEnd).
@@ -199,6 +200,7 @@ export class Game {
     const base = this.ctf.spawnPoint(this.playerTeam, null);
     this._spawnPlayer(base.x, base.y);
     this.hud = new Hud(this.config.hud, this.i18n, this.assets);
+    if (this.damageNumbers !== undefined) this.hud.showNumbers = this.damageNumbers; // opzione del giocatore
     this.hitMarker = null;
     this.bullets.length = 0;
     this.grenades.clear();
@@ -394,7 +396,7 @@ export class Game {
     this.squads[this.playerTeam]?.replan(); // la squadra segue il nuovo soldato del giocatore
     if (!this.attract) {
       // colpi a segno (segno sul mirino + suono) e colpi subiti (indicatore della direzione)
-      this.player.onDealt = (target, dealt, killed) => this._onPlayerHit(target, killed);
+      this.player.onDealt = (target, dealt, killed) => this._onPlayerHit(target, killed, dealt);
       this.player.onHurt = (dealt, source) => this._onPlayerHurt(dealt, source);
       return;
     }
@@ -1863,11 +1865,12 @@ export class Game {
    * mirino (hud.hitMarker: hit = soldato, armor = mezzo, kill = uccisione/distruzione) e suono, non più di uno
    * ogni soundGap s (i pallini della pompa arrivano insieme). Niente segno sui compagni.
    */
-  _onPlayerHit(target, killed) {
+  _onPlayerHit(target, killed, dealt = 0) {
     if (!target || target.team === this.player.team) return;
     const hc = this.config.hud?.hitMarker || {};
-    if (hc.show === false) return;
     const kind = killed ? 'kill' : target instanceof Player ? 'hit' : 'armor';
+    this.hud.damageNumber(target.x, target.y, dealt, kind, target); // solo con l'opzione attiva
+    if (hc.show === false) return;
     const cur = this.hitMarker;
     // un'uccisione appena segnata non viene coperta dai colpi successivi dello stesso istante
     if (cur?.kind === 'kill' && !killed && cur.age < (hc.killHold ?? 0.15)) return;
@@ -1912,19 +1915,57 @@ export class Game {
     // apertura smorzata (niente scatti da un colpo all'altro)
     const k = 1 - Math.exp(-(xc.smoothing ?? 18) * dt);
     this.crosshairGap = this.crosshairGap === null ? gap : this.crosshairGap + (gap - this.crosshairGap) * k;
-    const g = Math.round(this.crosshairGap);
+    return this._drawCrosshairShape(ctx, Math.round(mx), Math.round(my), Math.round(this.crosshairGap));
+  }
+
+  /**
+   * Forma del mirino in (x, y) con apertura dynGap (px), nello stile scelto (hud.crosshair.styles): dynamic =
+   * croce che si apre, cross = croce fissa (staticGap), circle = cerchio che si apre, tee = croce senza il braccio
+   * in alto, dot = punto. Restituisce l'apertura (per il segno di colpo a segno). Usata anche dall'anteprima del menu.
+   */
+  _drawCrosshairShape(ctx, x, y, dynGap, style = this.crosshairStyle || 'dynamic') {
+    const xc = this.config.hud?.crosshair || {};
+    // "cross" = croce fissa, "dot" = solo il punto: non si aprono con la rosa
+    const g = style === 'cross' ? xc.staticGap ?? 2 : style === 'dot' ? 0 : dynGap;
     const arm = xc.arm ?? 2;
-    const x = Math.round(mx);
-    const y = Math.round(my);
-    // contorno, poi bracci e punto centrale (stesso disegno dello sprite: braccio di 1 px con bordo di 1 px)
-    ctx.fillStyle = xc.outline || '#000000';
-    ctx.fillRect(x - 1, y - g - arm - 1, 3, arm + 2);
+    const outline = xc.outline || '#000000';
+    const color = xc.color || '#ffffff';
+    if (style === 'dot') {
+      // punto 2x2 con bordo
+      ctx.fillStyle = outline;
+      ctx.fillRect(x - 1, y - 1, 4, 4);
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, 2, 2);
+      return 1;
+    }
+    if (style === 'circle') {
+      // cerchio a pixel che si apre con la rosa, punto al centro (bordo nero attorno a ogni pixel)
+      const r = g + 2;
+      const pts = new Set();
+      const n = Math.max(12, Math.ceil(r * 8));
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2;
+        pts.add(`${Math.round(x + Math.cos(a) * r)},${Math.round(y + Math.sin(a) * r)}`);
+      }
+      const list = [...pts].map((s) => s.split(',').map(Number));
+      ctx.fillStyle = outline;
+      for (const [px, py] of list) ctx.fillRect(px - 1, py - 1, 3, 3);
+      ctx.fillRect(x - 1, y - 1, 3, 3);
+      ctx.fillStyle = color;
+      for (const [px, py] of list) ctx.fillRect(px, py, 1, 1);
+      ctx.fillRect(x, y, 1, 1);
+      return g;
+    }
+    // croce (dinamica o fissa) e "tee" (senza il braccio in alto): contorno, poi bracci e punto centrale
+    const top = style !== 'tee';
+    ctx.fillStyle = outline;
+    if (top) ctx.fillRect(x - 1, y - g - arm - 1, 3, arm + 2);
     ctx.fillRect(x - 1, y + g, 3, arm + 2);
     ctx.fillRect(x - g - arm - 1, y - 1, arm + 2, 3);
     ctx.fillRect(x + g, y - 1, arm + 2, 3);
     if (g > 1) ctx.fillRect(x - 1, y - 1, 3, 3);
-    ctx.fillStyle = xc.color || '#ffffff';
-    ctx.fillRect(x, y - g - arm, 1, arm);
+    ctx.fillStyle = color;
+    if (top) ctx.fillRect(x, y - g - arm, 1, arm);
     ctx.fillRect(x, y + g + 1, 1, arm);
     ctx.fillRect(x - g - arm, y, arm, 1);
     ctx.fillRect(x + g + 1, y, arm, 1);
@@ -2209,6 +2250,7 @@ export class Game {
 
     this.map.draw(ctx, cx, cy, W, H);
     const view = { x: cx, y: cy, w: W, h: H };
+    this._view = view; // anche per l'HUD (minimappa, bordo schermo, numeri dei danni)
     this.water?.draw(ctx, view, this.lights.clock);
     this.marks.draw(ctx, view); // crateri, tracce dei mezzi, bossoli fermi
     this.effects.drawDecals(ctx);
@@ -2328,6 +2370,8 @@ export class Game {
         vehicle: this.player.vehicle ? this._vehicleHud(this.player.vehicle) : null,
         holster: this._holsterHud(),
         minimap: this._minimapHud(),
+        view: this._view, // camera (px del mondo): numeri dei danni
+        edge: !this.ended && !this.player.dead ? this._edgeHud() : null,
         killFeed: this.killFeed,
         compactFeed: input.mode === 'touch', // su touch: senza l'arma (non arriva ai pulsanti)
         squad: this.bots.some((b) => b.playerSquad) ? this._squadHud() : null,
@@ -2390,9 +2434,40 @@ export class Game {
       allies,
       squad,
       enemies,
-      vehicles: this.vehicles.filter((v) => !v.destroyed && (v.team === team || !v.occupied)).map((v) => ({ x: v.x, y: v.y, team: v.occupied ? v.team : null })),
+      vehicles: this.vehicles
+        .filter((v) => !v.destroyed && (v.team === team || !v.occupied))
+        .map((v) => ({ x: v.x, y: v.y, team: v.occupied ? v.team : null, icon: v.def.minimapIcon || (v.def.flying ? 'heli' : 'jeep') })),
+      order: this.squadOrder.type === 'flag' ? this.squadOrder.flag : null,
+      view: this._view,
+    };
+  }
+
+  /** Indicatori a bordo schermo: bandiere e compagni di squadra fuori dalla visuale. */
+  _edgeHud() {
+    const squad = [];
+    for (const b of this.bots) {
+      const u = b.unit;
+      if (b.playerSquad && u && !u.dead) squad.push({ x: u.x, y: u.y });
+    }
+    return {
+      view: this._view,
+      flags: this.ctf.flags,
+      teams: this.ctf.teams,
+      squad,
       order: this.squadOrder.type === 'flag' ? this.squadOrder.flag : null,
     };
+  }
+
+  /** Opzione del giocatore: numeri dei danni sopra i bersagli colpiti. */
+  setDamageNumbers(on) {
+    this.damageNumbers = !!on;
+    if (this.hud) this.hud.showNumbers = this.damageNumbers; // l'HUD nasce con la partita (_reset)
+  }
+
+  /** Opzione del giocatore: stile del mirino (game.json -> hud.crosshair.styles). */
+  setCrosshairStyle(style) {
+    const styles = this.config.hud?.crosshair?.styles || ['dynamic'];
+    this.crosshairStyle = styles.includes(style) ? style : styles[0];
   }
 
   /** Riga della squadra nell'HUD: ordine attuale (+ tasto su desktop). */

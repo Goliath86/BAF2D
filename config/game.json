@@ -228,12 +228,14 @@
 
   "hud": {
     "reloadPrompt": { "y": 0.62, "fontSize": 10, "color": "#ffd36b", "blink": 0.5, "duty": 0.6 },
-    "minimap": { "top": 52, "width": 72, "alpha": 0.85, "border": "#000000", "neutral": "#e8e8e8", "enemy": "#ff4a3a", "squad": "#7cf07c", "player": "#ffffff", "emptyVehicle": "#9a9a9a", "enemyMemory": 3 },
+    "minimap": { "top": 52, "width": 72, "alpha": 0.92, "border": "#000000", "frame": "#8a8a96", "frameLight": "#4a4a56", "wall": "#d8d2bc", "water": "#2a5a78", "ground": "#1c2018", "view": "#ffffff", "viewAlpha": 0.3, "neutral": "#e8e8e8", "enemy": "#ff4a3a", "squad": "#7cf07c", "player": "#ffffff", "emptyVehicle": "#9a9a9a", "enemyMemory": 3 },
+    "edge": { "show": true, "left": 8, "right": 8, "top": 44, "bottom": 8, "miniPad": 40, "alpha": 0.85, "fontSize": 6, "neutral": "#e8e8e8" },
+    "damageNumbers": { "show": false, "life": 0.9, "rise": 12, "offset": 10, "bounce": 4, "bounceTime": 0.25, "popTime": 0.12, "mergeTime": 0.25, "fontSize": 6, "killFontSize": 8, "max": 12, "colors": { "hit": "#ffffff", "armor": "#ffb43a", "kill": "#ff4a3a" } },
     "squadFontSize": 6,
     "killFeed": { "fontSize": 6, "life": 6, "fade": 1, "max": 5, "weaponColor": "#b8b8c4", "mineBack": "rgba(255,211,107,0.22)" },
     "stamina": { "color": "#8ad4ff", "lowColor": "#ff9a3a", "low": 0.25, "back": "rgba(0,0,0,0.6)" },
     "suppression": { "color": "0,0,0", "maxAlpha": 0.5, "inner": 0.45 },
-    "crosshair": { "dynamic": true, "color": "#ffffff", "outline": "#000000", "arm": 2, "minGap": 1, "maxGap": 10, "scale": 1, "smoothing": 18 },
+    "crosshair": { "dynamic": true, "styles": ["dynamic", "cross", "circle", "tee", "dot"], "staticGap": 2, "color": "#ffffff", "outline": "#000000", "arm": 2, "minGap": 1, "maxGap": 10, "scale": 1, "smoothing": 18 },
     "hitMarker": {
       "life": 0.22, "killLife": 0.5, "killHold": 0.15, "fade": 0.4, "length": 2, "killLength": 3, "offset": 2,
       "colors": { "hit": "#ffffff", "armor": "#ffb43a", "kill": "#ff3a2a" }, "shadow": "#000000",

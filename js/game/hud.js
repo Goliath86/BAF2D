@@ -5,6 +5,27 @@
 // Cuore 7x6 (X = pieno)
 const HEART = ['.XX.XX.', 'XXXXXXX', 'XXXXXXX', '.XXXXX.', '..XXX..', '...X...'];
 
+// Icone a pixel (lettera = colore della tavolozza dell'icona, "." = vuoto)
+const ICONS = {
+  // granata a frammentazione: anello e leva in alto, corpo a spicchi con riflesso
+  grenade: {
+    rows: ['...LL....', '..L.MMm..', '...kMMk..', '..kgggk..', '.kgGgdgk.', '.kGgdggk.', '.kgggdgk.', '.kgdggdk.', '..kgddk..', '...kkk...'],
+    colors: { k: '#101410', g: '#4f5e33', G: '#8a9a5e', d: '#2e3820', M: '#a8a898', m: '#5a5a50', L: '#d8d8c8' },
+  },
+  // cartuccia: ogiva di rame, bossolo d'ottone con luce a sinistra, fondello scuro
+  cartridge: {
+    rows: ['.c.', 'cCc', 'bBb', 'Bbb', 'Bbb', 'Bbb', 'ddd'],
+    colors: { c: '#b06a3a', C: '#e09a5a', b: '#c89a3a', B: '#f0c860', d: '#7a5a20' },
+  },
+};
+
+// Icone dei mezzi sulla minimappa (vehicles.json -> minimapIcon), muso a destra
+const VEHICLE_ICONS = {
+  jeep: ['XXX.', 'XXXX', 'XXX.'],
+  tank: ['XXXX..', 'XXXXXX', 'XXXX..'],
+  heli: ['X...X', '.X.X.', '..X..', '.X.X.', 'X...X'],
+};
+
 export class Hud {
   constructor(cfg = {}, i18n, assets) {
     this.cfg = cfg;
@@ -26,6 +47,27 @@ export class Hud {
     this.popups = []; // "+100 UCCISIONE" sopra il giocatore: { text, color, age }
     this.promotions = []; // coda delle promozioni da mostrare: { name, insignia, age }
     this.hurts = []; // colpi subiti: { angle (verso chi ha sparato), strength 0..1, age } (hud.hurtIndicator)
+    this.numbers = []; // numeri dei danni: { x, y (mondo), n, kind, age, target } (hud.damageNumbers)
+    this.showNumbers = !!cfg.damageNumbers?.show; // opzione del giocatore (Game.setDamageNumbers)
+    this._mini = null; // minimappa già disegnata: { map, version, canvas }
+  }
+
+  /**
+   * Danno fatto dal giocatore: numero che salta sopra il bersaglio (x, y del mondo) e sale; i colpi sullo stesso
+   * bersaglio entro mergeTime s (pallini della pompa, raffiche) si sommano. kind = hit | armor | kill.
+   */
+  damageNumber(x, y, n, kind, target = null) {
+    if (!this.showNumbers || n <= 0) return;
+    const dc = this.cfg.damageNumbers || {};
+    const last = this.numbers.find((d) => d.target && d.target === target && d.age < (dc.mergeTime ?? 0.25));
+    if (last) {
+      last.n += n;
+      last.age = Math.min(last.age, 0.04);
+      if (kind === 'kill') last.kind = 'kill';
+      return;
+    }
+    this.numbers.push({ x, y, n, kind, age: 0, target, dx: (Math.random() - 0.5) * 6 });
+    while (this.numbers.length > (dc.max ?? 12)) this.numbers.shift();
   }
 
   /**
@@ -76,6 +118,11 @@ export class Hud {
     const life = this.sc.life ?? 1.4;
     for (const p of this.popups) p.age += dt;
     this.popups = this.popups.filter((p) => p.age < life);
+    if (this.numbers.length) {
+      const nl = this.cfg.damageNumbers?.life ?? 0.9;
+      for (const d of this.numbers) d.age += dt;
+      this.numbers = this.numbers.filter((d) => d.age < nl);
+    }
     if (this.hurts.length) {
       const hurtLife = this.cfg.hurtIndicator?.life ?? 1.2;
       for (const h of this.hurts) h.age += dt;
@@ -120,6 +167,10 @@ export class Hud {
     ui.imageSmoothingEnabled = false;
     if (mode?.suppression > 0.01) this._drawSuppression(ui, display, mode.suppression);
     if (this.hurts.length && mode?.screen && !player.dead) this._drawHurts(ui, u, mode.screen);
+    const SW = Math.floor(display.cssWidth / u);
+    const SH = Math.floor(display.cssHeight / u);
+    if (mode?.edge) this._drawEdge(ui, u, SW, SH, mode.edge, mode.minimap);
+    if (mode?.view && this.numbers.length) this._drawNumbers(ui, u, mode.view);
     this._drawHealth(ui, u, player);
     if (mode?.stamina !== null && mode?.stamina !== undefined) this._drawStamina(ui, u, mode.stamina);
     if (mode?.minimap) {
@@ -158,50 +209,297 @@ export class Hud {
    * bandiere col colore del proprietario, compagni, squadra, nemici avvistati dalla squadra, mezzi, giocatore.
    * Restituisce la y (pixel di gioco) sotto la minimappa.
    */
-  _drawMinimap(ui, u, W, d) {
+  /** Rettangolo della minimappa in pixel di gioco: { x, y, w, h }. */
+  _miniRect(W, map) {
     const mc = this.cfg.minimap || {};
     const m = this.cfg.margin ?? 5;
-    const map = d.map;
     const w = mc.width ?? 72;
     const h = Math.round((w * map.pixelHeight) / map.pixelWidth);
-    const x0 = W - m - w;
-    const y0 = mc.top ?? 52;
+    return { x: W - m - w, y: mc.top ?? 52, w, h };
+  }
+
+  /**
+   * Immagine della minimappa a w×h pixel di gioco, in stile carta tattica: terreno scurito col suo colore medio,
+   * acqua (impatto "water") in blu, tile che fermano i colpi chiari e in rilievo (ombra in basso a destra).
+   * Rifatta solo quando la mappa cambia (map.version: crolli, rivincita).
+   */
+  _miniTexture(map, w, h) {
+    const mc = this.cfg.minimap || {};
+    const v = map.version || 0;
+    const c = this._mini;
+    if (c && c.map === map && c.version === v && c.w === w) return c.canvas;
+    const cols = map.cols;
+    const rows = map.rows;
+    // colore medio di ogni tile: la mappa disegnata rimpicciolita a un pixel per tile
+    const t = document.createElement('canvas');
+    t.width = cols;
+    t.height = rows;
+    const g = t.getContext('2d', { willReadFrequently: true });
+    g.imageSmoothingEnabled = true;
+    g.imageSmoothingQuality = 'high';
+    g.drawImage(map.canvas, 0, 0, map.pixelWidth, map.pixelHeight, 0, 0, cols, rows);
+    const img = g.getImageData(0, 0, cols, rows);
+    const d = img.data;
+    const hex = (s) => [parseInt(s.slice(1, 3), 16), parseInt(s.slice(3, 5), 16), parseInt(s.slice(5, 7), 16)];
+    const wall = hex(mc.wall || '#d8d2bc');
+    const water = hex(mc.water || '#2a5a78');
+    const tint = hex(mc.ground || '#1c2018');
+    const solid = (x, y) => x >= 0 && y >= 0 && x < cols && y < rows && map.blocksShotTile(x, y);
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        const i = (y * cols + x) * 4;
+        let rgb;
+        if (solid(x, y)) {
+          rgb = [0, 1, 2].map((k) => d[i + k] * 0.35 + wall[k] * 0.65);
+        } else if (map.tileAt(x, y)?.impact === 'water') {
+          rgb = water;
+        } else {
+          // terreno: scuro, con un filo del suo colore (sabbia, erba, asfalto si distinguono ancora)
+          const shade = solid(x - 1, y - 1) || solid(x, y - 1) || solid(x - 1, y) ? 0.6 : 1; // ombra dei muri
+          rgb = [0, 1, 2].map((k) => (d[i + k] * 0.4 + tint[k] * 0.6) * shade);
+        }
+        d[i] = rgb[0];
+        d[i + 1] = rgb[1];
+        d[i + 2] = rgb[2];
+        d[i + 3] = 255;
+      }
+    }
+    g.putImageData(img, 0, 0);
+    // a w×h pixel di gioco (sfumata una volta sola, poi disegnata a pixel netti)
+    const out = c?.canvas || document.createElement('canvas');
+    out.width = w;
+    out.height = h;
+    const o = out.getContext('2d');
+    o.imageSmoothingEnabled = true;
+    o.imageSmoothingQuality = 'high';
+    o.drawImage(t, 0, 0, w, h);
+    this._mini = { map, version: v, w, canvas: out };
+    return out;
+  }
+
+  /** Disegna l'icona a pixel "rows" (righe di caratteri, X = pieno) in (x, y) col colore color e ombra. */
+  _pattern(ui, u, rows, x, y, color, shadow = this.cfg.shadow || '#000') {
+    for (const pass of shadow ? [0, 1] : [1]) {
+      const o = pass === 0 ? 1 : 0;
+      rows.forEach((row, j) => {
+        for (let i = 0; i < row.length; i++) if (row[i] !== '.') this._px(ui, u, x + i + o, y + j + o, 1, 1, pass === 0 ? shadow : color);
+      });
+    }
+  }
+
+  /** Icona a pixel di ICONS (righe + tavolozza) in (x, y) pixel di gioco, a scala s. */
+  _icon(ui, u, name, x, y, s = 1, alpha = 1) {
+    const ic = ICONS[name];
+    if (!ic) return 0;
+    ui.globalAlpha = alpha;
+    ic.rows.forEach((row, j) => {
+      for (let i = 0; i < row.length; i++) {
+        const c = ic.colors[row[i]];
+        if (c) this._px(ui, u, x + i * s, y + j * s, s, s, c);
+      }
+    });
+    ui.globalAlpha = 1;
+    return ic.rows[0].length * s;
+  }
+
+  /** Bandierina a pixel (pennone 1×5 + drappo 3×2) con la base in (x, y). */
+  _flagIcon(ui, u, x, y, color, dark, shadow) {
+    this._px(ui, u, x + 1, y - 4, 1, 5, shadow);
+    this._px(ui, u, x + 2, y - 3, 3, 2, shadow);
+    this._px(ui, u, x, y - 5, 1, 5, '#d8d8e0');
+    this._px(ui, u, x + 1, y - 5, 3, 2, color);
+    this._px(ui, u, x + 1, y - 4, 3, 1, dark);
+  }
+
+  _drawMinimap(ui, u, W, d) {
+    const mc = this.cfg.minimap || {};
+    const map = d.map;
+    const { x: x0, y: y0, w, h } = this._miniRect(W, map);
     const k = w / map.pixelWidth; // pixel di gioco della minimappa per pixel del mondo
     const shadow = this.cfg.shadow || '#000';
-    this._px(ui, u, x0 - 1, y0 - 1, w + 2, h + 2, mc.border || '#000');
+    // cornice: bordo scuro, filo chiaro in alto a sinistra e scuro in basso a destra, angoli rinforzati
+    const frame = mc.frame || '#8a8a96';
+    this._px(ui, u, x0 - 2, y0 - 2, w + 4, h + 4, mc.border || '#000');
+    this._px(ui, u, x0 - 1, y0 - 1, w + 1, 1, mc.frameLight || '#5a5a66');
+    this._px(ui, u, x0 - 1, y0 - 1, 1, h + 1, mc.frameLight || '#5a5a66');
+    for (const [cx, cy, sx, sy] of [[x0 - 2, y0 - 2, 1, 1], [x0 + w + 1, y0 - 2, -1, 1], [x0 - 2, y0 + h + 1, 1, -1], [x0 + w + 1, y0 + h + 1, -1, -1]]) {
+      this._px(ui, u, Math.min(cx, cx + sx * 3), cy, 4, 1, frame);
+      this._px(ui, u, cx, Math.min(cy, cy + sy * 3), 1, 4, frame);
+    }
     ui.save();
-    ui.globalAlpha = mc.alpha ?? 0.85;
-    ui.imageSmoothingEnabled = true; // rimpicciolita: meglio sfumata che a scatti
-    ui.drawImage(map.canvas, 0, 0, map.pixelWidth, map.pixelHeight, x0 * u, y0 * u, w * u, h * u);
+    ui.globalAlpha = mc.alpha ?? 0.9;
+    ui.drawImage(this._miniTexture(map, w, h), x0 * u, y0 * u, w * u, h * u);
     ui.restore();
-    ui.imageSmoothingEnabled = false;
     const P = (wx, wy) => [Math.round(x0 + wx * k), Math.round(y0 + wy * k)];
+    // visuale attuale (rettangolo tenue)
+    if (d.view) {
+      const [vx, vy] = P(Math.max(0, d.view.x), Math.max(0, d.view.y));
+      const [vx2, vy2] = P(Math.min(map.pixelWidth, d.view.x + d.view.w), Math.min(map.pixelHeight, d.view.y + d.view.h));
+      ui.globalAlpha = mc.viewAlpha ?? 0.3;
+      const vc = mc.view || '#ffffff';
+      this._px(ui, u, vx, vy, vx2 - vx, 1, vc);
+      this._px(ui, u, vx, vy2 - 1, vx2 - vx, 1, vc);
+      this._px(ui, u, vx, vy, 1, vy2 - vy, vc);
+      this._px(ui, u, vx2 - 1, vy, 1, vy2 - vy, vc);
+      ui.globalAlpha = 1;
+    }
     const dot = (wx, wy, color, s = 2) => {
       const [x, y] = P(wx, wy);
+      this._px(ui, u, x - (s >> 1) + 1, y - (s >> 1) + 1, s, s, shadow);
       this._px(ui, u, x - (s >> 1), y - (s >> 1), s, s, color);
     };
     const teams = d.ctf.teams;
-    // bandiere: quadratino del colore del proprietario (bianco = neutrale), lampeggia se contesa; ordine = cornice
+    // bandiere: bandierina del colore del proprietario (bianca = neutrale), lampeggia se contesa; ordine = cornice
     for (const f of d.ctf.flags) {
       const [x, y] = P(f.x, f.y);
       const blink = f.contested && Math.floor(this.time * 4) % 2 === 0;
-      const c = blink ? '#ffffff' : f.owner ? teams[f.owner].color : mc.neutral || '#e8e8e8';
-      if (d.order === f) this._px(ui, u, x - 3, y - 3, 7, 7, this.cfg.squadColor || mc.squad || '#7cf07c');
-      this._px(ui, u, x - 2, y - 2, 5, 5, shadow);
-      this._px(ui, u, x - 2, y - 2, 4, 4, c);
+      const t = f.owner ? teams[f.owner] : null;
+      const c = blink ? '#ffffff' : t ? t.color : mc.neutral || '#e8e8e8';
+      if (d.order === f) {
+        const sq = this.cfg.squadColor || mc.squad || '#7cf07c';
+        const on = Math.floor(this.time * 2) % 2 === 0;
+        if (on) {
+          this._px(ui, u, x - 3, y - 7, 9, 1, sq);
+          this._px(ui, u, x - 3, y + 2, 9, 1, sq);
+          this._px(ui, u, x - 3, y - 7, 1, 10, sq);
+          this._px(ui, u, x + 5, y - 7, 1, 10, sq);
+        }
+      }
+      this._flagIcon(ui, u, x, y + 1, c, blink ? '#c8c8c8' : t?.dark || '#a0a0a8', shadow);
     }
-    for (const v of d.vehicles) dot(v.x, v.y, v.team ? teams[v.team]?.dark || '#888' : mc.emptyVehicle || '#9a9a9a', 3);
+    // mezzi: sagoma per tipo (jeep, carro, elicottero), del colore della squadra o grigia se liberi
+    for (const v of d.vehicles) {
+      const rows = VEHICLE_ICONS[v.icon] || VEHICLE_ICONS.jeep;
+      const [x, y] = P(v.x, v.y);
+      const c = v.team ? teams[v.team]?.light || teams[v.team]?.color || '#888' : mc.emptyVehicle || '#9a9a9a';
+      this._pattern(ui, u, rows, x - (rows[0].length >> 1), y - (rows.length >> 1), c);
+    }
     for (const a of d.allies) dot(a.x, a.y, teams[d.team]?.color || '#4af');
-    for (const e of d.enemies) dot(e.x, e.y, mc.enemy || '#ff4a3a', e.vehicle ? 3 : 2);
+    for (const e of d.enemies) {
+      if (e.vehicle) dot(e.x, e.y, mc.enemy || '#ff4a3a', 3);
+      else dot(e.x, e.y, mc.enemy || '#ff4a3a');
+    }
     for (const s of d.squad) dot(s.x, s.y, mc.squad || '#7cf07c');
     if (d.player) {
-      // giocatore: punto bianco con un pixel nella direzione della mira
+      // giocatore: freccia bianca verso la mira (triangolo rasterizzato a pixel, con contorno)
       const [x, y] = P(d.player.x, d.player.y);
-      this._px(ui, u, x - 1, y - 1, 3, 3, shadow);
-      this._px(ui, u, x - 1, y - 1, 2, 2, mc.player || '#ffffff');
-      this._px(ui, u, Math.round(x + Math.cos(d.player.angle) * 2), Math.round(y + Math.sin(d.player.angle) * 2), 1, 1, mc.player || '#ffffff');
+      const a = d.player.angle;
+      const pts = (r) => [
+        [x + Math.cos(a) * 3 * r, y + Math.sin(a) * 3 * r],
+        [x + Math.cos(a + 2.5) * 2.4 * r, y + Math.sin(a + 2.5) * 2.4 * r],
+        [x + Math.cos(a - 2.5) * 2.4 * r, y + Math.sin(a - 2.5) * 2.4 * r],
+      ];
+      this._triangle(ui, u, pts(1.45), shadow);
+      this._triangle(ui, u, pts(1), mc.player || '#ffffff');
     }
-    return y0 + h + 3;
+    return y0 + h + 4;
+  }
+
+  /** Triangolo pieno a pixel di gioco (centri dei pixel dentro i tre vertici). */
+  _triangle(ui, u, [[ax, ay], [bx, by], [cx, cy]], color) {
+    const side = (px, py, x1, y1, x2, y2) => (x2 - x1) * (py - y1) - (y2 - y1) * (px - x1);
+    const minX = Math.floor(Math.min(ax, bx, cx));
+    const maxX = Math.ceil(Math.max(ax, bx, cx));
+    const minY = Math.floor(Math.min(ay, by, cy));
+    const maxY = Math.ceil(Math.max(ay, by, cy));
+    for (let y = minY; y <= maxY; y++) {
+      for (let x = minX; x <= maxX; x++) {
+        const px = x + 0.5;
+        const py = y + 0.5;
+        const s1 = side(px, py, ax, ay, bx, by);
+        const s2 = side(px, py, bx, by, cx, cy);
+        const s3 = side(px, py, cx, cy, ax, ay);
+        if ((s1 >= 0 && s2 >= 0 && s3 >= 0) || (s1 <= 0 && s2 <= 0 && s3 <= 0)) this._px(ui, u, x, y, 1, 1, color);
+      }
+    }
+  }
+
+  /**
+   * Indicatori a bordo schermo (hud.edge): per ogni bandiera fuori dalla visuale una freccia sul bordo verso di lei,
+   * con bandierina del proprietario e lettera; frecce verdi più piccole per i compagni di squadra fuori vista.
+   * e = { view: { x, y, w, h } (camera, px del mondo), flags, teams, squad: [{ x, y }], order }.
+   */
+  _drawEdge(ui, u, W, H, e, minimap) {
+    const ec = this.cfg.edge || {};
+    if (ec.show === false) return;
+    const shadow = this.cfg.shadow || '#000';
+    const inset = { l: ec.left ?? 8, r: ec.right ?? 8, t: ec.top ?? 44, b: ec.bottom ?? 8 };
+    const mini = minimap ? this._miniRect(W, minimap.map) : null;
+    const cx = W / 2;
+    const cy = H / 2;
+    // punto sul bordo (rettangolo rientrato) lungo la retta dal centro dello schermo verso (sx, sy)
+    const project = (sx, sy) => {
+      const dx = sx - cx;
+      const dy = sy - cy;
+      const kx = dx ? (dx > 0 ? W - inset.r - cx : inset.l - cx) / dx : Infinity;
+      const ky = dy ? (dy > 0 ? H - inset.b - cy : inset.t - cy) / dy : Infinity;
+      const k = Math.min(kx, ky);
+      let x = cx + dx * k;
+      const y = cy + dy * k;
+      // non sopra la minimappa e l'elenco sotto
+      if (mini && x > mini.x - 6 && y < mini.y + mini.h + (ec.miniPad ?? 40)) x = mini.x - 6;
+      return { x: Math.round(x), y: Math.round(y), a: Math.atan2(dy, dx) };
+    };
+    const inside = (sx, sy, pad) => sx > pad && sy > pad && sx < W - pad && sy < H - pad;
+    const arrow = (p, color, r) => {
+      const pts = (s) => [
+        [p.x + Math.cos(p.a) * r * s, p.y + Math.sin(p.a) * r * s],
+        [p.x + Math.cos(p.a + 2.4) * r * 0.8 * s, p.y + Math.sin(p.a + 2.4) * r * 0.8 * s],
+        [p.x + Math.cos(p.a - 2.4) * r * 0.8 * s, p.y + Math.sin(p.a - 2.4) * r * 0.8 * s],
+      ];
+      this._triangle(ui, u, pts(1.4), shadow);
+      this._triangle(ui, u, pts(1), color);
+    };
+    const size = ec.fontSize ?? 6;
+    const pulse = 0.75 + 0.25 * Math.sin(this.time * 5);
+    for (const f of e.flags) {
+      const sx = f.x - e.view.x;
+      const sy = f.y - e.view.y;
+      if (inside(sx, sy, 4)) continue;
+      const p = project(sx, sy);
+      const t = f.owner ? e.teams[f.owner] : null;
+      const color = f.contested && Math.floor(this.time * 4) % 2 === 0 ? '#ffffff' : t ? t.color : ec.neutral || '#e8e8e8';
+      ui.globalAlpha = e.order === f ? 1 : ec.alpha ?? 0.85;
+      arrow(p, color, 4);
+      // bandierina e lettera verso il centro dello schermo
+      const bx = Math.round(p.x - Math.cos(p.a) * 9);
+      const by = Math.round(p.y - Math.sin(p.a) * 9);
+      this._flagIcon(ui, u, bx - 2, by + 2, color, t?.dark || '#a0a0a8', shadow);
+      this._text(ui, u, f.id, bx + 3, by - 3, size, e.order === f ? this.cfg.minimap?.squad || '#7cf07c' : this.cfg.text || '#fff');
+      if (e.order === f) {
+        ui.globalAlpha = pulse;
+        arrow(p, this.cfg.minimap?.squad || '#7cf07c', 2);
+      }
+    }
+    ui.globalAlpha = ec.alpha ?? 0.85;
+    for (const s of e.squad) {
+      const sx = s.x - e.view.x;
+      const sy = s.y - e.view.y;
+      if (inside(sx, sy, 2)) continue;
+      arrow(project(sx, sy), this.cfg.minimap?.squad || '#7cf07c', 2.5);
+    }
+    ui.globalAlpha = 1;
+  }
+
+  /**
+   * Numeri dei danni (hud.damageNumbers): saltano sopra il bersaglio con un piccolo rimbalzo, salgono e svaniscono;
+   * più grandi e rossi per le uccisioni, arancioni sui mezzi. view = camera (px del mondo).
+   */
+  _drawNumbers(ui, u, view) {
+    const dc = this.cfg.damageNumbers || {};
+    const life = dc.life ?? 0.9;
+    const colors = { hit: '#ffffff', armor: '#ffb43a', kill: '#ff4a3a', ...(dc.colors || {}) };
+    for (const d of this.numbers) {
+      const k = d.age / life;
+      const pop = Math.max(0, 1 - d.age / (dc.popTime ?? 0.12)); // ingrandito all'inizio
+      const bounce = Math.sin(Math.min(1, d.age / (dc.bounceTime ?? 0.25)) * Math.PI) * (dc.bounce ?? 4);
+      const size = (d.kind === 'kill' ? dc.killFontSize ?? 8 : dc.fontSize ?? 6) * (1 + pop * 0.5);
+      const x = Math.round(d.x - view.x + d.dx);
+      const y = Math.round(d.y - view.y - (dc.offset ?? 10) - bounce - d.age * (dc.rise ?? 12));
+      ui.globalAlpha = k < 0.65 ? 1 : Math.max(0, 1 - (k - 0.65) / 0.35);
+      this._text(ui, u, String(Math.round(d.n)), x, y - size / 2, size, colors[d.kind] || colors.hit, 'center');
+    }
+    ui.globalAlpha = 1;
   }
 
   /** Sotto la minimappa: ordine attuale alla squadra ("SQUADRA: SEGUITEMI [T]"). */
@@ -366,9 +664,13 @@ export class Hud {
     const n = this.popups.length;
     this.popups.forEach((p, i) => {
       const k = p.age / life;
-      const y = Math.round(screen.y - (sc.offset ?? 16) - p.age * (sc.rise ?? 10) - (n - 1 - i) * line);
+      // entrata con un piccolo rimbalzo: salta su, ricade, poi sale piano; ingrandito per un attimo
+      const bt = sc.bounceTime ?? 0.3;
+      const b = p.age < bt ? Math.abs(Math.sin((p.age / bt) * Math.PI * 1.5)) * (1 - p.age / bt) * (sc.bounce ?? 5) : 0;
+      const pop = 1 + Math.max(0, 1 - p.age / (sc.popTime ?? 0.12)) * 0.4;
+      const y = Math.round(screen.y - (sc.offset ?? 16) - p.age * (sc.rise ?? 10) - (n - 1 - i) * line - b);
       ui.globalAlpha = k < 0.7 ? 1 : Math.max(0, 1 - (k - 0.7) / 0.3);
-      this._text(ui, u, p.text, Math.round(screen.x), y, size, p.color, 'center');
+      this._text(ui, u, p.text, Math.round(screen.x), y, size * pop, p.color, 'center');
     });
     ui.globalAlpha = 1;
   }
@@ -393,7 +695,10 @@ export class Hud {
     const pad = 5;
     const subSize = pc.subSize ?? 7;
     const bandH = pad + titleSize + 4 + insH + 4 + nameSize + (p.sub ? 3 + subSize : 0) + pad;
-    const top = Math.round(H * (pc.y ?? 0.22));
+    // entrata dall'alto con un rimbalzo (easeOutBack): supera di poco la posizione e torna indietro
+    const et = Math.min(1, p.age / (pc.dropTime ?? 0.3));
+    const back = 1 + 2.4 * Math.pow(et - 1, 3) + 1.4 * Math.pow(et - 1, 2);
+    const top = Math.round(H * (pc.y ?? 0.22) - (1 - back) * (pc.drop ?? 10));
     const cx = Math.floor(W / 2);
 
     ui.globalAlpha = alpha * (pc.bandAlpha ?? 0.65);
@@ -540,8 +845,12 @@ export class Hud {
     const y = m + (this.hc.height ?? 5) + 4;
     const empty = player.grenades <= 0;
     let x = m;
-    const icon = gc.icon && this.assets.sprites.get(gc.icon);
-    if (icon) {
+    const icon = gc.icon && !ICONS[gc.icon] && this.assets.sprites.get(gc.icon);
+    if (ICONS[gc.icon]) {
+      // icona a pixel dell'HUD (ICONS), centrata sulla riga del testo
+      const ih = ICONS[gc.icon].rows.length;
+      x += this._icon(ui, u, gc.icon, x, Math.round(y + (size - ih) / 2), 1, empty ? 0.4 : 1) + 1;
+    } else if (icon) {
       const s = gc.iconScale ?? 1;
       const iy = y + (size - icon.fh * s) / 2;
       ui.save();
@@ -692,7 +1001,12 @@ export class Hud {
     let magColor = this.cfg.text || '#fff';
     if (counted && player.resupplyFlash > 0) magColor = wc.resupplyColor || '#a4e88c';
     else if (counted && left <= 0) magColor = wc.emptyColor || '#f43';
-    const magW = this._textW(ui, u, magText, right, y + ammoSize - size, size, magColor, 'right');
+    let magW = this._textW(ui, u, magText, right, y + ammoSize - size, size, magColor, 'right');
+    if (counted && wc.reserveIcon !== false) {
+      // cartuccia a pixel davanti alla scorta
+      const ch = ICONS.cartridge.rows.length;
+      magW += this._icon(ui, u, 'cartridge', right - magW - 3, y + ammoSize - ch, 1, left <= 0 ? 0.4 : 1) + 1;
+    }
     const ammoW = this._textW(ui, u, String(player.ammo), right - magW - 1, y, ammoSize, ammoColor, 'right');
     const icon = w.pickupSprite && this.assets.sprites.get(w.pickupSprite);
     if (icon) {

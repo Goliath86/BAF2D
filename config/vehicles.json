@@ -58,6 +58,7 @@
     "jeep": {
       "name": "vehicles.jeep",
       "sprite": "jeep",
+      "minimapIcon": "jeep",
       "turretSprite": "jeep_turret",
       "turretPivot": [-6, 0],
       "wreckTurret": false,
@@ -83,6 +84,7 @@
     "tank": {
       "name": "vehicles.tank",
       "sprite": "tank",
+      "minimapIcon": "tank",
       "turretSprite": "tank_turret",
       "turretPivot": [-1, 0],
       "hitbox": [24, 24],
@@ -107,6 +109,7 @@
     "helicopter": {
       "name": "vehicles.helicopter",
       "sprite": "helicopter",
+      "minimapIcon": "heli",
       "rotorSprite": "heli_rotor",
       "rotorPivot": [1, 0],
       "rotorBlades": 4,

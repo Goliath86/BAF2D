@@ -858,6 +858,53 @@ export class Menu {
       });
     }
     renderAuto();
+
+    // numeri dei danni (sì / no)
+    const nums = $('damagenumbers-choice');
+    const renderNums = () => {
+      for (const b of nums.querySelectorAll('[data-value]')) b.setAttribute('aria-pressed', String((b.dataset.value === 'on') === !!this.game.damageNumbers));
+    };
+    for (const b of nums.querySelectorAll('[data-value]')) {
+      b.addEventListener('click', () => {
+        const on = b.dataset.value === 'on';
+        this.game.setDamageNumbers(on);
+        this.settings.set('damageNumbers', on);
+        renderNums();
+      });
+    }
+    renderNums();
+
+    // mirino: un pulsante per stile (game.json -> hud.crosshair.styles) con l'anteprima disegnata a pixel
+    const cross = $('crosshair-choice');
+    const renderCross = () => {
+      for (const b of cross.querySelectorAll('[data-value]')) b.setAttribute('aria-pressed', String(b.dataset.value === this.game.crosshairStyle));
+    };
+    for (const style of this.config.hud?.crosshair?.styles || []) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'seg';
+      b.dataset.value = style;
+      b.dataset.i18nTitle = `options.crosshairs.${style}`;
+      b.title = this.i18n.t(`options.crosshairs.${style}`);
+      b.append(this._crosshairPreview(style));
+      b.addEventListener('click', () => {
+        this.game.setCrosshairStyle(style);
+        this.settings.set('crosshair', style);
+        renderCross();
+      });
+      cross.append(b);
+    }
+    renderCross();
+  }
+
+  /** Anteprima del mirino "style": lo stesso disegno del gioco su un canvas piccolo, ingrandito a pixel netti. */
+  _crosshairPreview(style) {
+    const c = document.createElement('canvas');
+    c.width = 15;
+    c.height = 15;
+    c.className = 'crosshair-preview';
+    this.game._drawCrosshairShape(c.getContext('2d'), 7, 7, 3, style); // un po' aperto, per far vedere la forma
+    return c;
   }
 
   _renderLang() {

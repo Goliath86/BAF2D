@@ -42,7 +42,12 @@ Ordine = impatto stimato sul colpo d'occhio. Tutto procedurale (canvas), configu
   carrozzeria, lamiere che si staccano, fiamme sul motore sotto il 22%, carcasse con ruggine/fuliggine e fiamme
   nei primi secondi.
 - Rimasto del punto 6: niente di essenziale (in futuro: torretta con segni dei danni, elicottero con più dettagli).
-- Prossimo passo proposto: punto 7 (HUD), poi 8 (atmosfera).
+- Fatto (2026-11-14): punto 7. Minimappa tattica (muri in rilievo, acqua, bandierine, mezzi per tipo, freccia del
+  giocatore, visuale, cornice), indicatori a bordo schermo per bandiere e squadra fuori vista, icone a pixel di
+  granata e cartuccia, popup e promozioni con rimbalzo, numeri dei danni (opzione), mirino a scelta tra 5 stili
+  (opzione con anteprima).
+- Rimasto del punto 7: icone delle armi disegnate apposta per l'HUD (ora lo sprite a terra ingrandito).
+- Prossimo passo proposto: punto 8 (atmosfera e colore), poi 9 (menu).
 - Da misurare sul telefono anche il costo per frame della luce dei soldati (qualche drawImage su canvas piccoli
   per soldato + un livello delle ombre grande quanto la visuale).
 - Punto aperto: l'anteprima reale dell'editor si ricostruisce a ogni modifica e con la fusione costa ~0,4 s.
@@ -106,11 +111,11 @@ Ordine = impatto stimato sul colpo d'occhio. Tutto procedurale (canvas), configu
 - ~~Tracce di cingoli/pneumatici sul terreno.~~ fatto (punto 4)
 
 ## 7. HUD e interfaccia
-- Icone a pixel per armi, granate e munizioni più dettagliate (coerenti con lo stile).
-- Minimappa con bordo e rilievi più leggibili, icone diverse per mezzi e bandiere.
-- Indicatori a bordo schermo per bandiere fuori vista e compagni.
-- Animazioni dei popup (punti, medaglie) con leggero rimbalzo; numeri dei danni opzionali.
-- Mirino con varianti scelte dal giocatore.
+- Icone a pixel per armi, ~~granate e munizioni~~ più dettagliate (coerenti con lo stile): armi da fare.
+- ~~Minimappa con bordo e rilievi più leggibili, icone diverse per mezzi e bandiere.~~ fatto
+- ~~Indicatori a bordo schermo per bandiere fuori vista e compagni.~~ fatto
+- ~~Animazioni dei popup (punti, medaglie) con leggero rimbalzo; numeri dei danni opzionali.~~ fatto
+- ~~Mirino con varianti scelte dal giocatore.~~ fatto
 
 ## 8. Atmosfera e colore
 - Correzione di colore per mappa (deserto caldo e slavato, campagna satura, Arena fredda).

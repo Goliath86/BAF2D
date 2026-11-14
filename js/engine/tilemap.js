@@ -184,6 +184,7 @@ export class TileMap {
   reset() {
     if (!this.cracks.size && !this.debris.size && this.tiles.every((t, i) => t === this.original[i])) return;
     this.tiles.set(this.original);
+    this.version = (this.version || 0) + 1;
     this.cracks.clear();
     this.debris.clear();
     if (this.pristine) {
@@ -201,6 +202,7 @@ export class TileMap {
     if (tx < 0 || ty < 0 || tx >= this.cols || ty >= this.rows) return;
     const i = ty * this.cols + tx;
     this.tiles[i] = id;
+    this.version = (this.version || 0) + 1; // contatore delle modifiche (es. minimappa da rifare)
     this.cracks.delete(i);
     if (debris?.length) this.debris.set(i, debris);
     else this.debris.delete(i);

@@ -118,6 +118,8 @@ async function boot() {
     const medals = new Medals(medalsCfg, settings);
     const game = new Game({ config, assets, audio, display, input, effectsCfg, weapons, grenadeTypes, i18n, career, vehicleTypes, rocketTypes, medals, debugTools: urlDebug });
     game.setAutoReload(settings.get('autoReload', game.autoReload)); // opzione "ricarica automatica"
+    game.setDamageNumbers(settings.get('damageNumbers', !!config.hud?.damageNumbers?.show)); // opzione "numeri dei danni"
+    game.setCrosshairStyle(settings.get('crosshair', game.crosshairStyle)); // opzione "mirino"
 
     const menu = new Menu({
       config,
