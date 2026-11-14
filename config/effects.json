@@ -371,6 +371,26 @@
       "life": [6, 9],
       "fade": 2
     },
+    "debris_panel": {
+      "sprite": "debris_panel",
+      "sound": "casing_shell",
+      "ejectDeg": 0,
+      "spreadDeg": 0,
+      "speed": [40, 110],
+      "inherit": 0,
+      "height": 6,
+      "lift": [60, 120],
+      "gravity": 400,
+      "bounce": 0.3,
+      "minBounce": 15,
+      "friction": 0.5,
+      "groundDrag": 8,
+      "wallBounce": 0.35,
+      "spinDeg": [360, 1080],
+      "shadow": "#101216",
+      "life": [10, 16],
+      "fade": 2
+    },
     "mag_pistol": {
       "sprite": "mag_pistol",
       "sound": "mag_drop",

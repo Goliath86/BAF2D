@@ -136,9 +136,13 @@
       "frameHeight": 18,
       "origin": [15, 9],
       "placeholder": {
-        "shape": "jeep", "frames": 2, "autoOutline": "#0d0f08",
-        "body": "#5e6b3c", "bodyLight": "#7c8a52", "bodyDark": "#3e4828", "glass": "#2a3440", "interior": "#3a3226",
-        "tire": "#1e1e1e", "tireLight": "#3a3a3a", "burnt": "#2a2622", "burntLight": "#3e3832", "burntDark": "#161412"
+        "shape": "jeep", "frames": 10, "phases": 3, "charFrame": 9, "autoOutline": "#0d0f08",
+        "body": "#5e6b3c", "bodyLight": "#7c8a52", "bodyDark": "#3e4828", "glass": "#2a3440", "glassLight": "#7e98a8",
+        "interior": "#221e18", "seat": "#5a4a34", "seatLight": "#7a6648", "metal": "#2e3028", "headlight": "#f4e8b0",
+        "can": "#4a5430", "canLight": "#6a7646", "tarp": "#6a6448", "tarpLight": "#827a5a", "antenna": "#2a2a26",
+        "tire": "#1e1e1e", "tireLight": "#3a3a3a", "tireDark": "#141414",
+        "burnt": "#3e3934", "burntLight": "#5e5750", "burntDark": "#242019",
+        "camouflage": { "scale": 5, "seed": 3, "split": [0.36, 0.66], "tones": [["#4c4632", "#645c42", "#322e20"], ["#78784e", "#949468", "#545434"]] }
       }
     },
     "jeep_turret": {
@@ -158,9 +162,12 @@
       "frameHeight": 26,
       "origin": [19, 13],
       "placeholder": {
-        "shape": "tank", "frames": 3, "autoOutline": "#0d0f08",
+        "shape": "tank", "frames": 4, "phases": 3, "charFrame": 3, "autoOutline": "#0d0f08",
         "body": "#6a6e48", "bodyLight": "#868a5e", "bodyDark": "#474a30", "track": "#262622", "trackLight": "#3c3c36",
-        "burnt": "#2a2622", "burntLight": "#3e3832", "burntDark": "#161412"
+        "trackDark": "#141412", "metal": "#2e3028", "can": "#4e5432", "canLight": "#6a7048", "glass": "#2a3440",
+        "headlight": "#f4e8b0",
+        "burnt": "#3e3934", "burntLight": "#5e5750", "burntDark": "#242019",
+        "camouflage": { "scale": 6, "seed": 7, "split": [0.35, 0.65], "tones": [["#5a5238", "#746a4c", "#3c3624"], ["#4a5634", "#606e46", "#323a22"]] }
       }
     },
     "helicopter": {
@@ -170,11 +177,12 @@
       "frameHeight": 26,
       "origin": [26, 13],
       "placeholder": {
-        "shape": "helicopter", "frames": 2, "autoOutline": "#0d0f08",
+        "shape": "helicopter", "frames": 2, "charFrame": 1, "autoOutline": "#0d0f08",
+        "camouflage": { "scale": 7, "seed": 5, "split": [0.34, 0.68], "tones": [["#3c4028", "#52583a", "#24281a"], ["#5c5c40", "#76765a", "#3c3c28"]] },
         "body": "#4c5434", "bodyLight": "#687048", "bodyDark": "#2e3320", "glass": "#1e2a30", "glassLight": "#5e7888",
         "canopyFrame": "#22261a", "pod": "#3a3a32", "podLight": "#56564c", "missile": "#6a6e58", "missileTip": "#2a2a24",
         "wheel": "#1a1a18", "gun": "#262626", "sensor": "#d8a040", "tailRotor": "#2a2a26", "tailRotorLight": "#8a8a80",
-        "burnt": "#2a2622", "burntLight": "#3e3832", "burntDark": "#161412"
+        "burnt": "#3e3934", "burntLight": "#5e5750", "burntDark": "#242019"
       }
     },
     "heli_rotor": {
@@ -190,9 +198,11 @@
       "frameHeight": 20,
       "origin": [10, 10],
       "placeholder": {
-        "shape": "tank_turret", "frames": 2, "autoOutline": "#0d0f08", "pivot": [10, 10],
-        "body": "#6a6e48", "bodyLight": "#868a5e", "bodyDark": "#474a30", "gun": "#262626",
-        "burnt": "#2a2622", "burntLight": "#3e3832", "burntDark": "#161412"
+        "shape": "tank_turret", "frames": 2, "charFrame": 1, "autoOutline": "#0d0f08", "pivot": [10, 10],
+        "body": "#6a6e48", "bodyLight": "#868a5e", "bodyDark": "#474a30", "gun": "#262626", "gunLight": "#4a4a46",
+        "metal": "#2e3028", "glass": "#2a3440", "tarp": "#7a7254", "antenna": "#2a2a26",
+        "burnt": "#3e3934", "burntLight": "#5e5750", "burntDark": "#242019",
+        "camouflage": { "scale": 6, "seed": 11, "split": [0.35, 0.65], "tones": [["#5a5238", "#746a4c", "#3c3624"], ["#4a5634", "#606e46", "#323a22"]] }
       }
     },
     "soldier_legs": {
@@ -349,6 +359,13 @@
       "frameHeight": 3,
       "origin": [1, 1],
       "placeholder": { "shape": "debris", "frames": 4, "colors": ["#5a6070", "#3a3f4c", "#4a505e"] }
+    },
+    "debris_panel": {
+      "src": null,
+      "frameWidth": 6,
+      "frameHeight": 6,
+      "origin": [3, 3],
+      "placeholder": { "shape": "panel", "frames": 4, "body": "#5e6b3c", "light": "#7c8a52", "dark": "#323820", "edge": "#1a1c12" }
     },
     "debris_metal": {
       "src": null,

@@ -36,7 +36,13 @@ Ordine = impatto stimato sul colpo d'occhio. Tutto procedurale (canvas), configu
   gocce di sangue nella direzione del colpo e scia dei feriti gravi, traccianti della mitragliatrice dei mezzi,
   cerchi nell'acqua, foglie e schegge che cadono dagli impatti.
 - Rimasto del punto 5: fumogeni (serve prima l'arma).
-- Prossimo passo proposto: punto 6 (mezzi), poi 7 (HUD).
+- Fatto (2026-11-14): punto 6. Jeep e carro ridisegnati (taniche, sedili, volante, roll-bar, antenne, portelli,
+  periscopi, griglie, scarichi, cavi, maglie di ricambio), mimetica procedurale su tutti i mezzi, ruote e cingoli
+  che girano con la velocità (anche all'indietro), ruote anteriori della jeep che sterzano, segni dei danni sulla
+  carrozzeria, lamiere che si staccano, fiamme sul motore sotto il 22%, carcasse con ruggine/fuliggine e fiamme
+  nei primi secondi.
+- Rimasto del punto 6: niente di essenziale (in futuro: torretta con segni dei danni, elicottero con più dettagli).
+- Prossimo passo proposto: punto 7 (HUD), poi 8 (atmosfera).
 - Da misurare sul telefono anche il costo per frame della luce dei soldati (qualche drawImage su canvas piccoli
   per soldato + un livello delle ombre grande quanto la visuale).
 - Punto aperto: l'anteprima reale dell'editor si ricostruisce a ogni modifica e con la fusione costa ~0,4 s.
@@ -94,10 +100,10 @@ Ordine = impatto stimato sul colpo d'occhio. Tutto procedurale (canvas), configu
 - Fumo delle granate fumogene (se si aggiungono); ~~fumo del fuoco~~ fatto.
 
 ## 6. Mezzi
-- Più dettaglio: portelli, ruote/cingoli animati, antenne, taniche, mimetica.
-- Danni visibili: fumo e fiamme sotto una certa vita, ammaccature, pezzi che si staccano.
-- Carcassa annerita più ricca (fumo persistente).
-- Tracce di cingoli/pneumatici sul terreno.
+- ~~Più dettaglio: portelli, ruote/cingoli animati, antenne, taniche, mimetica.~~ fatto
+- ~~Danni visibili: fumo e fiamme sotto una certa vita, ammaccature, pezzi che si staccano.~~ fatto
+- ~~Carcassa annerita più ricca (fumo persistente).~~ fatto
+- ~~Tracce di cingoli/pneumatici sul terreno.~~ fatto (punto 4)
 
 ## 7. HUD e interfaccia
 - Icone a pixel per armi, granate e munizioni più dettagliate (coerenti con lo stile).

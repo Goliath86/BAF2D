@@ -103,6 +103,13 @@ export class Vehicle {
     // IA di guida: bandiera e punto scelti (letti dalle IA degli altri mezzi), azzerati quando il pilota scende
     this.brainObjective = null;
     this.brainPoint = null;
+    // danni visibili (def.damageLook): segni sulla carrozzeria (posizioni -1..1 sullo sprite), pezzi da staccare
+    this.scars = [];
+    this._scarDamage = 0;
+    this._scarVersion = 0;
+    this._pieces = 0;
+    this._fireTimer = 0;
+    this._wreckFlames = null;
     this.guns = (def.weapons || []).map((id) => {
       const w = weapons.get(id);
       return { w, ammo: w.magazine, cooldown: 0, reload: null, side: 1 };
@@ -168,8 +175,140 @@ export class Vehicle {
     const before = this.health;
     this.health = Math.max(0, this.health - amount);
     const dealt = before - this.health;
-    if (dealt > 0) by?.onDealt?.(this, dealt, this.health <= 0);
+    if (dealt > 0) {
+      this._wound(dealt, before);
+      by?.onDealt?.(this, dealt, this.health <= 0);
+    }
     return dealt;
+  }
+
+  /**
+   * Segni dei danni (def.damageLook): ogni scarEvery × vita massima di danno un segno sulla carrozzeria (bruciatura
+   * con ammaccatura per i colpi forti oltre bigHit × vita, foro per i proiettili); scendendo sotto le soglie
+   * piecesAt si stacca un pezzo (emesso in update, che ha accesso agli effetti).
+   */
+  _wound(dealt, before) {
+    const L = this.def.damageLook;
+    if (!L) return;
+    const max = this.maxHealth;
+    this._scarDamage += dealt;
+    const every = (L.scarEvery ?? 0.06) * max;
+    const big = dealt >= (L.bigHit ?? 0.08) * max;
+    while (this._scarDamage >= every) {
+      this._scarDamage -= every;
+      if (this.scars.length >= (L.maxScars ?? 24)) this.scars.shift();
+      this.scars.push({ u: (Math.random() * 2 - 1) * 0.75, v: (Math.random() * 2 - 1) * 0.7, big, seed: Math.floor(Math.random() * 9999) });
+      this._scarVersion++;
+    }
+    for (const t of L.piecesAt || []) if (before > t * max && this.health <= t * max) this._pieces++;
+  }
+
+  /** Punto locale (u avanti, v di lato, px dal centro dello scafo) -> coordinate mondo. */
+  _local(u, v) {
+    const c = Math.cos(this.angle);
+    const s = Math.sin(this.angle);
+    return { x: this.x + c * u - s * v, y: this.y + s * u + c * v };
+  }
+
+  /**
+   * Fiamme accese sul mezzo: [{ x, y, k }] (k = intensità 0..1). Sul motore (def.engine = punti locali) sotto
+   * damageLook.fireBelow della vita; sulla carcassa anche in wreckFlames punti a caso, per wreckFireTime s.
+   */
+  flames() {
+    const L = this.def.damageLook;
+    if (!L?.fire) return [];
+    const engine = this.def.engine || [[0, 0]];
+    let pts;
+    let k = 1;
+    if (this.destroyed) {
+      const t = L.wreckFireTime ?? 8;
+      if (this.wreckAge >= t) return [];
+      k = Math.min(1, ((t - this.wreckAge) / t) * 1.6);
+      if (!this._wreckFlames) {
+        this._wreckFlames = [...engine];
+        for (let i = 0; i < (L.wreckFlames ?? 2); i++) this._wreckFlames.push([(Math.random() * 2 - 1) * this.hw * 0.6, (Math.random() * 2 - 1) * this.hh * 0.6]);
+      }
+      pts = this._wreckFlames;
+    } else if (this.health < this.maxHealth * (L.fireBelow ?? 0.2)) pts = engine;
+    else return [];
+    return pts.map(([u, v], i) => ({ ...this._local(u, v), k: k * (i < engine.length ? 1 : 0.8), i }));
+  }
+
+  /** Pezzi che si staccano, fumo e scintille delle fiamme (chiamato a ogni update). */
+  _burn(dt, game) {
+    const L = this.def.damageLook;
+    if (!L) return;
+    const fx = game.effects;
+    while (this._pieces > 0) {
+      this._pieces--;
+      for (const deb of L.pieces?.debris || []) {
+        const n = Math.round(Array.isArray(deb.count) ? deb.count[0] + Math.random() * (deb.count[1] - deb.count[0]) : deb.count ?? 1);
+        for (let i = 0; i < n; i++) {
+          const p = this._local((Math.random() * 2 - 1) * this.hw, (Math.random() * 2 - 1) * this.hh);
+          fx.casing(deb.type, p.x, p.y, Math.random() * Math.PI * 2);
+        }
+      }
+      for (const em of L.pieces?.emitters || []) fx.emit(em, this.x, this.y, 0, 0);
+    }
+    const f = L.fire;
+    if (!f) return;
+    const flames = this.flames();
+    if (!flames.length) return;
+    this._fireTimer -= dt;
+    if (this._fireTimer > 0) return;
+    this._fireTimer = f.smokeEvery ?? 0.2;
+    for (const p of flames) {
+      if (f.smoke) fx.emit(f.smoke, p.x, p.y - 3, 0, 0);
+      if (f.sparks && Math.random() < (f.sparkChance ?? 0.3) * p.k) fx.emit(f.sparks, p.x, p.y - 2, 0, -1);
+    }
+  }
+
+  /** Sprite dei segni dei danni (canvas grande quanto lo scafo, ridisegnato solo quando cambiano). */
+  _scarSprite(body) {
+    if (!this.scars.length || this.destroyed) return null;
+    if (this._scarCache && this._scarDrawn === this._scarVersion) return this._scarCache;
+    const L = this.def.damageLook || {};
+    const c = this._scarCache?.image || document.createElement('canvas');
+    c.width = body.fw;
+    c.height = body.fh;
+    const g = c.getContext('2d');
+    const col = { scorch: '#14120e', soot: '#24201a', hole: '#0a0a0a', bright: '#a8a490', dent: '#1e2014', ...(L.colors || {}) };
+    for (const s of this.scars) {
+      const x = Math.round(body.origin[0] + (s.u * body.fw) / 2);
+      const y = Math.round(body.origin[1] + (s.v * body.fh) / 2);
+      let r = s.seed + 1;
+      const rnd = () => ((r = (r * 16807) % 2147483647) / 2147483647);
+      if (s.big) {
+        // bruciatura retinata con ammaccatura al centro (bordo chiaro in alto a sinistra, ombra in basso a destra)
+        const R = 2 + rnd() * 1.5;
+        for (let dy = -3; dy <= 3; dy++) {
+          for (let dx = -3; dx <= 3; dx++) {
+            const d = Math.hypot(dx, dy) / R;
+            if (d > 1.2 || rnd() < d * 0.6) continue;
+            g.fillStyle = d < 0.5 ? col.scorch : col.soot;
+            g.fillRect(x + dx, y + dy, 1, 1);
+          }
+        }
+        g.fillStyle = col.bright;
+        g.fillRect(x - 1, y - 1, 1, 1);
+        g.fillStyle = col.dent;
+        g.fillRect(x + 1, y, 1, 1);
+        g.fillRect(x, y + 1, 1, 1);
+      } else {
+        // foro: pixel nero con lamiera viva attorno
+        g.fillStyle = col.hole;
+        g.fillRect(x, y, 1, 1);
+        g.fillStyle = col.bright;
+        g.fillRect(x - 1, y - (rnd() < 0.5 ? 1 : 0), 1, 1);
+      }
+    }
+    // solo sulla carrozzeria: maschera = primo fotogramma dello scafo
+    g.globalCompositeOperation = 'destination-in';
+    g.drawImage(body.image, 0, 0, body.fw, body.fh, 0, 0, body.fw, body.fh);
+    g.globalCompositeOperation = 'source-over';
+    this._scarDrawn = this._scarVersion;
+    this._scarCache = { image: c, fw: body.fw, fh: body.fh, cols: 1, origin: body.origin };
+    return this._scarCache;
   }
 
   /** Punto di perno della torretta in coordinate mondo. */
@@ -211,6 +350,7 @@ export class Vehicle {
   update(dt, game, ctrl) {
     this.time += dt;
     const d = this.def;
+    this._burn(dt, game);
     if (d.flying) {
       this._fly(dt, game, ctrl);
       return;
@@ -241,7 +381,12 @@ export class Vehicle {
     }
     // danneggiato: fumo dal motore
     if (this.health < this.maxHealth * (d.smokeBelow ?? 0.4)) this._smoke(dt, game, 'damaged');
-    if (d.tracks) this.trackPhase += Math.abs(this.speed) * dt;
+    this.trackPhase += this.speed * dt;
+    // sterzo da disegnare: velocità di rotazione dello scafo rispetto alla massima (in retromarcia al contrario)
+    const turn = angleDiff(this.angle, this._lastAngle ?? this.angle) / dt / (d.turnRate ?? 2.5);
+    this._lastAngle = this.angle;
+    const want = Math.max(-1, Math.min(1, this.speed < -1 ? -turn : turn));
+    this.steerLook = (this.steerLook || 0) + (want - (this.steerLook || 0)) * Math.min(1, dt * 12);
   }
 
   /**
@@ -490,11 +635,34 @@ export class Vehicle {
     ctx.restore();
   }
 
+  /**
+   * Fotogramma dello scafo: carcassa (wreckFrame) o sterzo × passo di ruote/cingoli. vehicles.json: animFrames =
+   * passi (scorrono ogni animStep px percorsi, all'indietro in retromarcia), steerFrames = 3 gruppi di passi
+   * (dritto, sterzo a sinistra, a destra) scelti dalla velocità di rotazione dello scafo.
+   */
   _frame() {
     const d = this.def;
     if (this.destroyed) return d.wreckFrame ?? 1;
-    if (d.tracks) return Math.floor(this.trackPhase / 3) % 2;
-    return 0;
+    const n = d.animFrames ?? 1;
+    const phase = n > 1 ? ((Math.floor(this.trackPhase / (d.animStep ?? 3)) % n) + n) % n : 0;
+    const s = this.steerLook || 0;
+    const steer = d.steerFrames ? (s < -0.25 ? 1 : s > 0.25 ? 2 : 0) : 0;
+    return steer * n + phase;
+  }
+
+  /** Fiamme sul motore o sulla carcassa: sprite animato dritto (le fiamme salgono), più basso quando si spegne. */
+  _drawFlames(ctx) {
+    const flames = this.flames();
+    if (!flames.length) return;
+    const f = this.def.damageLook.fire;
+    const s = this.assets.sprite(f.sprite || 'fire');
+    for (const p of flames) {
+      const frame = Math.floor(this.time * (f.fps ?? 10) + p.i * 2.7) % s.frameCount;
+      const h = Math.max(2, Math.round(s.fh * (0.4 + 0.6 * p.k)));
+      const sx = (frame % s.cols) * s.fw;
+      const sy = Math.floor(frame / s.cols) * s.fh;
+      ctx.drawImage(s.image, sx, sy + s.fh - h, s.fw, h, Math.round(p.x - s.origin[0]), Math.round(p.y - h + (s.fh - s.origin[1])), s.fw, h);
+    }
   }
 
   /** Mozzo del rotore principale in coordinate mondo (def.rotorPivot rispetto al centro). */
@@ -519,11 +687,14 @@ export class Vehicle {
     ctx.save();
     ctx.globalAlpha = fade;
     drawSprite(ctx, body, frame, this.x, this.y, this.angle);
+    const scars = this._scarSprite(body);
+    if (scars) drawSprite(ctx, scars, 0, this.x, this.y, this.angle);
     if (d.turretSprite && (!this.destroyed || d.wreckTurret !== false)) {
       const t = this.assets.sprite(d.turretSprite);
       const p = this.pivot;
       drawSprite(ctx, t, this.destroyed ? Math.min(t.frameCount - 1, 1) : 0, p.x, p.y, this.turret);
     }
+    this._drawFlames(ctx);
     if (d.rotorSprite && (!this.destroyed || this.rotorSpeed > 0)) {
       const r = this.assets.sprite(d.rotorSprite);
       const hub = this._rotorHub();

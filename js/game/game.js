@@ -2122,6 +2122,16 @@ export class Game {
     }
     if (c.rocket) for (const r of this.rockets.list) L.add(r.x, r.y, c.rocket);
     for (const b of this.bullets) if (b.tracer?.light) L.add(b.x, b.y, b.tracer.light); // traccianti
+    // mezzi in fiamme (motore colpito, carcasse appena distrutte): luce tremolante
+    for (const v of this.vehicles) {
+      const l = v.def.damageLook?.fire?.light;
+      if (!l) continue;
+      for (const f of v.flames()) {
+        const t = v.time * (l.flickerSpeed ?? 13) + f.i * 3;
+        const flick = 1 - (l.flicker ?? 0.3) * (0.5 + 0.5 * Math.sin(t) * Math.sin(t * 0.37 + 1.3));
+        L.add(f.x, f.y - 3, l, f.k * flick, 0.85 + 0.15 * flick);
+      }
+    }
     if (c.flag) {
       const H = this.ctf.look?.poleHeight ?? 22;
       const blink = 0.5 + 0.5 * Math.sin(this.ctf.time * Math.PI * 2 * (c.flag.blinkHz ?? 2.5));

@@ -310,6 +310,50 @@ describe('gioco nel browser', { skip: chrome ? false : 'Chrome non trovato (impo
     assert.equal(await ev('BAF2D.effects.spots.length + BAF2D.effects.rings.length'), 0, 'gocce o cerchi rimasti');
   });
 
+  it('mezzi: ruote e cingoli animati, sterzo, segni dei danni, pezzi staccati, fiamme e carcassa', async () => {
+    await openGame();
+    await T(`start('desert', { allies: 0, enemies: 0 })`);
+    await T('step(0.2)');
+    const r = await ev(`(() => { const g = BAF2D, out = {};
+      const j = g.vehicles.find((v) => v.def.sprite === 'jeep'), t = g.vehicles.find((v) => v.def.sprite === 'tank');
+      // passi del battistrada: cambiano col percorso, anche all'indietro
+      const frames = new Set();
+      for (let i = 0; i < 12; i++) { j.trackPhase = i; frames.add(j._frame()); }
+      out.phases = frames.size;
+      j.trackPhase = -5; out.reverse = j._frame() >= 0;
+      j.trackPhase = 0;
+      j.steerLook = -1; out.left = j._frame(); j.steerLook = 1; out.right = j._frame(); j.steerLook = 0; out.straight = j._frame();
+      out.tankSteer = (t.steerLook = 1, t._frame()); t.steerLook = 0;
+      // danni: segni sulla carrozzeria e pezzi che si staccano
+      const casings = g.effects.casings.length;
+      t.damage(t.maxHealth * 0.35);
+      out.scars = t.scars.length;
+      g.update(1 / 60);
+      out.pieces = g.effects.casings.length - casings;
+      out.scarSprite = !!t._scarSprite(g.assets.sprite(t.def.sprite, t.team));
+      out.flamesHealthy = t.flames().length;
+      t.damage(t.maxHealth * 0.5);
+      out.flamesLow = t.flames().length;
+      return out; })()`);
+    assert.equal(r.phases, 3, 'passi del battistrada della jeep');
+    assert.ok(r.reverse, 'fotogramma negativo in retromarcia');
+    assert.deepEqual([r.straight, r.left, r.right], [0, 3, 6], 'gruppi di sterzo della jeep');
+    assert.equal(r.tankSteer, 0, 'il carro non ha fotogrammi di sterzo');
+    assert.ok(r.scars > 0, 'nessun segno dei danni');
+    assert.ok(r.pieces > 0, 'nessun pezzo staccato sotto il 70%');
+    assert.ok(r.scarSprite, 'segni non disegnati');
+    assert.equal(r.flamesHealthy, 0, 'fiamme su un mezzo poco danneggiato');
+    assert.ok(r.flamesLow > 0, 'nessuna fiamma sul mezzo quasi distrutto');
+    await T('step(0.3)');
+    await shot('vehicle-burning');
+    // distrutto: fiamme sulla carcassa che si spengono dopo wreckFireTime
+    await ev(`(() => { const g = BAF2D, t = g.vehicles.find((v) => v.def.sprite === 'tank'); t.damage(9999); })()`);
+    await T('step(0.5)');
+    assert.ok(await ev(`BAF2D.vehicles.find((v) => v.def.sprite === 'tank').flames().length > 0`), 'carcassa senza fiamme');
+    await T('step(10)');
+    assert.equal(await ev(`(BAF2D.vehicles.find((v) => v.def.sprite === 'tank' && v.destroyed)?.flames().length) ?? 0`), 0, 'fiamme della carcassa ancora accese');
+  });
+
   it('animazioni del soldato: rinculo, colpito, lancio, caduta lontano dal colpo, pose dei caduti', async () => {
     await openGame();
     await T(`start('arena', { allies: 0, enemies: 0 })`);

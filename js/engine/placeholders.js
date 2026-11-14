@@ -105,6 +105,105 @@ function rng(seed) {
 // matrice di Bayer 4x4 (soglie 0..1) per retinare le sfumature
 const BAYER4 = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => (v + 0.5) / 16);
 
+/** Valore pseudo-casuale stabile 0..1 per il punto intero (x, y). */
+function hash2(x, y, seed = 0) {
+  let h = (x * 374761393 + y * 668265263 + seed * 2147483647) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967295;
+}
+
+/** Rumore a valori morbido 0..1 (interpolazione smoothstep tra i nodi della griglia intera). */
+function vnoise(x, y, seed = 0) {
+  const xi = Math.floor(x);
+  const yi = Math.floor(y);
+  const fx = x - xi;
+  const fy = y - yi;
+  const sx = fx * fx * (3 - 2 * fx);
+  const sy = fy * fy * (3 - 2 * fy);
+  const a = hash2(xi, yi, seed);
+  const b = hash2(xi + 1, yi, seed);
+  const c = hash2(xi, yi + 1, seed);
+  const d = hash2(xi + 1, yi + 1, seed);
+  return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
+}
+
+/**
+ * Rettangolo ruotato di "ang" attorno al centro (cx, cy): len lungo l'asse, wid di traverso. paint(u, v) dà il
+ * colore del pixel (u = 0..len-1 lungo, v = 0..wid-1 di traverso) o null per lasciarlo vuoto.
+ */
+function rotRect(g, cx, cy, len, wid, ang, paint) {
+  const c = Math.cos(ang);
+  const s = Math.sin(ang);
+  const R = Math.ceil(Math.hypot(len, wid) / 2) + 1;
+  for (let y = Math.floor(cy - R); y <= Math.ceil(cy + R); y++) {
+    for (let x = Math.floor(cx - R); x <= Math.ceil(cx + R); x++) {
+      const dx = x + 0.5 - cx;
+      const dy = y + 0.5 - cy;
+      const u = dx * c + dy * s + len / 2;
+      const v = -dx * s + dy * c + wid / 2;
+      if (u < 0 || v < 0 || u >= len || v >= wid) continue;
+      const col = paint(Math.floor(u), Math.floor(v));
+      if (col) rect(g, x, y, 1, 1, col);
+    }
+  }
+}
+
+/**
+ * Lamiera bruciata (carcasse, placeholder.charFrame = indice del fotogramma): sui pixel opachi chiazze di fuliggine
+ * quasi nera, ruggine (char.rust) dove la vernice è bruciata via, fori neri e qualche pixel di cenere chiara.
+ */
+function applyChar(g, x0, w, h, p) {
+  const ch = p.char || {};
+  const rust = (ch.rust || ['#4a2e1a', '#5a3820', '#3a2414']).map(hexToRgb);
+  const soot = hexToRgb(ch.soot || '#0c0a08');
+  const ash = hexToRgb(ch.ash || '#6a625a');
+  const img = g.getImageData(x0, 0, w, h);
+  const d = img.data;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      if (d[i + 3] === 0) continue;
+      const n = vnoise(x / 3, y / 3, 21);
+      const r = hash2(x, y, 5);
+      let c = null;
+      if (r > 0.975) c = soot; // foro
+      else if (r < 0.03) c = ash;
+      else if (n > 0.72 && r > 0.25) c = rust[Math.floor(hash2(x, y, 9) * rust.length)];
+      else if (n < 0.26 && r < 0.5) c = soot;
+      if (c) [d[i], d[i + 1], d[i + 2]] = c;
+    }
+  }
+  g.putImageData(img, x0, 0);
+}
+
+/**
+ * Mimetica (placeholder.camouflage = { scale, seed, split: [basso, alto], tones: [[corpo, luce, ombra], ...] }): i pixel
+ * dei toni del corpo (body, bodyLight, bodyDark) prendono i toni della macchia dove il rumore è sotto split[0]
+ * (tones[0]) o sopra split[1] (tones[1]); stessa macchia in tutti i fotogrammi (coordinate del fotogramma).
+ */
+function applyCamo(g, x0, w, h, p) {
+  const cm = p.camouflage;
+  const src = [p.body, p.bodyLight, p.bodyDark].map((c) => (c ? hexToRgb(c).join(',') : null));
+  const tones = (cm.tones || []).map((t) => t.map(hexToRgb));
+  const [lo, hi] = cm.split || [0.36, 0.64];
+  const img = g.getImageData(x0, 0, w, h);
+  const d = img.data;
+  const sc = cm.scale ?? 5;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      if (d[i + 3] === 0) continue;
+      const k = src.indexOf(`${d[i]},${d[i + 1]},${d[i + 2]}`);
+      if (k < 0) continue;
+      const n = vnoise(x / sc, y / sc, cm.seed ?? 3) * 0.75 + vnoise(x / (sc * 0.45), y / (sc * 0.45), (cm.seed ?? 3) + 9) * 0.25;
+      const t = n < lo ? tones[0] : n > hi ? tones[1] : null;
+      if (!t || !t[k]) continue;
+      [d[i], d[i + 1], d[i + 2]] = t[k];
+    }
+  }
+  g.putImageData(img, x0, 0);
+}
+
 // ---------- Armi ----------
 // Ogni arma è vista dall'alto, canna verso destra, asse sulle righe cy-1..cy
 // (caricatore ecc. possono sporgere sotto fino a cy+2). x = pixel più a sinistra.
@@ -614,41 +713,88 @@ const SPRITE_SHAPES = {
    * Ruote sporgenti, cofano, parabrezza, sedili, cassone, ruota di scorta; quadrato di squadra sul cofano.
    */
   jeep(g, w, h, p, frame) {
-    const burnt = frame === 1;
+    // frame = sterzo (0 dritto, 1 a sinistra, 2 a destra) × "phases" passi del battistrada; l'ultimo = carcassa
+    const phases = p.phases ?? 3;
+    const burnt = frame === (p.frames ?? 10) - 1;
+    const phase = burnt ? 0 : frame % phases;
+    const steer = burnt ? 0 : [0, -1, 1][Math.floor(frame / phases)] ?? 0;
     const C = burnt
-      ? { body: p.burnt, light: p.burntLight, dark: p.burntDark, glass: p.burntDark, interior: p.burntDark, tire: '#0e0e0e', tireLight: '#1e1e1e' }
-      : { body: p.body, light: p.bodyLight, dark: p.bodyDark, glass: p.glass, interior: p.interior, tire: p.tire, tireLight: p.tireLight };
+      ? { body: p.burnt, light: p.burntLight, dark: p.burntDark, glass: '#0a0a0a', glassLight: '#0a0a0a', interior: '#141210', seat: '#1c1814', seatLight: '#24201a', tire: '#1a1816', tireLight: '#3a3632', can: p.burntDark, canLight: p.burnt, tarp: '#1c1814', tarpLight: '#24201a', metal: '#2a2622' }
+      : { body: p.body, light: p.bodyLight, dark: p.bodyDark, glass: p.glass, glassLight: p.glassLight, interior: p.interior, seat: p.seat, seatLight: p.seatLight, tire: p.tire, tireLight: p.tireLight, can: p.can, canLight: p.canLight, tarp: p.tarp, tarpLight: p.tarpLight, metal: p.metal };
     const top = 3;
     const bottom = h - 4;
-    // ruote
-    for (const x of [5, w - 10]) {
-      rect(g, x, top - 2, 6, 3, C.tire);
-      rect(g, x, bottom, 6, 3, C.tire);
-      rect(g, x + 1, top - 2, 4, 1, C.tireLight);
-      rect(g, x + 1, bottom + 2, 4, 1, C.tireLight);
+    const rows = bottom - top + 1;
+    const cy = Math.floor(h / 2);
+    // ruote: battistrada a tasselli che scorrono con "phase"; le anteriori girano con lo sterzo
+    const wheel = (cx, wy, ang) =>
+      rotRect(g, cx, wy, 6, 3, ang, (u, v) => {
+        if (burnt) return (u + v) % 2 ? C.tireLight : C.tire; // cerchione nudo
+        return (((u - phase) % 3) + 3) % 3 === 0 ? C.tireLight : v === 1 ? p.tireDark || C.tire : C.tire;
+      });
+    for (const wy of [top - 0.5, bottom + 1.5]) {
+      wheel(7.5, wy, 0);
+      wheel(w - 7.5, wy, steer * 0.38);
     }
-    // scocca
-    rect(g, 2, top, w - 4, bottom - top + 1, C.dark);
-    rect(g, 3, top + 1, w - 6, bottom - top - 1, C.body);
-    // cofano (davanti) con luce
-    rect(g, w - 11, top + 1, 8, bottom - top - 1, C.light);
-    rect(g, w - 11, top + 1, 8, 1, C.body);
-    rect(g, w - 3, top + 2, 1, 2, burnt ? C.dark : '#f4e8b0'); // fari
-    rect(g, w - 3, bottom - 3, 1, 2, burnt ? C.dark : '#f4e8b0');
-    // parabrezza
-    rect(g, w - 13, top + 1, 2, bottom - top - 1, C.glass);
-    // abitacolo e sedili
-    rect(g, 9, top + 2, w - 23, bottom - top - 3, C.interior);
-    rect(g, 12, top + 2, 3, 3, C.dark);
-    rect(g, 12, bottom - 4, 3, 3, C.dark);
-    // cassone e ruota di scorta
-    rect(g, 3, top + 2, 5, bottom - top - 3, C.dark);
-    rect(g, 0, Math.floor(h / 2) - 2, 2, 4, C.tire);
+    // ruota di scorta dietro
+    rect(g, 0, cy - 3, 2, 6, C.tire);
+    rect(g, 0, cy - 2 + (phase % 2), 1, 1, C.tireLight);
+    rect(g, 0, cy + (phase % 2), 1, 1, C.tireLight);
+    // scocca e parafanghi (più chiari sopra, in ombra sotto)
+    rect(g, 2, top, w - 4, rows, C.dark);
+    rect(g, 3, top + 1, w - 6, rows - 2, C.body);
+    rect(g, 4, top, 7, 1, C.light);
+    rect(g, w - 11, top, 7, 1, C.light);
+    // cofano: nervatura centrale, luce sul bordo, prese d'aria
+    rect(g, w - 11, top + 1, 8, rows - 2, C.body);
+    rect(g, w - 11, top + 1, 8, 1, C.light);
+    rect(g, w - 11, cy - 1, 8, 1, C.light);
+    rect(g, w - 11, cy, 8, 1, C.dark);
+    for (const y of [top + 3, bottom - 3]) for (let x = w - 10; x < w - 5; x += 2) rect(g, x, y, 1, 1, C.dark);
+    // muso: griglia, fari con protezione, paraurti
+    rect(g, w - 3, top + 1, 1, rows - 2, C.dark);
+    for (let y = top + 3; y < bottom - 2; y += 2) rect(g, w - 3, y, 1, 1, C.metal);
+    for (const y of [top + 1, bottom - 2]) {
+      rect(g, w - 3, y, 1, 2, burnt ? '#0a0a0a' : p.headlight || '#f4e8b0');
+      rect(g, w - 2, y, 1, 2, C.metal);
+    }
+    rect(g, w - 2, top + 3, 1, rows - 6, C.metal); // paraurti
+    // parabrezza (telaio + vetro con riflesso)
+    rect(g, w - 13, top + 1, 2, rows - 2, C.dark);
+    rect(g, w - 12, top + 2, 1, rows - 4, C.glass);
+    rect(g, w - 12, top + 2, 1, 2, C.glassLight);
+    // abitacolo aperto: pavimento, sedili con schienale, volante, leva del cambio
+    rect(g, 12, top + 1, w - 25, rows - 2, C.interior);
+    for (const y of [top + 1, bottom - 4]) {
+      rect(g, 13, y, 3, 4, C.seat);
+      rect(g, 13, y, 2, 1, C.seatLight);
+      rect(g, 12, y, 1, 4, C.dark); // schienale
+    }
+    rect(g, w - 14, top + 2, 1, 3, '#1a1a18'); // volante (guida a sinistra = in alto)
+    rect(g, w - 15, top + 3, 1, 1, '#1a1a18');
+    rect(g, 15, cy - 1, 2, 2, C.dark); // tunnel e leva
+    rect(g, 16, cy - 1, 1, 1, C.metal);
+    // roll-bar
+    rect(g, 11, top, 1, rows, C.metal);
+    rect(g, 11, top, 1, 1, C.light);
+    // cassone: pianale a doghe, due taniche, telo arrotolato
+    rect(g, 3, top + 1, 8, rows - 2, C.dark);
+    for (let x = 4; x < 11; x += 2) rect(g, x, top + 1, 1, rows - 2, C.interior);
+    for (const y of [top + 1, bottom - 4]) {
+      rect(g, 4, y, 3, 4, C.can);
+      rect(g, 4, y, 3, 1, C.canLight);
+      rect(g, 5, y + 1, 1, 2, C.dark); // stampo a croce
+      rect(g, 6, y, 1, 1, C.metal); // tappo
+    }
+    rect(g, 8, top + 2, 2, rows - 4, C.tarp);
+    for (let y = top + 2; y < bottom - 1; y += 2) rect(g, 8, y, 2, 1, C.tarpLight);
+    // antenna a frusta piegata all'indietro
+    line(g, 10, bottom - 1, 3, cy + 1, burnt ? C.dark : p.antenna || '#2a2a26');
     if (p.team && !burnt) {
-      rect(g, w - 8, Math.floor(h / 2) - 2, 4, 4, p.teamDark);
-      rect(g, w - 8, Math.floor(h / 2) - 2, 3, 3, p.team);
+      // stella/quadrato di squadra sul cofano
+      rect(g, w - 9, cy - 2, 4, 4, p.teamDark);
+      rect(g, w - 9, cy - 2, 3, 3, p.team);
+      rect(g, w - 9, cy - 2, 1, 1, p.teamLight || p.team);
     }
-    if (burnt) for (let i = 0; i < 6; i++) rect(g, 4 + i * 4, top + 2 + (i % 3) * 3, 2, 1, p.burntLight);
   },
 
   /** Mitragliatrice su perno della jeep (ruota attorno all'origine): scudo, castello, canna, cassetta. */
@@ -668,30 +814,73 @@ const SPRITE_SHAPES = {
    * Carro lanciarazzi visto dall'alto, muso a destra. Frame 0/1 = cingoli (animazione), frame 2 = carcassa.
    */
   tank(g, w, h, p, frame) {
-    const burnt = frame === 2;
+    // frame 0..phases-1 = maglie dei cingoli che scorrono di 1 px; l'ultimo = carcassa
+    const phases = p.phases ?? 3;
+    const burnt = frame === (p.frames ?? 4) - 1;
+    const phase = burnt ? 0 : frame % phases;
     const C = burnt
-      ? { body: p.burnt, light: p.burntLight, dark: p.burntDark, track: '#121110', trackLight: '#1e1c1a' }
-      : { body: p.body, light: p.bodyLight, dark: p.bodyDark, track: p.track, trackLight: p.trackLight };
+      ? { body: p.burnt, light: p.burntLight, dark: p.burntDark, track: '#121110', trackLight: '#2a2622', trackDark: '#080808', metal: '#1e1c1a', can: p.burntDark, canLight: p.burnt, glass: '#0a0a0a' }
+      : { body: p.body, light: p.bodyLight, dark: p.bodyDark, track: p.track, trackLight: p.trackLight, trackDark: p.trackDark || '#141412', metal: p.metal, can: p.can, canLight: p.canLight, glass: p.glass };
     const th = 6; // spessore cingoli
+    const cy = Math.floor(h / 2);
+    // cingoli: maglie ogni 3 px (fessura scura, piastra con bordo esterno chiaro, dente di guida al centro),
+    // estremità arrotondate con ruota motrice e tendicingolo
     for (const y of [0, h - th]) {
-      rect(g, 1, y, w - 2, th, C.track);
-      // maglie: segmenti che scorrono (frame 0/1)
-      for (let x = 2 + (frame % 2) * 2; x < w - 2; x += 4) rect(g, x, y + 1, 1, th - 2, C.trackLight);
-      rect(g, 1, y, w - 2, 1, C.trackLight);
+      const outer = y === 0 ? y : y + th - 1;
+      const inner = y === 0 ? y + th - 1 : y;
+      for (let x = 2; x < w - 2; x++) {
+        const k = (((x - phase) % 3) + 3) % 3; // la parte di sopra del cingolo avanza rispetto allo scafo
+        rect(g, x, y, 1, th, k === 0 ? C.trackDark : C.track);
+        if (k !== 0) rect(g, x, outer, 1, 1, C.trackLight);
+        if (k === 1) rect(g, x, y + 2, 1, 2, C.trackLight); // dente di guida
+        rect(g, x, inner, 1, 1, C.trackDark); // ombra verso lo scafo
+      }
+      for (const x of [1, w - 2]) {
+        rect(g, x, y + 1, 1, th - 2, C.track);
+        rect(g, x === 1 ? 2 : w - 4, y + 2, 2, 2, C.metal); // mozzi delle ruote alle estremità
+        rect(g, x === 1 ? 2 : w - 4, y + 2, 1, 1, C.trackLight);
+      }
     }
-    // scafo
+    // scafo: parafanghi sopra i cingoli, piano superiore, spiovente anteriore più chiaro
     rect(g, 3, th - 1, w - 6, h - th * 2 + 2, C.dark);
     rect(g, 4, th, w - 8, h - th * 2, C.body);
-    // spiovente anteriore (più chiaro) e griglia del motore dietro
-    rect(g, w - 9, th, 5, h - th * 2, C.light);
-    for (let y = th + 2; y < h - th - 1; y += 2) rect(g, 5, y, 5, 1, C.dark);
-    if (p.team && !burnt) {
-      rect(g, 12, th + 1, 4, 3, p.teamDark);
-      rect(g, 12, th + 1, 3, 2, p.team);
-      rect(g, 12, h - th - 4, 4, 3, p.teamDark);
-      rect(g, 12, h - th - 4, 3, 2, p.team);
+    rect(g, 4, th, w - 8, 1, C.light);
+    rect(g, w - 10, th, 6, h - th * 2, C.light);
+    rect(g, w - 10, th, 1, h - th * 2, C.body); // spigolo dello spiovente
+    rect(g, w - 5, th + 1, 1, h - th * 2 - 2, C.dark);
+    // spiovente: portello del pilota con periscopi, maglie di ricambio, fari con griglia, ganci di traino
+    disc(g, w - 7, cy - 0.5, 1.8, C.dark);
+    rect(g, w - 8, cy - 1, 2, 1, C.body);
+    rect(g, w - 6, cy - 3, 1, 1, C.glass);
+    rect(g, w - 6, cy + 1, 1, 1, C.glass);
+    for (const y of [th + 1, h - th - 3]) {
+      rect(g, w - 9, y, 3, 2, C.track); // maglie di ricambio
+      rect(g, w - 9, y, 1, 2, C.trackLight);
+      rect(g, w - 5, y, 1, 2, burnt ? '#0a0a0a' : p.headlight || '#f4e8b0'); // faro
     }
-    if (burnt) for (let i = 0; i < 8; i++) rect(g, 5 + i * 3, th + 1 + (i % 4) * 3, 2, 1, p.burntLight);
+    rect(g, w - 4, cy - 3, 1, 1, C.metal);
+    rect(g, w - 4, cy + 2, 1, 1, C.metal);
+    // cavo di traino lungo i fianchi (a tratti)
+    for (const y of [th, h - th - 1]) for (let x = 12; x < w - 11; x++) rect(g, x, y, 1, 1, x % 2 ? C.metal : C.dark);
+    // dietro: griglie del motore a lamelle, scarichi anneriti, cassette e taniche sui parafanghi
+    for (let y = th + 2; y < h - th - 2; y += 2) {
+      rect(g, 6, y, 6, 1, C.dark);
+      rect(g, 6, y + 1, 6, 1, C.light);
+    }
+    rect(g, 4, th + 1, 2, 2, '#1a1816');
+    rect(g, 4, h - th - 3, 2, 2, '#1a1816');
+    for (const y of [th + 1, h - th - 4]) {
+      rect(g, 13, y, 4, 3, C.can);
+      rect(g, 13, y, 4, 1, C.canLight);
+      rect(g, 15, y + 1, 1, 1, C.dark);
+    }
+    rect(g, 3, cy - 2, 1, 4, C.metal); // gancio posteriore
+    if (p.team && !burnt) {
+      rect(g, 8, th + 1, 3, 2, p.teamDark);
+      rect(g, 8, th + 1, 2, 1, p.team);
+      rect(g, 8, h - th - 3, 3, 2, p.teamDark);
+      rect(g, 8, h - th - 3, 2, 1, p.team);
+    }
   },
 
   /**
@@ -830,22 +1019,37 @@ const SPRITE_SHAPES = {
     const dark = burnt ? p.burntDark : p.bodyDark;
     const ox = p.pivot?.[0] ?? 10;
     const cy = Math.floor(h / 2);
-    // lanciarazzi (contenitori con 2 tubi ciascuno)
+    const metal = burnt ? p.burntDark : p.metal || dark;
+    // cesto portaoggetti dietro la cupola (griglia con un telo dentro)
+    rect(g, ox - 9, cy - 4, 4, 9, dark);
+    for (let y = cy - 3; y < cy + 4; y += 2) rect(g, ox - 8, y, 2, 1, burnt ? p.burnt : p.tarp || light);
+    // lanciarazzi (contenitori con 2 tubi ciascuno): rivetti, bordo chiaro, bocche dei tubi scure
     for (const y of [1, h - 6]) {
       rect(g, ox - 4, y, 13, 5, dark);
       rect(g, ox - 3, y + 1, 11, 3, body);
       rect(g, ox - 3, y + 1, 11, 1, light);
+      rect(g, ox - 3, y + 2, 11, 1, dark); // separazione dei tubi
+      for (let x = ox - 2; x < ox + 7; x += 3) rect(g, x, y + 3, 1, 1, metal);
       rect(g, ox + 8, y + 1, 1, 1, '#0e0e0e');
       rect(g, ox + 8, y + 3, 1, 1, '#0e0e0e');
+      rect(g, ox + 1, y + (y === 1 ? 4 : 0), 2, 1, metal); // braccio di sostegno
     }
-    // mitragliatrice coassiale
+    // mitragliatrice coassiale con manicotto
     rect(g, ox + 5, cy - 1, w - ox - 6, 2, p.gun);
+    rect(g, ox + 5, cy - 1, w - ox - 6, 1, p.gunLight || p.gun);
+    rect(g, ox + 5, cy - 1, 3, 2, dark);
     rect(g, w - 1, cy - 1, 1, 2, dark);
-    // cupola
+    // cupola: bordo scuro, luce in alto a sinistra
     disc(g, ox, cy, 6.5, dark);
     disc(g, ox, cy, 5.5, body);
-    disc(g, ox - 1.5, cy - 1.5, 2.5, light);
-    disc(g, ox - 2, cy + 1, 1.6, dark); // portello
+    disc(g, ox - 1.5, cy - 1.5, 2.6, light);
+    disc(g, ox - 1, cy - 1, 1.2, body);
+    // portello del capocarro (anello) e periscopi verso il davanti
+    disc(g, ox - 2, cy + 1.5, 1.9, dark);
+    rect(g, ox - 3, cy + 1, 2, 1, metal);
+    for (const [dx, dy] of [[3, -3], [4, 0], [3, 3]]) rect(g, ox + dx, cy + dy, 1, 1, burnt ? '#0a0a0a' : p.glass || '#2a3440');
+    // antenna a frusta dal retro della cupola
+    line(g, ox - 4, cy - 4, ox - 9, 0, burnt ? dark : p.antenna || '#2a2a26');
   },
 
   bullet(g, w, h, p) {
@@ -1077,6 +1281,20 @@ const SPRITE_SHAPES = {
       }
       disc(g, cx, cy, R * 0.45, p.core);
     }
+  },
+
+  /** Pezzo di lamiera staccato da un mezzo (piegato: bordo chiaro, piega scura); ogni frame una forma. */
+  panel(g, w, h, p, frame) {
+    const r = rng(frame * 11 + 4);
+    const pw = 3 + Math.floor(r() * 2);
+    const ph = 2 + Math.floor(r() * 2);
+    const x = Math.floor((w - pw) / 2);
+    const y = Math.floor((h - ph) / 2);
+    rect(g, x, y, pw, ph, p.body);
+    rect(g, x, y, pw, 1, p.light);
+    rect(g, x + Math.floor(r() * pw), y, 1, ph, p.dark); // piega
+    rect(g, x + pw - 1, y + ph - 1, 1, 1, p.edge);
+    if (r() < 0.5) rect(g, x + pw, y + 1, 1, 1, p.edge); // lembo strappato
   },
 
   /** Detrito (scheggia/sasso) di 1..4 pixel; ogni frame è una forma diversa. */
@@ -1435,7 +1653,7 @@ export function createSpritePlaceholder(def) {
   const frames = (p.frames || countFrames(def.animations)) * Math.max(1, p.sheetVariants || 1);
   const painter = SPRITE_SHAPES[p.shape] || SPRITE_SHAPES.rect;
   const c = makeCanvas(fw * frames, fh);
-  const g = c.getContext('2d', { willReadFrequently: !!p.autoOutline });
+  const g = c.getContext('2d', { willReadFrequently: !!(p.autoOutline || p.camouflage || p.charFrame !== undefined) });
   for (let i = 0; i < frames; i++) {
     g.save();
     g.translate(i * fw, 0);
@@ -1445,6 +1663,8 @@ export function createSpritePlaceholder(def) {
     g.clip();
     painter(g, fw, fh, p, i);
     g.restore();
+    if (p.camouflage) applyCamo(g, i * fw, fw, fh, p);
+    if (p.charFrame === i) applyChar(g, i * fw, fw, fh, p);
     if (p.autoOutline) addOutline(g, i * fw, fw, fh, p.autoOutline);
   }
   return c;
