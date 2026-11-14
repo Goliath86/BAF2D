@@ -636,9 +636,16 @@ body.match-over #overlay-matchend {
 }
 
 /* nella schermata principale le voci stanno in basso, sotto il logo c'è aria */
-.menu-screen[data-screen="main"],
-.menu-screen[data-screen="pause"] {
-  justify-content: center;
+/* (margini automatici e non justify-content: center, che con il contenuto più alto del pannello, come sui
+   telefoni in orizzontale, tagliava in alto le prime voci senza poterci scorrere) */
+.menu-screen[data-screen="main"] > :first-child,
+.menu-screen[data-screen="pause"] > :first-child {
+  margin-top: auto;
+}
+
+.menu-screen[data-screen="main"] > :last-child,
+.menu-screen[data-screen="pause"] > :last-child {
+  margin-bottom: auto;
 }
 
 .menu-title {
@@ -767,15 +774,22 @@ button {
   white-space: pre-line;
 }
 
+/* versione: in fondo al pannello laterale, solo nel menu principale */
 .menu-version {
-  position: absolute;
-  right: max(14px, env(safe-area-inset-right));
-  bottom: 10px;
+  display: none;
+  flex: none;
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 2px solid var(--menu-line);
   font-size: 13px;
   letter-spacing: 1px;
   color: var(--menu-dim);
   text-shadow: 2px 2px 0 #000;
   pointer-events: none;
+}
+
+.menu-panel:has(.menu-screen[data-screen="main"].active) .menu-version {
+  display: block;
 }
 
 /* ---------- Nuova partita ---------- */
@@ -1592,7 +1606,8 @@ body.mode-touch .pause-button:not(.hidden) {
   }
 
   .menu-version {
-    bottom: 6px;
+    margin-top: 6px;
+    padding-top: 4px;
     font-size: 11px;
   }
 
