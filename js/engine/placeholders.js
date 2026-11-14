@@ -102,6 +102,9 @@ function rng(seed) {
   };
 }
 
+// matrice di Bayer 4x4 (soglie 0..1) per retinare le sfumature
+const BAYER4 = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => (v + 0.5) / 16);
+
 // ---------- Armi ----------
 // Ogni arma è vista dall'alto, canna verso destra, asse sulle righe cy-1..cy
 // (caricatore ecc. possono sporgere sotto fino a cy+2). x = pixel più a sinistra.
@@ -939,67 +942,125 @@ const SPRITE_SHAPES = {
     const cx = w / 2;
     const cy = h / 2;
     const R = Math.min(w, h) / 2 - 3;
-    // raggi di fuliggine che escono dalla macchia
-    const rays = 7 + Math.floor(r() * 4);
-    for (let i = 0; i < rays; i++) {
-      const a = (i / rays) * Math.PI * 2 + r() * 0.5;
-      const len = R * (0.9 + r() * 0.5);
-      line(g, Math.round(cx), Math.round(cy), Math.round(cx + Math.cos(a) * len), Math.round(cy + Math.sin(a) * len), p.edge);
+    // bordo irregolare: raggio che cambia con l'angolo (somma di onde) + raggi di fuliggine più lunghi
+    const waves = [0, 1, 2].map((i) => [2 + i * 2 + Math.floor(r() * 2), r() * Math.PI * 2, 0.12 / (i + 1)]);
+    const rays = [];
+    for (let i = 0, n = 7 + Math.floor(r() * 5); i < n; i++) rays.push([(i / n) * Math.PI * 2 + r() * 0.5, 0.25 + r() * 0.4, 0.06 + r() * 0.08]);
+    const reach = (a) => {
+      let k = 1;
+      for (const [f, ph, amp] of waves) k += Math.sin(a * f + ph) * amp;
+      for (const [ra, len, wid] of rays) {
+        const d = Math.abs(Math.atan2(Math.sin(a - ra), Math.cos(a - ra)));
+        if (d < wid) k += len * (1 - d / wid);
+      }
+      return k;
+    };
+    // bande dal centro al bordo: nero, carbone, fuliggine, terra bruciata (marrone), retinate tra loro (Bayer)
+    const bands = [p.dark, p.mid, p.edge, p.brown || p.edge];
+    const stops = [0.32, 0.55, 0.78, 1.02];
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const dx = x + 0.5 - cx;
+        const dy = y + 0.5 - cy;
+        const d = Math.hypot(dx, dy) / (R * reach(Math.atan2(dy, dx)));
+        const jit = (BAYER4[(y & 3) * 4 + (x & 3)] - 0.5) * 0.14 + (r() - 0.5) * 0.05;
+        const v = d + jit;
+        let b = stops.findIndex((s) => v < s);
+        if (b < 0) continue;
+        rect(g, x, y, 1, 1, bands[b]);
+      }
     }
-    // bordo sgranato: pixel sparsi poco oltre la macchia
-    for (let i = 0; i < R * 10; i++) {
+    // cenere chiara sparsa nel nero e zolle di terra smossa sul bordo (scure con un pixel di luce)
+    for (let i = 0; i < R * 0.6; i++) {
       const a = r() * Math.PI * 2;
-      const d = R * (0.7 + r() * 0.55);
-      rect(g, Math.floor(cx + Math.cos(a) * d), Math.floor(cy + Math.sin(a) * d), 1, 1, r() < 0.5 ? p.edge : p.mid);
+      const d = R * r() * 0.5;
+      rect(g, Math.floor(cx + Math.cos(a) * d), Math.floor(cy + Math.sin(a) * d), 1, 1, p.ash || p.edge);
     }
-    // macchia = unione di dischi, poi centro più scuro
-    const blobs = [[0, 0, 0.75]];
-    for (let i = 0; i < 5; i++) {
-      const a = r() * Math.PI * 2;
-      blobs.push([Math.cos(a) * 0.35, Math.sin(a) * 0.35, 0.35 + r() * 0.25]);
+    if (p.clod) {
+      for (let i = 0; i < R * 0.9; i++) {
+        const a = r() * Math.PI * 2;
+        const d = R * reach(a) * (0.85 + r() * 0.35);
+        const x = Math.floor(cx + Math.cos(a) * d);
+        const y = Math.floor(cy + Math.sin(a) * d);
+        const big = r() < 0.4;
+        rect(g, x, y, big ? 2 : 1, 1, p.clod);
+        if (big) rect(g, x, y - 1, 1, 1, p.clodLight || p.clod);
+      }
     }
-    for (const [ox, oy, s] of blobs) disc(g, cx + ox * R, cy + oy * R, R * s, p.mid);
-    disc(g, cx + (r() - 0.5) * 2, cy + (r() - 0.5) * 2, R * 0.45, p.dark);
-    for (let i = 0; i < 6; i++) rect(g, Math.floor(cx + (r() - 0.5) * R), Math.floor(cy + (r() - 0.5) * R), 1, 1, p.ash || p.edge);
   },
 
   /**
    * Palla di fuoco: frame 0..frames-1 = dall'esplosione (nucleo bianco, fiamme) al fumo che si dissolve.
    * Unione di dischi con offset fissi che si allargano, cambiano colore e si assottigliano.
    */
-  explosion(g, w, h, p, frame) {
+  explosion(g, w, h, p, index) {
+    // index = variante * frames + passo (sheetVariants forme diverse; non si ruotano: la luce viene da in alto a sx)
     const n = p.frames || 8;
+    const variant = Math.floor(index / n);
+    const frame = index % n;
     const t = n > 1 ? frame / (n - 1) : 1;
     const cx = w / 2;
     const cy = h / 2;
     const maxR = Math.min(w, h) / 2 - 1;
-    const r = rng(17);
-    const blobs = [[0, 0, 0.7]];
-    for (let i = 0; i < 7; i++) {
-      const a = (i / 7) * Math.PI * 2 + r() * 0.6;
-      blobs.push([Math.cos(a) * (0.3 + r() * 0.25), Math.sin(a) * (0.3 + r() * 0.25), 0.35 + r() * 0.2]);
+    const r = rng(17 + variant * 41);
+    // nuvola = unione di sbuffi con offset fissi (stessa forma in tutti i fotogrammi, che si gonfia)
+    const blobs = [[0, 0, 0.62]];
+    for (let i = 0; i < 9; i++) {
+      const a = (i / 9) * Math.PI * 2 + r() * 0.5;
+      const d = 0.26 + r() * 0.24;
+      blobs.push([Math.cos(a) * d, Math.sin(a) * d, 0.28 + r() * 0.2]);
     }
-    const R = maxR * (0.45 + 0.55 * Math.sqrt(t)); // si allarga in fretta, poi rallenta
-    const shrink = t > 0.5 ? 1 - ((t - 0.5) / 0.5) * 0.65 : 1; // nel finale le nuvole si assottigliano
-    const spread = 1 + t * 0.6; // e si allontanano dal centro
-    const layer = (scale, color) => {
-      for (const [ox, oy, s] of blobs) {
-        const rad = R * s * scale * shrink;
-        if (rad >= 0.6) disc(g, cx + ox * R * spread, cy + oy * R * spread, rad, color);
+    const grow = 1 - Math.pow(1 - t, 3); // si allarga di colpo, poi rallenta
+    const R = maxR * (0.28 + 0.72 * grow);
+    const spread = 1 + t * 0.3;
+    const shrink = t > 0.55 ? 1 - ((t - 0.55) / 0.45) * 0.4 : 1;
+    const heat = Math.max(0, 1.55 - t * 2.2); // calore: bianco all'inizio, finito a ~70% della vita
+    const fade = t > 0.6 ? (t - 0.6) / 0.4 : 0; // nel finale il fumo si buca e sparisce
+    const fire = [p.red || p.outer, p.outer, p.mid, p.core];
+    const smoke = [p.smokeDark || p.smoke, p.smoke, p.smokeLight || p.smoke];
+    const boil = rng(index * 7 + 3); // ribollire diverso a ogni fotogramma
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const px = x + 0.5 - cx;
+        const py = y + 0.5 - cy;
+        let dens = 0;
+        let local = 0; // luce sullo sbuffo più vicino (ogni sbuffo ha il suo volume)
+        for (const [ox, oy, s] of blobs) {
+          const rad = R * s * shrink;
+          const bx = px - ox * R * spread;
+          const by = py - oy * R * spread;
+          const q = 1 - Math.hypot(bx, by) / rad;
+          if (q > dens) {
+            dens = q;
+            local = -(bx + by) / (rad * 1.2);
+          }
+        }
+        dens += (boil() - 0.5) * 0.08;
+        if (dens <= 0) continue;
+        const b = BAYER4[(y & 3) * 4 + (x & 3)];
+        if (dens < 0.14 && b > dens / 0.14) continue; // bordo morbido retinato
+        if (fade > 0 && dens < fade * 0.85 + (b - 0.5) * 0.2) continue; // si dissolve dal bordo verso il centro
+        // luce da in alto a sinistra: metà dalla nuvola intera, metà dal singolo sbuffo
+        const light = Math.max(-1, Math.min(1, -(px + py) / (R * 1.2) * 0.45 + local * 0.75));
+        const temp = dens * heat * 1.25 + light * 0.12 * heat + (b - 0.5) * 0.14;
+        if (temp > 0.3) {
+          const i = temp > 0.95 ? 3 : temp > 0.68 ? 2 : temp > 0.42 ? 1 : 0;
+          rect(g, x, y, 1, 1, fire[i]);
+        } else {
+          const s = 0.45 + light * 0.45 + dens * 0.25 + (b - 0.5) * 0.25;
+          rect(g, x, y, 1, 1, smoke[s < 0.42 ? 0 : s < 0.78 ? 1 : 2]);
+        }
       }
-    };
-    if (t < 0.4) {
-      layer(1, p.outer);
-      layer(0.72, p.mid);
-      layer(0.45, p.core);
-    } else if (t < 0.65) {
-      layer(1, p.smoke);
-      layer(0.75, p.outer);
-      layer(0.45, p.mid);
-    } else {
-      layer(1, p.smokeDark || p.smoke);
-      layer(0.6, p.smoke);
-      if (t < 0.8) layer(0.3, p.outer);
+    }
+    // primo istante: lampo con raggi
+    if (t < 0.15) {
+      const k = 1 - t / 0.15;
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2 + 0.2;
+        const len = maxR * (0.55 + (i % 2) * 0.3) * k + R * 0.5;
+        line(g, cx, cy, cx + Math.cos(a) * len, cy + Math.sin(a) * len, i % 2 ? p.mid : p.core);
+      }
+      disc(g, cx, cy, R * 0.45, p.core);
     }
   },
 

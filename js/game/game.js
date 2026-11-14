@@ -2106,6 +2106,7 @@ export class Game {
     this.water?.draw(ctx, view, this.lights.clock);
     this.marks.draw(ctx, view); // crateri, tracce dei mezzi, bossoli fermi
     this.effects.drawDecals(ctx);
+    this.effects.drawEmbers(ctx); // braci accese nelle bruciature
     const wind = this.weather.active ? this.weather.wind : null;
     this.props.drawGround(ctx, view, wind); // ombre, cespugli, sassi
     for (const v of this.vehicles) if (v.high) v.drawShadow(ctx); // ombre degli elicotteri in volo
@@ -2138,6 +2139,7 @@ export class Game {
     for (const b of this.bullets) drawSprite(ctx, b.sprite, 0, b.x, b.y, b.angle);
     this.rockets.draw(ctx);
     this.effects.drawFlashes(ctx);
+    this.effects.drawRings(ctx); // onde d'urto (polvere), sotto il fumo
     this.effects.drawParticles(ctx);
     this.effects.drawBlasts(ctx); // sopra il fumo, altrimenti ne coprirebbe il nucleo
     this.props.drawOverhead(ctx, view, wind); // chiome delle palme sopra i soldati

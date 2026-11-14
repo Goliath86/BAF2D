@@ -353,8 +353,17 @@
       "sound": "explosion",
       "decal": { "sprite": "scorch", "life": 30, "fade": 8, "alpha": 0.9, "clipSolid": true },
       "crater": { "radius": 4, "hole": "#1c1914", "ring": "#2e2820", "rim": "#5a4c3a", "clods": 7, "alpha": 0.75 },
-      "fireball": { "sprite": "explosion", "duration": 0.6 },
+      "fireball": { "sprite": "explosion", "duration": 0.7 },
       "glow": { "color": "#ff9a2a", "alpha": 0.4, "radius": 34, "bands": 4, "life": 0.25 },
+      "shockwave": { "radius": 30, "time": 0.3, "width": 3, "density": 0.85, "colors": ["#c8b890", "#b4a47c"] },
+      "embers": {
+        "count": [14, 20], "spread": 9, "life": [6, 10], "pulse": 2.4, "bigChance": 0.2,
+        "colors": ["#4a1206", "#8a240a", "#d0400e", "#ff8a24", "#ffc860"],
+        "light": { "color": "#ff6a1a", "alpha": 0.12, "radius": 10, "bands": 3, "cut": 0.5 }
+      },
+      "dust": [
+        { "count": [8, 12], "colors": ["#c8b890", "#b4a47c"], "speed": [30, 75], "life": [0.8, 1.5], "size": [3, 10], "drag": 3, "rise": [2, 6], "alpha": 0.5, "round": true, "shade": 0.16 }
+      ],
       "fires": {
         "count": [0, 2], "spread": 10, "life": [3, 6], "sprite": "fire", "fps": 10,
         "light": { "color": "#ff8a2a", "alpha": 0.22, "radius": 14, "bands": 4, "cut": 0.9, "flicker": 0.3, "flickerSpeed": 13 },
@@ -402,23 +411,25 @@
           "count": [12, 16],
           "colors": ["#6a625a", "#5a544e", "#7a726a", "#4a4642"],
           "speed": [15, 55],
-          "life": [1.4, 2.6],
-          "size": [5, 12],
+          "life": [1.6, 2.8],
+          "size": [5, 14],
           "drag": 2.2,
-          "rise": [5, 12],
+          "rise": [6, 13],
           "alpha": 0.55,
-          "round": true
+          "round": true,
+          "shade": 0.2
         },
         {
           "count": [6, 9],
           "colors": ["#9a9a9a", "#8a8a8a", "#b4b4b4"],
           "speed": [5, 20],
-          "life": [2.2, 3.5],
-          "size": [6, 14],
+          "life": [2.6, 4],
+          "size": [6, 18],
           "drag": 1.5,
-          "rise": [6, 10],
+          "rise": [7, 12],
           "alpha": 0.3,
-          "round": true
+          "round": true,
+          "shade": 0.15
         }
       ]
     },
@@ -426,8 +437,17 @@
       "sound": "explosion",
       "decal": { "sprite": "scorch", "life": 25, "fade": 8, "alpha": 0.8, "clipSolid": true },
       "crater": { "radius": 5, "hole": "#1c1914", "ring": "#2e2820", "rim": "#5a4c3a", "clods": 8, "alpha": 0.75 },
-      "fireball": { "sprite": "explosion", "duration": 0.5 },
+      "fireball": { "sprite": "explosion", "duration": 0.6 },
       "glow": { "color": "#ff9a2a", "alpha": 0.38, "radius": 30, "bands": 4, "life": 0.22 },
+      "shockwave": { "radius": 28, "time": 0.28, "width": 3, "density": 0.85, "colors": ["#c8b890", "#b4a47c"] },
+      "embers": {
+        "count": [12, 18], "spread": 8, "life": [6, 9], "pulse": 2.4, "bigChance": 0.2,
+        "colors": ["#4a1206", "#8a240a", "#d0400e", "#ff8a24", "#ffc860"],
+        "light": { "color": "#ff6a1a", "alpha": 0.12, "radius": 10, "bands": 3, "cut": 0.5 }
+      },
+      "dust": [
+        { "count": [8, 12], "colors": ["#c8b890", "#b4a47c"], "speed": [30, 75], "life": [0.8, 1.5], "size": [3, 10], "drag": 3, "rise": [2, 6], "alpha": 0.5, "round": true, "shade": 0.16 }
+      ],
       "fires": {
         "count": [1, 2], "spread": 8, "life": [3, 6], "sprite": "fire", "fps": 10,
         "light": { "color": "#ff8a2a", "alpha": 0.22, "radius": 14, "bands": 4, "cut": 0.9, "flicker": 0.3, "flickerSpeed": 13 },
@@ -443,15 +463,24 @@
       "emitters": [
         { "count": [10, 14], "colors": ["#fff4c2", "#ffd36b", "#ffb627", "#ff7a1a"], "speed": [30, 90], "life": [0.15, 0.35], "size": [3, 1], "drag": 5, "round": true },
         { "count": [12, 18], "colors": ["#fff4c2", "#ffd36b", "#ffb627"], "speed": [160, 280], "life": [0.15, 0.3], "size": [1, 1], "drag": 3, "streak": 0.022, "collide": true, "fade": false },
-        { "count": [10, 14], "colors": ["#6a625a", "#5a544e", "#7a726a", "#4a4642"], "speed": [15, 55], "life": [1.2, 2.2], "size": [5, 11], "drag": 2.2, "rise": [5, 12], "alpha": 0.55, "round": true }
+        { "count": [10, 14], "colors": ["#6a625a", "#5a544e", "#7a726a", "#4a4642"], "speed": [15, 55], "life": [1.4, 2.6], "size": [5, 13], "drag": 2.2, "rise": [6, 13], "alpha": 0.55, "round": true, "shade": 0.2 }
       ]
     },
     "vehicle": {
       "sound": "vehicle_explosion",
       "decal": { "sprite": "scorch", "life": 40, "fade": 10, "alpha": 0.95, "clipSolid": true },
       "crater": { "radius": 8, "hole": "#16130f", "ring": "#2a241c", "rim": "#54463a", "clods": 14, "alpha": 0.8 },
-      "fireball": { "sprite": "explosion", "duration": 0.8 },
+      "fireball": { "sprite": "explosion", "duration": 0.9 },
       "glow": { "color": "#ff8a1a", "alpha": 0.5, "radius": 52, "bands": 5, "life": 0.4 },
+      "shockwave": { "radius": 46, "time": 0.38, "width": 4, "density": 0.9, "colors": ["#c8b890", "#b4a47c"] },
+      "embers": {
+        "count": [24, 32], "spread": 14, "life": [9, 14], "pulse": 2, "bigChance": 0.3,
+        "colors": ["#4a1206", "#8a240a", "#d0400e", "#ff8a24", "#ffc860"],
+        "light": { "color": "#ff6a1a", "alpha": 0.14, "radius": 14, "bands": 3, "cut": 0.6 }
+      },
+      "dust": [
+        { "count": [12, 16], "colors": ["#c8b890", "#b4a47c"], "speed": [35, 90], "life": [1, 1.8], "size": [4, 12], "drag": 3, "rise": [2, 6], "alpha": 0.5, "round": true, "shade": 0.16 }
+      ],
       "fires": {
         "count": [3, 5], "spread": 14, "life": [6, 11], "sprite": "fire", "fps": 10,
         "light": { "color": "#ff7a1a", "alpha": 0.26, "radius": 20, "bands": 4, "cut": 0.95, "flicker": 0.3, "flickerSpeed": 12 },
@@ -468,7 +497,7 @@
         { "count": [18, 24], "colors": ["#fff4c2", "#ffd36b", "#ffb627", "#ff7a1a"], "speed": [40, 120], "life": [0.2, 0.5], "size": [4, 1], "drag": 4, "round": true },
         { "count": [24, 32], "colors": ["#fff4c2", "#ffd36b", "#ffb627"], "speed": [180, 320], "life": [0.2, 0.45], "size": [1, 1], "drag": 3, "streak": 0.025, "collide": true, "fade": false },
         { "count": [14, 20], "colors": ["#2a2a2a", "#3a3a3a", "#4a4a4a"], "speed": [100, 220], "life": [0.3, 0.6], "size": [1, 2], "drag": 4, "streak": 0.015, "collide": true },
-        { "count": [18, 24], "colors": ["#3a3632", "#4a4642", "#2a2622", "#5a544e"], "speed": [15, 60], "life": [2, 3.5], "size": [6, 16], "drag": 2, "rise": [6, 14], "alpha": 0.6, "round": true }
+        { "count": [18, 24], "colors": ["#3a3632", "#4a4642", "#2a2622", "#5a544e"], "speed": [15, 60], "life": [2.2, 3.8], "size": [6, 18], "drag": 2, "rise": [6, 14], "alpha": 0.6, "round": true, "shade": 0.2 }
       ]
     }
   },
@@ -591,6 +620,7 @@
 
     "ground": {
       "decal": { "sprite": "hole_ground", "life": 3, "fade": 1.5 },
+      "dust": ["#8a8e98", "#767a84", "#9ea2aa"],
       "sound": "hit_ground",
       "emitters": [
         {
@@ -653,6 +683,7 @@
 
     "sand": {
       "decal": { "sprite": "hole_sand", "life": 2.5, "fade": 1.5 },
+      "dust": ["#e2c690", "#d4b47a", "#ecd6a6"],
       "sound": "hit_ground",
       "emitters": [
         {
@@ -678,6 +709,7 @@
 
     "grass": {
       "decal": { "sprite": "hole_grass", "life": 2.5, "fade": 1.5 },
+      "dust": ["#8a7a5a", "#7a6a4c", "#9a8a68"],
       "sound": "hit_ground",
       "emitters": [
         { "count": [3, 5], "colors": ["#6a5434", "#7a6040", "#5a4630"], "speed": [25, 60], "life": [0.2, 0.4], "size": [1, 1], "drag": 5 },
@@ -688,6 +720,7 @@
 
     "dirt": {
       "decal": { "sprite": "hole_dirt", "life": 2.5, "fade": 1.5 },
+      "dust": ["#8a7656", "#7a6648", "#9a8664"],
       "sound": "hit_ground",
       "emitters": [
         { "count": [4, 6], "colors": ["#6a5434", "#8a6c46", "#4e3c2a"], "speed": [25, 60], "life": [0.2, 0.4], "size": [1, 1], "drag": 5 },

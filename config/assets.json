@@ -319,7 +319,11 @@
       "frameWidth": 36,
       "frameHeight": 36,
       "origin": [18, 18],
-      "placeholder": { "shape": "scorch", "frames": 3, "dark": "#060606", "mid": "#121110", "edge": "#1e1c1a", "ash": "#34302c" }
+      "placeholder": {
+        "shape": "scorch", "frames": 4,
+        "dark": "#070605", "mid": "#15110d", "edge": "#2a1f16", "brown": "#46331f", "ash": "#4a4440",
+        "clod": "#3a2a1a", "clodLight": "#6a5236"
+      }
     },
     "explosion": {
       "src": null,
@@ -328,12 +332,15 @@
       "origin": [20, 20],
       "placeholder": {
         "shape": "explosion",
-        "frames": 9,
+        "frames": 14,
+        "sheetVariants": 3,
         "core": "#fffbe6",
         "mid": "#ffd36b",
         "outer": "#ff7a1a",
-        "smoke": "#6a625a",
-        "smokeDark": "#3e3a36"
+        "red": "#c83a14",
+        "smoke": "#5e5650",
+        "smokeDark": "#36312d",
+        "smokeLight": "#8a827a"
       }
     },
     "debris_stone": {

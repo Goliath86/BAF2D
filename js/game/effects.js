@@ -19,6 +19,67 @@ function pick(list, def) {
   return list && list.length ? list[Math.floor(Math.random() * list.length)] : def;
 }
 
+/** Colore "#rrggbb" schiarito (k > 0, verso il bianco) o scurito (k < 0, verso il nero) di |k|. */
+function shadeHex(hex, k) {
+  const n = parseInt(hex.slice(1, 7), 16);
+  const t = k > 0 ? 255 : 0;
+  const a = Math.abs(k);
+  const c = (v) => Math.round(v + (t - v) * a);
+  return `rgb(${c((n >> 16) & 255)},${c((n >> 8) & 255)},${c(n & 255)})`;
+}
+
+// matrice di Bayer 4x4 (soglie 0..1) per le retinature
+const BAYER4 = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => (v + 0.5) / 16);
+const bayer = (x, y) => BAYER4[(y & 3) * 4 + (x & 3)];
+
+/** Disco pixelato di raggio r centrato in (cx, cy) interi: una riga per y, col fillStyle attuale. */
+function fillDisc(ctx, cx, cy, r) {
+  for (let y = -Math.floor(r); y < Math.ceil(r); y++) {
+    const dy = y + 0.5;
+    const hw = Math.round(Math.sqrt(Math.max(0, r * r - dy * dy)));
+    if (hw > 0) ctx.fillRect(cx - hw, cy + y, hw * 2, 1);
+  }
+}
+
+/**
+ * Disco pixelato a tre toni senza sovrapposizioni (con l'alpha le parti sovrapposte sarebbero più opache):
+ * dark = tutto il disco, base = disco spostato verso la luce (in alto a sinistra), light = riflesso più piccolo.
+ */
+function shadedDisc(ctx, cx, cy, r, dark, base, light) {
+  const o = Math.max(1, Math.round(r * 0.2));
+  const br = r - o; // disco del colore pieno: centro (cx - o, cy - o)
+  const lo = Math.round(r * 0.38);
+  const lr = r * 0.4; // riflesso: centro (cx - lo, cy - lo)
+  const inside = (x, y, ox, oy, rr) => {
+    const dx = x + 0.5 - ox;
+    const dy = y + 0.5 - oy;
+    return dx * dx + dy * dy <= rr * rr;
+  };
+  for (let y = -Math.floor(r); y < Math.ceil(r); y++) {
+    const dy = y + 0.5;
+    const hw = Math.round(Math.sqrt(Math.max(0, r * r - dy * dy)));
+    if (hw <= 0) continue;
+    let run = null;
+    let start = 0;
+    for (let x = -hw; x <= hw; x++) {
+      let c = null;
+      if (x < hw) {
+        if (!inside(x, y, -o, -o, br)) c = dark;
+        else if (inside(x, y, -lo, -lo, lr)) c = light;
+        else c = base;
+      }
+      if (c !== run) {
+        if (run) {
+          ctx.fillStyle = run;
+          ctx.fillRect(cx + start, cy + y, x - start, 1);
+        }
+        run = c;
+        start = x;
+      }
+    }
+  }
+}
+
 export class Effects {
   constructor(cfg = {}, assets, audio) {
     this.assets = assets;
@@ -39,6 +100,9 @@ export class Effects {
     this.blasts = []; // palle di fuoco delle esplosioni (sprite animato)
     this.fires = []; // fuochi rimasti accesi dopo le esplosioni (fiamma animata, fumo, luce)
     this.maxFires = cfg.maxFires ?? 24;
+    this.rings = []; // onde d'urto delle esplosioni (anello di polvere che si allarga)
+    this.embers = []; // braci rimaste accese nella bruciatura (gruppi di pixel che pulsano)
+    this.maxEmbers = cfg.maxEmbers ?? 12;
     this.lights = null; // Lights (game/lights.js), impostato da Game: aloni di vampate, esplosioni e fuochi
     this.marks = null; // GroundMarks (game/marks.js), impostato da Game: crateri e bossoli che restano
     this.bakeCasings = cfg.bakeCasings !== false; // bossoli fermi cotti nei segni a terra (restano tutta la partita)
@@ -72,6 +136,43 @@ export class Effects {
     while (this.fires.length > this.maxFires) this.fires.shift();
   }
 
+  /**
+   * Colori della polvere del terreno nel punto (x, y): impacts.<impatto del tile>.dust (null se non definiti, es.
+   * acqua o pavimenti). Usati da onde d'urto, polvere delle esplosioni e polvere sollevata da mezzi e soldati.
+   */
+  groundDust(x, y, map) {
+    if (!map) return null;
+    const tile = map.tileAt(Math.floor(x / map.size), Math.floor(y / map.size));
+    return this.impacts[tile?.impact || 'ground']?.dust || null;
+  }
+
+  /**
+   * Braci rimaste accese nella bruciatura (def = explosions.<tipo>.embers): { count, spread, life, colors (dal più
+   * scuro al più chiaro), pulse (velocità), light }. Un gruppo per esplosione; solo pixel su terreno libero.
+   */
+  _spawnEmbers(def, x, y, map) {
+    const pts = [];
+    const n = Math.round(range(def.count, 10));
+    const spread = def.spread ?? 10;
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const d = Math.sqrt(Math.random()) * spread;
+      const px = Math.round(x + Math.cos(a) * d);
+      const py = Math.round(y + Math.sin(a) * d);
+      if (map?.blocksShotAt(px, py)) continue;
+      // le braci più vicine al centro restano accese più a lungo
+      pts.push({ x: px, y: py, phase: Math.random() * Math.PI * 2, speed: 0.6 + Math.random() * 0.8, keep: 1 - (d / spread) * 0.6, size: Math.random() < (def.bigChance ?? 0.2) ? 2 : 1 });
+    }
+    if (!pts.length) return;
+    this.embers.push({ def, x, y, pts, time: 0, life: range(def.life, 8) });
+    while (this.embers.length > this.maxEmbers) this.embers.shift();
+  }
+
+  /** Intensità 0..1 di un gruppo di braci: piena all'inizio, cala nella seconda metà della vita. */
+  _emberLevel(e) {
+    return Math.max(0, Math.min(1, ((e.life - e.time) / e.life) * 2));
+  }
+
   /** Intensità 0..1 del fuoco f: sale in fretta, poi cala nell'ultimo terzo della vita. */
   _fireLevel(f) {
     const up = Math.min(1, f.time / 0.25);
@@ -87,6 +188,58 @@ export class Effects {
       const t = f.time * (l.flickerSpeed ?? 14) + f.phase;
       const flick = 1 - (l.flicker ?? 0.25) * (0.5 + 0.5 * Math.sin(t) * Math.sin(t * 0.37 + 1.3));
       lights.add(f.x, f.y - 2, l, this._fireLevel(f) * flick, 0.85 + 0.15 * flick);
+    }
+    // braci: un alone fioco per gruppo (si vede col buio)
+    for (const e of this.embers) {
+      const l = e.def.light;
+      if (l) lights.add(e.x, e.y, l, this._emberLevel(e) * (0.85 + 0.15 * Math.sin(e.time * 3)));
+    }
+  }
+
+  /** Braci: pixel che pulsano dal rosso scuro al giallo e si spengono a poco a poco (sopra la bruciatura). */
+  drawEmbers(ctx) {
+    for (const e of this.embers) {
+      const colors = e.def.colors || ['#5a1a0a', '#a8320e', '#e04a10', '#ff9a2a'];
+      const level = this._emberLevel(e);
+      const pulse = e.def.pulse ?? 2.2;
+      for (const p of e.pts) {
+        // ogni brace ha il suo respiro; quelle lontane dal centro si spengono prima
+        const v = (0.55 + 0.45 * Math.sin(e.time * pulse * p.speed + p.phase)) * Math.min(1, level / p.keep);
+        if (v < 0.15) continue;
+        ctx.fillStyle = colors[Math.min(colors.length - 1, Math.floor(v * colors.length))];
+        ctx.fillRect(p.x, p.y, p.size, 1);
+      }
+    }
+  }
+
+  /**
+   * Onde d'urto: anello di polvere (colori del terreno) che si allarga in fretta e si dirada con una retinatura;
+   * def = explosions.<tipo>.shockwave = { radius, time, width, density }. Non disegnato dentro i muri.
+   */
+  drawRings(ctx) {
+    for (const r of this.rings) {
+      const d = r.def;
+      const u = r.time / (d.time ?? 0.3);
+      const R = (d.radius ?? 24) * (1 - (1 - u) * (1 - u)); // rallenta allargandosi
+      if (R < 2) continue;
+      const width = Math.max(1, Math.round((d.width ?? 3) * (1 - u * 0.5)));
+      const dens = (d.density ?? 0.8) * (1 - u);
+      const n = Math.ceil(Math.PI * 2 * R);
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2;
+        const ca = Math.cos(a);
+        const sa = Math.sin(a);
+        for (let k = 0; k < width; k++) {
+          const px = Math.round(r.x + ca * (R - k));
+          const py = Math.round(r.y + sa * (R - k));
+          // più fitto sul fronte dell'onda, rado verso l'interno
+          if (bayer(px, py) > dens * (1 - k / (width + 1))) continue;
+          if (r.map?.blocksShotAt(px, py)) continue;
+          const list = k === 0 ? r.front : r.colors;
+          ctx.fillStyle = list[Math.abs(px * 7 + py * 13) % list.length];
+          ctx.fillRect(px, py, 1, 1);
+        }
+      }
     }
   }
 
@@ -127,17 +280,31 @@ export class Effects {
     if (d.fireball) {
       const sprite = d.fireball.sprite ? this.assets.sprite(d.fireball.sprite) : null;
       const duration = range(d.fireball.duration, 0.5);
+      // forma a caso tra le varianti del foglio (niente rotazione: l'ombreggiatura ha la luce in alto a sinistra)
+      const steps = sprite ? sprite.frameCount / sprite.variants : 1;
       this.blasts.push({
         sprite,
+        first: sprite ? Math.floor(Math.random() * sprite.variants) * steps : 0,
+        steps,
         x: Math.round(x),
         y: Math.round(y),
-        angle: Math.floor(Math.random() * 4) * (Math.PI / 2),
+        angle: 0,
         time: 0,
         duration,
         fireTime: duration,
       });
     }
     if (d.fires) this._spawnFires(d.fires, x, y, map);
+    if (d.embers) this._spawnEmbers(d.embers, x, y, map);
+    // polvere del terreno sotto l'esplosione (impacts.<impatto del tile>.dust): onda d'urto e nuvola sollevata
+    const dust = this.groundDust(x, y, map);
+    if (d.shockwave) {
+      const colors = dust || d.shockwave.colors || ['#c8b890'];
+      // fronte dell'onda schiarito (polvere sollevata contro il sole), coda col colore del terreno
+      const front = colors.map((c) => shadeHex(c, d.shockwave.lighten ?? 0.35));
+      this.rings.push({ def: d.shockwave, x: Math.round(x), y: Math.round(y), time: 0, colors, front, map });
+    }
+    for (const em of d.dust || []) this.emit(dust ? { ...em, colors: dust } : em, x, y, 0, 0);
     for (const em of d.emitters || []) this.emit(em, x, y, 0, 0);
     for (const deb of d.debris || []) {
       const n = Math.round(range(deb.count, 6));
@@ -305,6 +472,7 @@ export class Effects {
       const a = base + (Math.random() - 0.5) * spread;
       const sp = range(em.speed, 20);
       const life = range(em.life, 0.3);
+      const color = pick(em.colors, '#ffffff');
       this.particles.push({
         x,
         y,
@@ -316,7 +484,9 @@ export class Effects {
         maxLife: life,
         size0: size[0],
         size1: size[1] ?? size[0],
-        color: pick(em.colors, '#ffffff'),
+        color,
+        // volume (fumo): lato in luce (in alto a sinistra) e in ombra, di "shade" verso bianco/nero
+        shade: em.shade && em.round ? [shadeHex(color, em.shade), shadeHex(color, -em.shade)] : null,
         alpha: em.alpha ?? 1,
         fade: em.fade !== false,
         round: !!em.round, // disco pixelato invece del quadrato (es. fumo grosso)
@@ -334,6 +504,8 @@ export class Effects {
     this.flashes.length = 0;
     this.blasts.length = 0;
     this.fires.length = 0;
+    this.rings.length = 0;
+    this.embers.length = 0;
   }
 
   /** map: TileMap per far rimbalzare i bossoli sui tile solidi (opzionale). */
@@ -347,6 +519,16 @@ export class Effects {
       const b = this.blasts[i];
       b.time += dt;
       if (b.time >= b.duration) this.blasts.splice(i, 1);
+    }
+    for (let i = this.rings.length - 1; i >= 0; i--) {
+      const r = this.rings[i];
+      r.time += dt;
+      if (r.time >= (r.def.time ?? 0.3)) this.rings.splice(i, 1);
+    }
+    for (let i = this.embers.length - 1; i >= 0; i--) {
+      const e = this.embers[i];
+      e.time += dt;
+      if (e.time >= e.life) this.embers.splice(i, 1);
     }
     for (let i = this.fires.length - 1; i >= 0; i--) {
       const f = this.fires[i];
@@ -493,7 +675,7 @@ export class Effects {
   drawBlasts(ctx) {
     for (const b of this.blasts) {
       if (b.sprite && b.time < b.fireTime) {
-        const frame = Math.min(b.sprite.frameCount - 1, Math.floor((b.time / b.fireTime) * b.sprite.frameCount));
+        const frame = b.first + Math.min(b.steps - 1, Math.floor((b.time / b.fireTime) * b.steps));
         drawSprite(ctx, b.sprite, frame, b.x, b.y, b.angle);
       }
     }
@@ -514,15 +696,13 @@ export class Effects {
         const uy = sp > 0 ? vy / sp : 0;
         for (let k = 0; k < len; k++) ctx.fillRect(Math.round(p.x - ux * k), Math.round(p.y - uy * k), 1, 1);
       } else if (p.round && s >= 3) {
-        // disco pixelato: una riga per y
-        const r = s / 2;
         const cx = Math.round(p.x);
         const cy = Math.round(p.y);
-        for (let y = -Math.floor(r); y < Math.ceil(r); y++) {
-          const dy = y + 0.5;
-          const hw = Math.round(Math.sqrt(Math.max(0, r * r - dy * dy)));
-          if (hw > 0) ctx.fillRect(cx - hw, cy + y, hw * 2, 1);
-        }
+        const r = s / 2;
+        if (p.shade && s >= 5) {
+          // sbuffo con volume: ombra in basso a destra, colore pieno, riflesso in alto a sinistra
+          shadedDisc(ctx, cx, cy, r, p.shade[1], p.color, p.shade[0]);
+        } else fillDisc(ctx, cx, cy, r);
       } else {
         ctx.fillRect(Math.round(p.x - s / 2), Math.round(p.y - s / 2), s, s);
       }

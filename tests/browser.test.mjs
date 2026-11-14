@@ -231,6 +231,31 @@ describe('gioco nel browser', { skip: chrome ? false : 'Chrome non trovato (impo
     assert.equal(await ev(`${alphaAt}(${p.x}, ${p.y})`), 0, 'la nuova partita non ha cancellato i segni');
   });
 
+  it("esplosioni: onda d'urto col colore del terreno, braci che si spengono, fumo con volume", async () => {
+    await openGame();
+    await T(`start('desert', { allies: 0, enemies: 0 })`);
+    await T('step(0.2)');
+    const r = await ev(`(() => { const g = BAF2D, e = g.effects, p = g.player;
+      const sand = e.impacts.sand.dust;
+      let pt = null;
+      for (let y = 0; y < g.map.rows && !pt; y++) for (let x = 0; x < g.map.cols && !pt; x++)
+        if (g.map.tileAt(x, y)?.impact === 'sand') pt = { x: (x + 0.5) * g.map.size, y: (y + 0.5) * g.map.size };
+      e.explosion('frag', pt.x, pt.y, g.map);
+      const ring = e.rings.at(-1);
+      return { rings: e.rings.length, embers: e.embers.length, sandRing: JSON.stringify(ring.colors) === JSON.stringify(sand),
+        shaded: e.particles.filter((q) => q.shade).length, blastFirst: e.blasts.at(-1).first % e.blasts.at(-1).steps };
+    })()`);
+    assert.equal(r.rings, 1, "nessuna onda d'urto");
+    assert.ok(r.sandRing, "l'onda d'urto sulla sabbia non ha i colori della sabbia");
+    assert.ok(r.embers > 0, 'nessuna brace');
+    assert.ok(r.shaded > 0, 'nessuno sbuffo di fumo con volume');
+    assert.equal(r.blastFirst, 0, 'la palla di fuoco non parte dal primo fotogramma della variante');
+    await T('step(0.15)');
+    await shot('explosion');
+    await T('step(15)');
+    assert.equal(await ev('BAF2D.effects.rings.length + BAF2D.effects.embers.length + BAF2D.effects.blasts.length'), 0, 'onde, braci o palle di fuoco rimaste');
+  });
+
   it('animazioni del soldato: rinculo, colpito, lancio, caduta lontano dal colpo, pose dei caduti', async () => {
     await openGame();
     await T(`start('arena', { allies: 0, enemies: 0 })`);

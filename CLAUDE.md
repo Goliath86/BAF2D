@@ -506,8 +506,13 @@ tests/                test di regressione (node --test): static.test.mjs, browse
   giocatore con decadimento lineare in `blastRadius` e linea di vista (`_lineOfSight`, i muri riparano).
 - Esplosioni (`effects.json` -> `explosions`): `decal` con `clipSolid` (bruciatura pre-ruotata su canvas proprio e
   cancellata sui tile solidi), `fireball` (sprite procedurale `explosion`, frame lungo `duration`), `glow`,
-  `emitters` a 360° (particelle con `round`, `streak`, `collide`), `debris` = tipi di `casings` lanciati a 360°
-  (`ejectDeg`/`spreadDeg` 0). Disegno: palle di fuoco sopra le particelle (il fumo non copre il nucleo).
+  `emitters` a 360° (particelle con `round`, `streak`, `collide`, `shade` = sbuffo a tre toni con luce in alto a
+  sinistra), `debris` = tipi di `casings` lanciati a 360° (`ejectDeg`/`spreadDeg` 0), `shockwave` (anello di
+  polvere retinato, `Effects.rings`, `drawRings` sotto le particelle), `dust` (emettitori coi colori del terreno),
+  `embers` (braci che pulsano nella bruciatura, `Effects.embers`, `drawEmbers` dopo i decal, alone `light`).
+  Colori del terreno: `effects.groundDust(x, y, map)` = `impacts.<impatto del tile>.dust`. Palla di fuoco
+  procedurale (`explosion`): `frames` passi × `sheetVariants` forme, non ruotata (luce in alto a sinistra);
+  bruciatura `scorch` retinata (nero -> marrone `brown`, zolle `clod`). Disegno: palle di fuoco sopra le particelle.
 - Suoni: `placeholder` può essere una lista di strati (ognuno con `volume` relativo).
 - `input.endFrame()` va chiamato a fine di ogni tick di update (azzera i `wasPressed`).
 - Tasti di debug F4..F9 (arma, vita, granate, squadra, punti di carriera) attivi solo con `?debug=1` nell'URL o
