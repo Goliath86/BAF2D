@@ -1,4 +1,4 @@
-# BAF2D — itch.io page (v1.4.0)
+# BAF2D — itch.io page (v1.5.0)
 
 Copy each block into the matching field of the itch.io "Edit game" page.
 
@@ -10,12 +10,12 @@ BAF2D
 
 ## Short description or tagline
 
-Top-down pixel-art capture the flag by day or by night: destructible maps, your own squad, vehicles and helicopters, medals, unlocks and a map editor.
+Top-down pixel-art capture the flag in sun, rain, fog or darkness: destructible maps, your own squad, vehicles and helicopters, medals, unlocks and a map editor.
 
 ## Classification / Kind of project
 
 - Classification: **Games**
-- Kind of project: **HTML** (upload `dist/BAF2D-1.4.0-html5.zip`, tick "This file will be played in the browser")
+- Kind of project: **HTML** (upload `dist/BAF2D-1.5.0-html5.zip`, tick "This file will be played in the browser")
 - Release status: **Released**
 
 ## Embed options (Uploads → HTML)
@@ -52,10 +52,13 @@ pick up better weapons and jump into vehicles. Every match feeds your career: sc
     palms, dry-stone walls and wide dirt roads built for vehicles, and <em>Countryside</em>: green farmland between
     two zig-zag trench lines with sandbag parapets, hedgerows, orchards, shell craters and a farmhouse in the middle.
     Every map is symmetric and has no dead ends: there is always another way round.</li>
-  <li><strong>Day, dusk or night.</strong> Pick the time of day for every match. At night the battlefield is lit only
-    by muzzle flashes, explosions, burning wrecks, torches and lamps, and vehicles drive with their headlights on.</li>
-  <li><strong>A battlefield that remembers.</strong> Explosions leave craters and fires that burn for a while, tanks
-    and jeeps leave track marks, spent casings pile up where the fighting was hardest.</li>
+  <li><strong>Day, dusk or night, rain or fog.</strong> Pick the time of day and the weather for every match, or let
+    the light fade from day to night as you fight. At night the battlefield is lit only by muzzle flashes,
+    explosions, burning wrecks, torches and lamps, and vehicles drive with their headlights on. Rain fills puddles
+    that ripple under the drops; morning fog rolls across the fields in thick banks.</li>
+  <li><strong>A battlefield that remembers.</strong> Explosions throw up a fireball, a dust shockwave and chunks of
+    earth, then leave smouldering craters and fires that burn for a while. Tanks and jeeps leave track marks, spent
+    casings pile up where the fighting was hardest, and damaged vehicles lose panels and catch fire.</li>
   <li><strong>Destructible maps.</strong> Crates, fences, hay bales, hedges, sandbags and walls crack and give way
     under fire: bullets chew through light cover, rockets breach brick and stone, tanks drive straight through
     fences and sandbags. Every firefight reshapes the battlefield.</li>
@@ -74,7 +77,8 @@ pick up better weapons and jump into vehicles. Every match feeds your career: sc
     grenades, go and fetch a rocket launcher when enemy armour shows up, and drive vehicles to the flags. Up to
     8 vs 8.</li>
   <li><strong>Gunfeel.</strong> Hit markers on the crosshair (with a distinct kill confirm), red arcs that show where
-    incoming fire comes from, a dynamic crosshair and recoil that rewards short bursts.</li>
+    incoming fire comes from, a dynamic crosshair (or one of four other styles), optional damage numbers and recoil
+    that rewards short bursts. A tactical minimap and arrows at the screen edge keep you oriented.</li>
   <li><strong>Career and ranks.</strong> Points for kills, assists, defending, capturing and destroying vehicles. Your
     rank is saved in the browser and grows from match to match, with a promotion screen when you rank up.</li>
   <li><strong>Medals.</strong> 16 feats to earn in battle: double and triple kills, killing sprees, grenade and
@@ -123,7 +127,8 @@ Keys can be remapped in Options, where you can also turn on <strong>auto reload<
 <ul>
   <li>Progress (rank, medals, your soldier, settings) is stored in your browser's local storage.</li>
   <li>The main menu runs a live thermal-camera drone feed over a city at war.</li>
-  <li>On phones, play in landscape: the game asks for fullscreen on the first tap.</li>
+  <li>On phones, play in landscape: the game asks for fullscreen on the first tap. Graphics quality switches to
+    <em>Low</em> automatically on touch devices; you can change it in Options.</li>
   <li>All graphics and sounds are generated in code: no external assets, about 0.7&nbsp;MB to download.</li>
 </ul>
 
@@ -147,22 +152,80 @@ Source code licensed under the GNU GPL v3.</p>
 
 - Cover image: `arts/cover.png` (630 × 500, the size itch.io asks for).
 - Screenshots (1920 × 1080, in `arts/screenshots/`), suggested order and captions:
-  1. `night_countryside.png` — Night battle in the countryside: a tank takes a flag by the light of a burning wreck.
-  2. `dusk_desert.png` — Dusk in the desert village: torches, craters and fires after the fight.
-  3. `main_menu.png` — The main menu: a live thermal drone feed over a city at war.
-  4. `day_countryside.png` — Trench fighting in broad daylight, a downed helicopter in the field.
-  5. `night_arena.png` — Night in the Test Arena: lamps, fires and muzzle flashes are all the light you get.
-  6. `soldier_customization.png` — Build your soldier: call sign, starting weapon, camo, vest, gear.
-  7. `medal_ingame.png` — Medals in battle: 16 feats, each with its own pixel-art medal.
-  8. `match_end.png` — Victory: leaderboard, medals of the match, promotion and new unlocks.
-  9. `apache_strike.png` — Attack helicopter run: rockets and cannon fire on the enemy trench line.
-  10. `vehicle_combat.png` — Rocket tank vs jeep on the desert road.
-  11. `map_editor.png` — The map editor: paint tiles, place flags, bases, pickups and vehicles, then test the map.
-  12. `medals.png` — Your medal collection.
-  13. `soldier_unlocks.png` — New camos and gear unlock as you rank up: preview them before you earn them.
-- Not in the list: `leaderboard.png` (superseded by `match_end.png`), `editor.png` (superseded by
-  `map_editor.png`), and the pre-1.4 battle shots `oasis_battle.png`, `crossroads_firefight.png`, `promotion.png`,
-  `apache_rocket.png` (older graphics; replace them on the page with the new ones).
+  1. `rain_countryside.png` — Rain over the countryside farm: craters, puddles and a firefight between the barns.
+  2. `night_countryside.png` — Night battle in the countryside: a tank takes a flag by the light of a burning wreck.
+  3. `desert_explosion.png` — A vehicle blows up at the desert oasis: fireball, shockwave and flying earth.
+  4. `fog_countryside.png` — Morning fog rolls over the trenches.
+  5. `briefing.png` — Every match opens with a briefing over the battlefield.
+  6. `dusk_desert.png` — Dusk in the desert village: torches, craters and fires after the fight.
+  7. `main_menu.png` — The main menu: a live thermal drone feed over a city at war.
+  8. `new_game.png` — Pick the map, the teams, the time of day and the weather.
+  9. `dusk_rain_crossroads.png` — Rain at dusk on Crossroads: a flag lights up while it's being captured.
+  10. `match_end.png` — Victory: where the fighting was fiercest, leaderboard, medals, promotion and unlocks.
+  11. `soldier_customization.png` — Build your soldier: call sign, starting weapon, camo, vest, gear.
+  12. `apache_strike.png` — Attack helicopter run: rockets and cannon fire on the enemy trench line.
+  13. `map_editor.png` — The map editor: paint tiles, place flags, bases, pickups and vehicles, then test the map.
+  14. `medal_ingame.png` — Medals in battle: 16 feats, each with its own pixel-art medal.
+- Not in the list: `day_countryside.png`, `night_arena.png`, `vehicle_combat.png`, `medals.png`,
+  `soldier_unlocks.png` (still valid, use them if you want more), `leaderboard.png` (superseded by `match_end.png`),
+  `editor.png` (superseded by `map_editor.png`), and the pre-1.4 battle shots `oasis_battle.png`,
+  `crossroads_firefight.png`, `promotion.png`, `apache_rocket.png` (older graphics).
+
+## Release notes (devlog) — v1.5.0
+
+Title: **BAF2D 1.5.0 — Rain, fog and fair fights**
+
+Type: Major update. Attach `rain_countryside.png` (cover of the post), `desert_explosion.png`, `fog_countryside.png`
+and `briefing.png`.
+
+1.4.0 gave the battlefield light and depth. This update gives it weather, much bigger explosions and a smoother
+ride. It also changes how the bots fight you, and you'll feel that one right away. As always, everything is drawn
+in code.
+
+**Weather**
+- *New game* has a new **Weather** option: the map's own weather, Clear, **Rain** or **Morning fog**.
+- Rain falls slanted with the wind and splashes on the ground. Puddles form on dirt, roads and floors, reflect the
+  sky and ripple under the drops. The colours go grey and you hear it pouring.
+- Fog rolls across the map in thick banks that drift with the wind.
+- Clouds cast shadows that sweep across the countryside and the desert. In the desert the dust gets thicker during
+  gusts.
+- A new time of day, **Day to night**: the light slowly fades to dusk and then to darkness while you fight.
+- Every map has its own colour grade now: the Arena is cold, the desert warm and washed out, the countryside lush.
+  If you like a filmic look, turn on **film grain** in Options.
+
+**Explosions and effects**
+- Explosions throw up a shaded fireball that turns into smoke, a dust shockwave in the colour of the ground and
+  chunks of earth. They leave a scorch mark with embers that keep glowing.
+- Soldiers and vehicles kick up dust when they run and drive, and the helicopter raises dust when it flies low.
+- Blood drips in the direction of the shot, and badly wounded soldiers leave a trail. Hedges shed leaves and wood
+  throws splinters when hit. The vehicles' machine guns fire tracers.
+- Jeeps and tanks are more detailed and camouflaged, their wheels and tracks turn as they move, and they show the
+  damage they take: dents, panels coming off, an engine fire, then a rusty, burning wreck.
+
+**Fair fights**
+- **Bots only shoot at you when they're on your screen.** No more dying to a rifleman you couldn't see. A bot
+  that was already firing at you keeps going for a moment after it drops out of view, so running away still
+  isn't free. Grenades still fly, and bots fight each other just like before.
+
+**Menus and HUD**
+- Every match now opens with a **briefing**: the map scrolls by behind a card with your team, the odds, the time of
+  day, the weather, the objective and a tip.
+- Map previews in *New game* look like the real maps.
+- At the end of the match, the result panel opens on the spot where the fighting was fiercest, with a marker where
+  each soldier fell.
+- The minimap is now a proper tactical map. Arrows at the screen edge point to flags and squadmates out of view.
+  You can turn on damage numbers and pick one of five crosshairs in Options.
+
+**Smoother on desktop and phones**
+- Hitches are gone: collapsing walls, new craters and the first explosion of a match could freeze a frame for up
+  to 0.75 s. Now they take a few milliseconds.
+- Drawing a frame is much cheaper, and up to four times cheaper on some maps.
+- A new **Graphics quality** option (High/Low). Low turns off the most expensive effects and is picked
+  automatically on phones and tablets.
+- On phones, the top of the main menu is no longer cut off.
+
+Your rank, medals and soldier carry over. Try a rainy night on Countryside, and let me know in the comments if
+the game runs better on your phone!
 
 ## Release notes (devlog) — v1.4.0
 

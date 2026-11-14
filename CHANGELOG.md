@@ -1,7 +1,53 @@
 # Changelog
 
 All notable changes to BAF2D. Versions follow [semantic versioning](https://semver.org/); the current version is
-in `config/game.json` (`version`) and shown in the bottom-right corner of the menu.
+in `config/game.json` (`version`) and shown at the bottom of the main menu panel.
+
+## [1.5.0] — 2026-11-14
+
+### Added
+- **Weather** (*New game* → *Weather*): the map's own weather, Clear, **Rain** or **Morning fog**. Rain falls slanted
+  with the wind, splashes on the ground, fills puddles that reflect the sky and ripple under the drops, and darkens
+  the colours. Fog drifts across the battlefield in thick banks. In the desert the dust gets denser during gusts.
+- **Cloud shadows** sweep across the countryside and the desert with the wind.
+- **Day to night** (*New game* → *Time of day*): the light slowly fades from day to dusk to night during the match.
+- **Colour grading for each map**: the Arena is cold, the desert warm and washed out, the countryside lush.
+  A light vignette frames the screen, and **film grain** can be turned on in *Options*.
+- **Briefing**: when a match starts, the map you're about to fight on scrolls by behind a card with the operation
+  name, your team, the number of soldiers, the time of day, the weather, the objective and a tip. Press any key or
+  tap to start.
+- **Loading screen** with a pixel progress bar and a tip.
+- **Graphics quality** option (*Options*): *Low* drops the most expensive effects (the light on the soldiers'
+  edges, one colour pass, half the rain and fog, fewer particles). It is selected automatically on touch devices.
+- **Explosions**: a shaded fireball that turns into smoke, a dust shockwave in the colour of the ground, chunks of
+  earth, and a scorch mark with embers that keep glowing for a while.
+- **Effects**: running soldiers and vehicles kick up dust (sand, earth or mud), the helicopter rotor raises dust
+  near the ground, blood drips in the direction of the shot and badly wounded soldiers leave a trail, the vehicles'
+  machine guns fire tracers, the water ripples where bullets hit it, leaves and splinters fly off hedges and wood.
+- **Vehicles**: jeeps and tanks with more detail (jerrycans, seats, roll bar, antennas, hatches, periscopes,
+  exhausts, spare tracks) and camouflage, wheels and tracks that turn with the speed, front wheels that steer.
+  Damage shows: scorched dents, panels that come off, the engine catches fire when the vehicle is badly hit, and
+  wrecks are rusty and burn for a while.
+- **HUD**: a tactical minimap with raised walls, water, flags and an icon for each vehicle type; arrows at the screen
+  edge for flags and squadmates out of view; optional **damage numbers**; **five crosshair styles** to choose from in
+  *Options*; bouncing pop-ups for points, medals and promotions.
+
+### Changed
+- **New game**: the map previews look like the real thing (blended terrain, trees and props, the map's colours).
+- **Match end**: the result panel opens on a picture of the spot where the fighting was fiercest, with a marker
+  where each soldier fell. Score rows slide in one by one and the rank bar fills up from where you started.
+- **Menu transitions**: the panel and screens slide in, the briefing and loading screens close like a shutter.
+- **Bots only shoot at you when they are on your screen.** A bot that was firing at you keeps shooting for a
+  moment after it goes out of view, then stops: no more getting hit by enemies you can't see. Grenades are not
+  affected, and bots fight each other as before.
+- The version number is now at the bottom of the main menu panel.
+
+### Fixed
+- **No more hitches** when walls crack or collapse, when grenades leave craters or on the first explosion of a
+  match (a single frame could take up to 0.75 s).
+- **Faster rendering**, especially on phones: soldiers' shadows and edge light, battle scars, particles and the HUD
+  are all cheaper to draw.
+- On phones in landscape the first items of the main menu could be cut off at the top and impossible to reach.
 
 ## [1.4.0] — 2026-11-13
 
