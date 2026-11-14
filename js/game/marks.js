@@ -2,7 +2,9 @@
 // segno, svuotato a ogni partita): crateri delle esplosioni (effects.json -> explosions.<t>.crater), tracce di
 // ruote e cingoli dei mezzi (vehicles.json -> <mezzo>.trail) e bossoli/caricatori/detriti fermi a terra, "cotti"
 // nel livello invece di restare oggetti da disegnare (effects.json -> bakeCasings).
-// Nessun costo per fotogramma oltre a un drawImage della parte visibile.
+// Ogni segno si disegna due volte, con le stesse operazioni: nel livello dei segni e direttamente nel canvas della
+// mappa, che si disegna comunque a ogni fotogramma (nessun costo per fotogramma). Quando la mappa ridisegna una
+// regione (tile distrutti, crepe: TileMap.onRegion) i segni di quella regione si ricopiano dal livello.
 
 function makeCanvas(w, h) {
   const c = document.createElement('canvas');
@@ -11,32 +13,97 @@ function makeCanvas(w, h) {
   return c;
 }
 
+/** Contesto che ripete ogni operazione su due contesti (livello dei segni + mappa): solo quelle usate qui. */
+class DualContext {
+  constructor(a, b) {
+    this.a = a;
+    this.b = b;
+  }
+
+  set globalAlpha(v) {
+    this.a.globalAlpha = v;
+    this.b.globalAlpha = v;
+  }
+
+  set fillStyle(v) {
+    this.a.fillStyle = v;
+    this.b.fillStyle = v;
+  }
+
+  save() {
+    this.a.save();
+    this.b.save();
+  }
+
+  restore() {
+    this.a.restore();
+    this.b.restore();
+  }
+
+  translate(x, y) {
+    this.a.translate(x, y);
+    this.b.translate(x, y);
+  }
+
+  rotate(r) {
+    this.a.rotate(r);
+    this.b.rotate(r);
+  }
+
+  fillRect(...p) {
+    this.a.fillRect(...p);
+    this.b.fillRect(...p);
+  }
+
+  drawImage(...p) {
+    this.a.drawImage(...p);
+    this.b.drawImage(...p);
+  }
+}
+
 export class GroundMarks {
   constructor() {
     this.map = null;
     this.canvas = null;
     this.g = null;
+    this.pending = []; // tracce in coda: px, py, size, alpha, colore (flush)
+    this.pendingBake = []; // sprite fermi a terra in coda: [sprite, frame, x, y, angle, alpha]
   }
 
-  /** Nuova partita (o rivincita): niente segni. */
+  /** Nuova partita (o rivincita, dopo map.reset()): niente segni. */
   reset(map) {
     this.map = map;
+    this.dual = null;
+    this.pending.length = 0;
+    this.pendingBake.length = 0;
     if (this.canvas && map && this.canvas.width === map.pixelWidth && this.canvas.height === map.pixelHeight) {
       this.g.clearRect(0, 0, this.canvas.width, this.canvas.height);
     } else {
       this.canvas = null; // mappa di altre dimensioni: si ricrea al primo segno
       this.g = null;
     }
+    // regione della mappa ridisegnata (tile distrutti): i segni di quella regione tornano sopra
+    if (map) {
+      map.onRegion = (x, y, w, h, mg) => {
+        if (this.canvas) mg.drawImage(this.canvas, x, y, w, h, x, y, w, h);
+      };
+    }
   }
 
   _ctx() {
-    if (!this.map) return null;
+    if (!this.map?.canvas) return null;
     if (!this.canvas) {
       this.canvas = makeCanvas(this.map.pixelWidth, this.map.pixelHeight);
       this.g = this.canvas.getContext('2d');
       this.g.imageSmoothingEnabled = false;
     }
-    return this.g;
+    this.map.marked = true; // alla rivincita la mappa va ripulita (TileMap.reset)
+    if (!this.dual) {
+      const mg = this.map.canvas.getContext('2d');
+      mg.imageSmoothingEnabled = false;
+      this.dual = new DualContext(this.g, mg);
+    }
+    return this.dual;
   }
 
   /**
@@ -97,26 +164,67 @@ export class GroundMarks {
     }
     if (Math.hypot(v.x - last.x, v.y - last.y) < (t.step ?? 2)) return;
     v._trailAt = { x: v.x, y: v.y };
-    const g = this._ctx();
-    if (!g) return;
+    if (!this.map) return;
     const cos = Math.cos(v.angle);
     const sin = Math.sin(v.angle);
     const s = t.size ?? 1;
-    g.save();
-    g.globalAlpha = t.alpha ?? 0.1;
-    g.fillStyle = t.color || '#000';
+    // in coda: si scrivono a blocchi (flush). Modificare il canvas della mappa a ogni tick costringe il browser
+    // a ricopiarlo intero (milioni di pixel) al disegno successivo
     for (const [f, side] of t.offsets || []) {
       const px = Math.round(v.x + cos * f - sin * side - s / 2);
       const py = Math.round(v.y + sin * f + cos * side - s / 2);
-      if (!this.map.blocksShotAt(px, py)) g.fillRect(px, py, s, s);
+      if (!this.map.blocksShotAt(px, py)) this.pending.push(px, py, s, t.alpha ?? 0.1, t.color || '#000');
     }
-    g.restore();
+  }
+
+  /** Scrive i segni in coda (tracce): chiamata da Game.update ogni marks.flushInterval s. */
+  flush() {
+    if (!this.pending.length && !this.pendingBake.length) return;
+    const g = this._ctx();
+    if (g) {
+      for (const b of this.pendingBake) this._bake(g, ...b);
+      g.save();
+      const P = this.pending;
+      for (let i = 0; i < P.length; i += 5) {
+        g.globalAlpha = P[i + 3];
+        g.fillStyle = P[i + 4];
+        g.fillRect(P[i], P[i + 1], P[i + 2], P[i + 2]);
+      }
+      g.restore();
+    }
+    this.pending.length = 0;
+    this.pendingBake.length = 0;
+  }
+
+  /** Segni ancora in coda (ctx traslato sulla camera): si vedono subito, prima di essere scritti nella mappa. */
+  drawPending(ctx) {
+    if (!this.pending.length && !this.pendingBake.length) return;
+    ctx.save();
+    for (const b of this.pendingBake) this._bake(ctx, ...b);
+    const P = this.pending;
+    for (let i = 0; i < P.length; i += 5) {
+      ctx.globalAlpha = P[i + 3];
+      ctx.fillStyle = P[i + 4];
+      ctx.fillRect(P[i], P[i + 1], P[i + 2], P[i + 2]);
+    }
+    ctx.restore();
+  }
+
+  /** Avanza il tempo: scrive la coda ogni "interval" s. */
+  update(dt, interval = 0.4) {
+    this.flushTimer = (this.flushTimer ?? 0) + dt;
+    if (this.flushTimer >= interval) {
+      this.flushTimer = 0;
+      this.flush();
+    }
   }
 
   /** Sprite fermo a terra (bossolo, caricatore, detrito) cotto nel livello. */
   bake(sprite, frame, x, y, angle, alpha = 1) {
-    const g = this._ctx();
-    if (!g) return;
+    if (this.map) this.pendingBake.push([sprite, frame, x, y, angle, alpha]); // in coda come le tracce (flush)
+  }
+
+  _bake(g, sprite, frame, x, y, angle, alpha) {
     const sx = (frame % sprite.cols) * sprite.fw;
     const sy = Math.floor(frame / sprite.cols) * sprite.fh;
     g.save();
@@ -127,13 +235,4 @@ export class GroundMarks {
     g.restore();
   }
 
-  /** Parte visibile del livello dei segni (ctx già traslato sulla camera). */
-  draw(ctx, view) {
-    if (!this.canvas) return;
-    const x = Math.max(0, view.x);
-    const y = Math.max(0, view.y);
-    const w = Math.min(this.canvas.width, view.x + view.w) - x;
-    const h = Math.min(this.canvas.height, view.y + view.h) - y;
-    if (w > 0 && h > 0) ctx.drawImage(this.canvas, x, y, w, h, x, y, w, h);
-  }
 }

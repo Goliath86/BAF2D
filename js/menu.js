@@ -1017,6 +1017,20 @@ export class Menu {
     }
     renderNums();
 
+    // qualità grafica (alta / bassa)
+    const quality = $('quality-choice');
+    const renderQuality = () => {
+      for (const b of quality.querySelectorAll('[data-value]')) b.setAttribute('aria-pressed', String(b.dataset.value === this.game.quality));
+    };
+    for (const b of quality.querySelectorAll('[data-value]')) {
+      b.addEventListener('click', () => {
+        this.game.setQuality(b.dataset.value);
+        this.settings.set('quality', b.dataset.value);
+        renderQuality();
+      });
+    }
+    renderQuality();
+
     // grana della pellicola (sì / no)
     const grain = $('grain-choice');
     const renderGrain = () => {

@@ -3,6 +3,7 @@
   "maxParticles": 800,
   "maxCasings": 150,
   "windDrift": 18,
+  "marksFlush": 0.4,
 
   "weather": {
     "desert_wind": {

@@ -140,6 +140,9 @@ async function boot() {
     const medals = new Medals(medalsCfg, settings);
     const game = new Game({ config, assets, audio, display, input, effectsCfg, weapons, grenadeTypes, i18n, career, vehicleTypes, rocketTypes, medals, debugTools: urlDebug });
     game.setAutoReload(settings.get('autoReload', game.autoReload)); // opzione "ricarica automatica"
+    // qualità grafica: scelta del giocatore, altrimenti display.quality.default ("auto" = bassa su touch)
+    const qDef = config.display?.quality?.default ?? 'auto';
+    game.setQuality(settings.get('quality', null) ?? (qDef === 'auto' ? (input.isTouchDevice ? 'low' : 'high') : qDef));
     game.setGrain(settings.get('grain', !!config.atmosphere?.grain?.default)); // opzione "grana"
     game.setDamageNumbers(settings.get('damageNumbers', !!config.hud?.damageNumbers?.show)); // opzione "numeri dei danni"
     game.setCrosshairStyle(settings.get('crosshair', game.crosshairStyle)); // opzione "mirino"

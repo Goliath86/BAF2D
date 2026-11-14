@@ -3,7 +3,9 @@
 // muri proiettano l'ombra dalla stessa parte. Gli sprite ruotano liberamente: la luce non può essere "cotta"
 // nello sprite, quindi si calcola a ogni disegno con le sagome dei frame ruotati (rotsprite.js, in cache).
 
-import { drawRotated } from './rotsprite.js';
+import { drawRotated, rotated } from './rotsprite.js';
+
+let rimIds = 0; // numero dei frame ruotati (rotsprite) per le chiavi della cache della luce sul bordo
 
 function makeCanvas(w, h) {
   const c = document.createElement('canvas');
@@ -26,8 +28,7 @@ export class UnitLighting {
   constructor(cfg = {}) {
     this.cfg = cfg;
     this.enabled = cfg.enabled !== false;
-    this.layer = null; // ombre di tutti i soldati della visuale (le sovrapposizioni non si scuriscono il doppio)
-    this.scratch = null; // composizione della luce sul bordo di un soldato
+    this.poseCache = new Map(); // chiave della posa -> ombra o luce sul bordo già composta (LRU, cfg.cache)
   }
 
   /** Direzione e colore dell'ombra per la mappa (dal tileset, altrimenti da cfg.shadow.fallback). */
@@ -47,38 +48,74 @@ export class UnitLighting {
   }
 
   /**
-   * Ombre portate di tutti i soldati. parts(u) = [[sprite, frame, angle], ...] (gambe, busto).
-   * Disegnate su un livello grande quanto la visuale e poi fuse con una sola trasparenza.
+   * Immagine già composta per la posa di un soldato (frame ruotati di gambe e busto + loro posizioni relative),
+   * in cache LRU (cfg.cache): i soldati cambiano posa di rado rispetto ai fotogrammi, quindi di solito costa un
+   * solo drawImage. kind = tipo di composizione (entra nella chiave), build(g, at) la disegna sulla tela 48x48
+   * col soldato al centro (at(dx, dy) = posizione di una parte). Restituisce { canvas, x, y } (angolo in alto a
+   * sinistra in coordinate del mondo, stesso arrotondamento del soldato disegnato).
+   */
+  _composite(kind, x, y, parts, build) {
+    const size = 48;
+    const rx = Math.round(x);
+    const ry = Math.round(y);
+    const c = size / 2;
+    // posizione di ogni parte come nel disegno del soldato (round(x + dx)), relativa a round(x)
+    const at = (dx = 0, dy = 0) => [Math.round(x + dx) - rx + c, Math.round(y + dy) - ry + c];
+    let key = kind;
+    for (const [sprite, frame, angle, dx, dy] of parts) {
+      const e = rotated(sprite, frame, angle);
+      e.id ??= ++rimIds;
+      const [px, py] = at(dx, dy);
+      key += `|${e.id},${px},${py}`;
+    }
+    const cache = this.poseCache;
+    let S = cache.get(key);
+    if (S) {
+      cache.delete(key); // in fondo = usato da poco
+    } else {
+      // tela riusata da quella usata meno di recente quando la cache è piena
+      if (cache.size >= (this.cfg.cache ?? 800)) {
+        const oldest = cache.keys().next().value;
+        S = cache.get(oldest);
+        cache.delete(oldest);
+      } else S = makeCanvas(size, size);
+      const g = S.getContext('2d');
+      g.imageSmoothingEnabled = false;
+      g.globalCompositeOperation = 'source-over';
+      g.clearRect(0, 0, size, size);
+      build(g, at);
+    }
+    cache.set(key, S);
+    return { canvas: S, x: rx - c, y: ry - c };
+  }
+
+  /**
+   * Ombre portate dei soldati, sotto a tutti. parts(u) = [[sprite, frame, angle, dx, dy], ...] (gambe, busto):
+   * la sagoma intera di ogni soldato (gambe e busto non si scuriscono il doppio) tinta e spostata verso l'ombra.
    */
   drawShadows(ctx, map, view, units, parts) {
     if (!this.enabled || !units.length) return;
     const sh = this.shadowOf(map);
     if (!sh.alpha || (!sh.dx && !sh.dy)) return;
-    if (!this.layer || this.layer.width !== view.w || this.layer.height !== view.h) this.layer = makeCanvas(view.w, view.h);
-    const L = this.layer;
-    const g = L.getContext('2d');
-    g.imageSmoothingEnabled = false;
-    g.globalCompositeOperation = 'source-over';
-    g.clearRect(0, 0, L.width, L.height);
-    let any = false;
+    const a = ctx.globalAlpha;
+    ctx.globalAlpha = a * sh.alpha;
     for (const u of units) {
-      const x = u.x - view.x + sh.dx;
-      const y = u.y - view.y + sh.dy;
-      if (x < -32 || y < -32 || x > view.w + 32 || y > view.h + 32) continue;
-      // stesso arrotondamento del soldato disegnato (round(x + dx)), poi lo spostamento intero dell'ombra
-      for (const [sprite, frame, angle, dx = 0, dy = 0] of parts(u)) {
-        drawMask(g, sprite, frame, Math.round(u.x + dx) - view.x + sh.dx, Math.round(u.y + dy) - view.y + sh.dy, angle);
-      }
-      any = true;
+      const x = u.x + sh.dx;
+      const y = u.y + sh.dy;
+      if (x < view.x - 32 || y < view.y - 32 || x > view.x + view.w + 32 || y > view.y + view.h + 32) continue;
+      const list = parts(u);
+      const p = this._composite(`s${sh.color}`, u.x, u.y, list, (g, at) => {
+        for (const [sprite, frame, angle, dx, dy] of list) {
+          const [px, py] = at(dx, dy);
+          drawMask(g, sprite, frame, px, py, angle);
+        }
+        g.globalCompositeOperation = 'source-in';
+        g.fillStyle = sh.color;
+        g.fillRect(0, 0, g.canvas.width, g.canvas.height);
+      });
+      ctx.drawImage(p.canvas, p.x + sh.dx, p.y + sh.dy);
     }
-    if (!any) return;
-    g.globalCompositeOperation = 'source-in';
-    g.fillStyle = sh.color;
-    g.fillRect(0, 0, L.width, L.height);
-    ctx.save();
-    ctx.globalAlpha = sh.alpha;
-    ctx.drawImage(L, view.x, view.y);
-    ctx.restore();
+    ctx.globalAlpha = a;
   }
 
   /**
@@ -87,41 +124,31 @@ export class UnitLighting {
    */
   drawRim(ctx, map, x, y, parts) {
     const rim = this.cfg.rim;
-    if (!this.enabled || !rim || !rim.alpha) return;
+    if (!this.enabled || this.rimOff || !rim || !rim.alpha) return; // rimOff = qualità grafica bassa
     const sh = this.shadowOf(map);
     // spostamento verso l'ombra: un pixel P è illuminato se P - (dx, dy) (verso la luce) è fuori dalla sagoma
     const w = rim.width || 1;
     let ox = Math.round(sh.ux * w * 1.3);
     let oy = Math.round(sh.uy * w * 1.3);
     if (!ox && !oy) oy = 1;
-    const size = 48;
-    if (!this.scratch) this.scratch = makeCanvas(size, size);
-    const S = this.scratch;
-    const g = S.getContext('2d');
-    g.imageSmoothingEnabled = false;
-    g.globalCompositeOperation = 'source-over';
-    g.clearRect(0, 0, size, size);
-    // stesso arrotondamento di drawSprite: la sagoma coincide col soldato disegnato
-    const rx = Math.round(x);
-    const ry = Math.round(y);
-    const c = size / 2;
-    // posizione di ogni parte come nel disegno del soldato (round(x + dx)), relativa a round(x)
-    const at = (dx = 0, dy = 0) => [Math.round(x + dx) - rx + c, Math.round(y + dy) - ry + c];
-    for (const [sprite, frame, angle, dx, dy] of parts) {
-      const [px, py] = at(dx, dy);
-      drawMask(g, sprite, frame, px, py, angle);
-    }
-    g.globalCompositeOperation = 'destination-out';
-    for (const [sprite, frame, angle, dx, dy] of parts) {
-      const [px, py] = at(dx, dy);
-      drawMask(g, sprite, frame, px + ox, py + oy, angle);
-    }
-    g.globalCompositeOperation = 'source-in';
-    g.fillStyle = rim.color || '#fff';
-    g.fillRect(0, 0, size, size);
-    ctx.save();
-    ctx.globalAlpha = rim.alpha;
-    ctx.drawImage(S, rx - c, ry - c);
-    ctx.restore();
+    // luce già composta per la stessa posa e direzione della luce (in cache)
+    const p = this._composite(`r${ox},${oy},${rim.color}`, x, y, parts, (g, at) => {
+      for (const [sprite, frame, angle, dx, dy] of parts) {
+        const [px, py] = at(dx, dy);
+        drawMask(g, sprite, frame, px, py, angle);
+      }
+      g.globalCompositeOperation = 'destination-out';
+      for (const [sprite, frame, angle, dx, dy] of parts) {
+        const [px, py] = at(dx, dy);
+        drawMask(g, sprite, frame, px + ox, py + oy, angle);
+      }
+      g.globalCompositeOperation = 'source-in';
+      g.fillStyle = rim.color || '#fff';
+      g.fillRect(0, 0, g.canvas.width, g.canvas.height);
+    });
+    const a = ctx.globalAlpha;
+    ctx.globalAlpha = a * rim.alpha;
+    ctx.drawImage(p.canvas, p.x, p.y);
+    ctx.globalAlpha = a;
   }
 }

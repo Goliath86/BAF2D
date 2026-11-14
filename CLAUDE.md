@@ -75,9 +75,11 @@ js/engine/
   scatter.js          paintScatter: dettagli a terra cotti nella mappa (tileset.scatter: segnaletica, olio, crepe,
                       tombini, griglie, cavi, tracce, impronte, rifiuti, ciuffi, canne, sassolini, fiori)
 js/game/water.js      Water: riflessi e increspature animati sulle celle d'acqua visibili (tileset.water)
-js/game/marks.js      GroundMarks: segni che restano tutta la partita su un livello grande quanto la mappa (crateri
-                      explosions.<t>.crater, tracce dei mezzi vehicles.json -> trail, bossoli fermi cotti
-                      se effects.json -> bakeCasings), azzerato in _reset, disegnato dopo l'acqua e prima dei decal
+js/game/marks.js      GroundMarks: segni che restano tutta la partita (crateri explosions.<t>.crater, tracce dei mezzi
+                      vehicles.json -> trail, bossoli fermi cotti se effects.json -> bakeCasings), disegnati due
+                      volte (DualContext): nel proprio livello grande quanto la mappa e direttamente nel canvas
+                      della mappa; tracce e bossoli in coda scritti ogni effects.json -> marksFlush s (drawPending
+                      li mostra intanto); map.onRegion li ricopia dopo un ridisegno; map.marked = da ripulire in reset
 js/game/lights.js     Lights: luci dinamiche (aloni a gradini retinati in cache, lampi e luci del fotogramma) e buio
                       dell'ora del giorno (game.json -> lights.times, cicli lenti lights.cycles)
 js/game/atmosphere.js Atmosphere: correzione di colore per mappa/meteo, vignettatura, grana (game.json -> atmosphere)
@@ -221,10 +223,12 @@ tests/                test di regressione (node --test): static.test.mjs, browse
   pose × `frames` fotogrammi di caduta (`DEAD_POSES`, `death.fallTime`, il corpo scivola da dov'era); pozza
   `blood_pool` a `sheetVariants` forme. `sprite.variants` (assets.js) = varianti in fila nel foglio.
 - Luce dei soldati (`js/engine/lighting.js`, `game.json -> lighting`, `game.lighting`): direzione e colore dalle
-  ombre del tileset (`tileset.shadow`), `shadow.length` = fattore su dx/dy. `drawShadows` = ombre portate di tutti i
-  soldati su un livello grande quanto la visuale (prima dei soldati), `drawRim` = luce sul bordo dopo ogni soldato
-  (sagoma meno sagoma spostata verso l'ombra). Usano `unit.drawParts()` = [[sprite, frame, angolo]] e le sagome
-  nere `spriteMask(sprite)` (in cache sullo sprite). Gli sprite ruotano liberamente: la luce non è nello sprite.
+  ombre del tileset (`tileset.shadow`), `shadow.length` = fattore su dx/dy. `drawShadows` = ombra portata di ogni
+  soldato (sagoma intera tinta, prima dei soldati), `drawRim` = luce sul bordo dopo ogni soldato (sagoma meno sagoma
+  spostata verso l'ombra; spenta con `rimOff`, qualità bassa). Entrambe composte da `_composite` su una tela 48x48
+  per posa (frame ruotati di rotsprite + posizioni) e tenute in una cache LRU (`lighting.cache`): di solito un
+  drawImage per soldato. Usano `unit.drawParts()` = [[sprite, frame, angolo, dx, dy]]. Gli sprite ruotano
+  liberamente: la luce non è nello sprite.
 - Morte e rientro: `Player.update`/`draw` non fanno nulla da morto. `Game._onPlayerDeath` crea un cadavere in
   `this.corpses` (corpo `deadSprite` + pozza, max `death.maxCorpses`, spariscono dopo `corpseTime` s con dissolvenza
   `corpseFade`; arma e granate diventano pickup), toglie i ticket e avvia
@@ -245,7 +249,7 @@ tests/                test di regressione (node --test): static.test.mjs, browse
   `BotBrain._followTick` = formazione dietro al giocatore (`bots.ai.squadFollow`), chi segue non sale sui mezzi.
   Segni verdi sopra i compagni (`_drawSquadMarks`).
 - HUD del fronte: minimappa (`hud.minimap`, sotto l'arma: carta tattica `Hud._miniTexture` = colore medio per
-  tile scurito, muri chiari in rilievo, acqua; rifatta quando cambia `map.version` (setTile/reset); bandierine,
+  tile (dai pixel del tileset, `tileset._avgColor`; mai leggere i pixel del canvas della mappa) scurito, muri chiari in rilievo, acqua; rifatta quando cambia `map.version` (setTile/reset); bandierine,
   mezzi per tipo `vehicles.json -> minimapIcon`, compagni, squadra, nemici della lavagna di squadra entro
   `enemyMemory` s, ordine, freccia del giocatore, rettangolo della visuale), indicatori a bordo schermo
   (`hud.edge`, `Game._edgeHud`: bandiere e compagni di squadra fuori vista), numeri dei danni (`hud.damageNumbers`,
@@ -285,6 +289,20 @@ tests/                test di regressione (node --test): static.test.mjs, browse
   fa `preventDefault` da disabilitato (i pulsanti HTML ricevono Invio/Spazio). Tasto `pause` (Esc/P) gestito dal Menu
   in capture; su touch `#pause-button` sotto l'HUD.
 - Versione del gioco: `game.json -> version` (in basso a destra nel menu).
+- Prestazioni (misure con Chrome headless e profiler CDP: tempo di update e render per fotogramma; "mobile" =
+  `Emulation.setCPUThrottlingRate` 4 + schermo 844x390 a 3x, indicativo):
+  - Mai leggere i pixel (`getImageData`) di un canvas che sta sulla scheda grafica durante la partita: costa
+    decine o centinaia di ms. `TileMap._renderRegion` disegna su una tela in memoria condivisa (`regionContext`,
+    `willReadFrequently`, getImageData/putImageData in coordinate della mappa) e la copia nella mappa; il tileset
+    usato lì è la copia in memoria `_tilesetImage()` (costruita da `_tilesetPixels()`), le ombre una tela in
+    memoria riusata. `map.warmRedraw()` in `Game.setup` prepara tutto (il primo cratere non scatta).
+  - Non modificare a ogni tick un canvas grande (mappa, livelli grandi quanto la mappa): raccogliere e scrivere a
+    blocchi (GroundMarks). Non creare canvas durante la partita: cache/atlanti (`Effects._discAtlas` = dischi
+    delle particelle per colore, tutte le dimensioni su un canvas).
+  - Canvas `ui` a densità massima `display.uiMaxDpr` (con un numero intero di pixel dell'HUD per pixel di gioco).
+  - Qualità grafica (Opzioni, Settings `quality`, `game.setQuality`, `display.quality` = { default: "auto" =
+    bassa su touch, low: { rim, gradeSelf, particles, weather } }).
+  - `Nav.refresh` senza ricerche per cella (solidità per id di tile, vicini con indici).
 - Caricamento e briefing: `#overlay-loading` (main.js `loadingStep(i18n, fase, 0..1)` con testi
   `loadingScreen.<fase>`, consiglio a caso da `tips`, `hideLoading()` a tendina; gli errori usano ancora
   `#overlay-message`). Pulsante "Inizia" -> `Menu.launch()`: `#overlay-briefing` (nome, etichette, obiettivo,

@@ -412,8 +412,9 @@ export class Weather {
 
   _updateRain(dt, view) {
     const r = this.cfg.rain;
-    const n = r.count ?? 160;
+    const n = Math.round((r.count ?? 160) * (this.density ?? 1)); // density < 1 = qualità grafica bassa
     while (this.drops.length < n) this.drops.push(this._newDrop({}, view, true));
+    if (this.drops.length > n) this.drops.length = n;
     const sp = r.splash || {};
     const ring = r.ring || {};
     const maxSplash = r.maxSplashes ?? 160;
@@ -559,7 +560,9 @@ export class Weather {
     ctx.restore();
     // banchi di nebbia o polvere (più densi nelle raffiche se gustAlpha)
     const gust = this._gustLevel();
-    if (view) for (const l of this.fog) l.draw(ctx, view, 1 + ((l.def.gustAlpha ?? 0) * gust) / Math.max(0.001, l.def.alpha ?? 0.2));
+    // qualità grafica bassa (density < 1): solo il primo banco
+    const fogs = (this.density ?? 1) < 1 ? this.fog.slice(0, 1) : this.fog;
+    if (view) for (const l of fogs) l.draw(ctx, view, 1 + ((l.def.gustAlpha ?? 0) * gust) / Math.max(0.001, l.def.alpha ?? 0.2));
     if (c.rain) this._drawRain(ctx);
   }
 

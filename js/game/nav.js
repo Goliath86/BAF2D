@@ -84,9 +84,23 @@ export class Nav {
   /** Ricalcola tile percorribili e spazio libero dalla mappa (all'inizio e quando un tile viene distrutto). */
   refresh() {
     const map = this.map;
-    const n = this.cols * this.rows;
-    for (let ty = 0; ty < this.rows; ty++) {
-      for (let tx = 0; tx < this.cols; tx++) this.walk[ty * this.cols + tx] = map.isSolidTile(tx, ty) ? 0 : 1;
+    const cols = this.cols;
+    const rows = this.rows;
+    const n = cols * rows;
+    const walk = this.walk;
+    const clear = this.clear;
+    // solidità per id di tile (una ricerca per tipo invece che per cella)
+    const solidOf = new Map();
+    const ids = map.tiles;
+    for (let i = 0; i < n; i++) {
+      const id = ids[i];
+      let sol = solidOf.get(id);
+      if (sol === undefined) {
+        const t = map.tileset.byId.get(id);
+        sol = !!t && t.solid;
+        solidOf.set(id, sol);
+      }
+      walk[i] = sol ? 0 : 1;
     }
     // spazio libero: distanza (in tile, Chebyshev) dal tile solido più vicino o dal bordo;
     // 0 = solido, 1 = confina con un solido, 2 = c'è almeno un tile libero tutto attorno (mezzi), ...
@@ -94,31 +108,32 @@ export class Nav {
     const queue = (this._queue ||= new Int32Array(n * 2));
     let len = 0;
     for (let i = 0; i < n; i++) {
-      const tx = i % this.cols;
-      const ty = Math.floor(i / this.cols);
-      const border = tx === 0 || ty === 0 || tx === this.cols - 1 || ty === this.rows - 1;
-      if (!this.walk[i]) {
-        this.clear[i] = 0;
+      if (!walk[i]) {
+        clear[i] = 0;
         queue[len++] = i;
-      } else this.clear[i] = border ? 1 : 255;
+      } else {
+        const tx = i % cols;
+        const ty = (i - tx) / cols;
+        clear[i] = tx === 0 || ty === 0 || tx === cols - 1 || ty === rows - 1 ? 1 : 255;
+      }
     }
-    for (let i = 0; i < n; i++) {
-      const tx = i % this.cols;
-      const ty = Math.floor(i / this.cols);
-      if (this.walk[i] && (tx === 0 || ty === 0 || tx === this.cols - 1 || ty === this.rows - 1)) queue[len++] = i;
-    }
+    for (let i = 0; i < n; i++) if (walk[i] && clear[i] === 1) queue[len++] = i;
     for (let q = 0; q < len; q++) {
       const i = queue[q];
-      const tx = i % this.cols;
-      const ty = Math.floor(i / this.cols);
-      for (const [dx, dy] of DIRS) {
-        const nx = tx + dx;
-        const ny = ty + dy;
-        if (nx < 0 || ny < 0 || nx >= this.cols || ny >= this.rows) continue;
-        const j = ny * this.cols + nx;
-        if (this.clear[j] > this.clear[i] + 1) {
-          this.clear[j] = this.clear[i] + 1;
-          queue[len++] = j;
+      const tx = i % cols;
+      const ty = (i - tx) / cols;
+      const next = clear[i] + 1;
+      const x0 = tx > 0 ? -1 : 0;
+      const x1 = tx < cols - 1 ? 1 : 0;
+      const y0 = ty > 0 ? -1 : 0;
+      const y1 = ty < rows - 1 ? 1 : 0;
+      for (let dy = y0; dy <= y1; dy++) {
+        for (let dx = x0; dx <= x1; dx++) {
+          const j = i + dy * cols + dx;
+          if (clear[j] > next) {
+            clear[j] = next;
+            queue[len++] = j;
+          }
         }
       }
     }

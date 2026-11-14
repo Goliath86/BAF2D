@@ -166,6 +166,7 @@ export class Game {
     // ora del giorno (game.json -> lights.times): dal menu, altrimenti quella del livello, altrimenti il default
     this.lights.setTime(timeOfDay || level.timeOfDay || this.config.lights?.default || null);
     this.map = new TileMap(level, this.assets.tileset(level.tileset));
+    this.map.warmRedraw(); // il primo cratere o tile rotto non fa scattare la partita
     // tickets (opzionale, dal menu) = ticket iniziali di ogni squadra al posto di ctf.tickets (vale anche per la rivincita);
     // timeLimit (s, dal menu; 0 = nessun limite, null = ctf.timeLimit)
     const ctfCfg = { ...this.config.ctf };
@@ -181,6 +182,7 @@ export class Game {
     this.weather = new Weather(wid ? this.effectsCfg.weather?.[wid] : null);
     if (wid && !this.weather.active) console.warn(`Weather "${wid}" not found in effects.json`);
     this.weather.attach(this.map); // pozzanghere
+    this.weather.density = this.weatherDensity ?? 1; // qualità grafica bassa: meno pioggia e nebbia
     this.effects.wind = this.weather.active ? this.weather.wind : null;
     this.atmosphere.setGrade(this.atmosphere.gradeFor(level, this.weather.cfg));
     this.background = level.background || this.config.display?.background || '#000';
@@ -951,6 +953,7 @@ export class Game {
       }
     }
     for (const v of this.vehicles) this.marks.vehicle(v); // tracce di ruote e cingoli
+    this.marks.update(dt, this.effectsCfg.marksFlush ?? 0.4); // scritte nella mappa a blocchi
     this._kickUp(dt);
     this._updateBullets(dt);
     this.rockets.update(dt, this, (r, x, y, v) => {
@@ -2290,7 +2293,7 @@ export class Game {
     this._view = view; // anche per l'HUD (minimappa, bordo schermo, numeri dei danni)
     this.water?.draw(ctx, view, this.lights.clock);
     this.weather.drawPuddles(ctx, view, this.lights.clock); // pozzanghere della pioggia
-    this.marks.draw(ctx, view); // crateri, tracce dei mezzi, bossoli fermi
+    this.marks.drawPending(ctx); // tracce e bossoli non ancora scritti nella mappa
     this.effects.drawDecals(ctx);
     this.effects.drawEmbers(ctx); // braci accese nelle bruciature
     const wind = this.weather.active ? this.weather.wind : null;
@@ -2591,6 +2594,23 @@ export class Game {
       for (const [i, j] of X) g.fillRect(x + i, y + j, 1, 1);
     }
     return c;
+  }
+
+  /**
+   * Qualità grafica (opzione del giocatore, game.json -> display.quality): "high" o "low". Bassa = senza gli
+   * effetti più costosi a ogni fotogramma (quality.low: rim = luce sul bordo dei soldati, gradeSelf = passaggi
+   * "self" della correzione di colore, particles = frazione delle particelle, weather = frazione di pioggia e
+   * banchi di nebbia). Pensata per i telefoni.
+   */
+  setQuality(q) {
+    this.quality = q === 'low' ? 'low' : 'high';
+    const low = this.quality === 'low';
+    const qc = this.config.display?.quality?.low || {};
+    this.lighting.rimOff = low && qc.rim === false;
+    this.atmosphere.skipSelf = low && qc.gradeSelf === false;
+    this.effects.maxParticles = Math.max(50, Math.round((this.effectsCfg.maxParticles ?? 600) * (low ? qc.particles ?? 1 : 1)));
+    this.weatherDensity = low ? qc.weather ?? 1 : 1;
+    if (this.weather) this.weather.density = this.weatherDensity;
   }
 
   /** Grana della pellicola sopra la scena (opzione del giocatore). */

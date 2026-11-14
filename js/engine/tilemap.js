@@ -56,6 +56,38 @@ class NoiseGrid {
   }
 }
 
+/**
+ * Tela d'appoggio in memoria (willReadFrequently: niente scheda grafica, getImageData immediato) per ridisegnare
+ * una regione della mappa: contesto traslato in modo che si disegni in coordinate della mappa; anche
+ * getImageData / putImageData accettano coordinate della mappa (da (ox, oy) a (ox + w, oy + h)).
+ * Una sola tela condivisa, ingrandita quando serve e pulita a ogni uso.
+ */
+let regionCanvas = null;
+let shadowCanvas = null; // ombre della regione (_drawShadows), anche questa in memoria e riusata
+const CTX = typeof CanvasRenderingContext2D !== 'undefined' ? CanvasRenderingContext2D.prototype : null;
+function regionContext(w, h, ox, oy) {
+  if (!regionCanvas || regionCanvas.width < w || regionCanvas.height < h) {
+    const old = regionCanvas;
+    regionCanvas = document.createElement('canvas');
+    // abbastanza grande per crateri e crolli (ricrearla durante la partita costa: nuova tela, nuovo contesto)
+    regionCanvas.width = Math.max(w, old?.width ?? 0, 256);
+    regionCanvas.height = Math.max(h, old?.height ?? 0, 256);
+    const g = regionCanvas.getContext('2d', { willReadFrequently: true });
+    g.getImageData = (x, y, ww, hh) => CTX.getImageData.call(g, x - g._ox, y - g._oy, ww, hh);
+    g.putImageData = (img, x, y, ...rest) => CTX.putImageData.call(g, img, x - g._ox, y - g._oy, ...rest);
+  }
+  const g = regionCanvas.getContext('2d', { willReadFrequently: true });
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.globalAlpha = 1;
+  g.globalCompositeOperation = 'source-over';
+  g.clearRect(0, 0, w, h);
+  g.imageSmoothingEnabled = false;
+  g._ox = ox;
+  g._oy = oy;
+  g.translate(-ox, -oy);
+  return g;
+}
+
 /** Mappe già disegnate per livello e tileset (la fusione dei terreni costa: la seconda partita la riusa). */
 const renderCache = new WeakMap();
 
@@ -182,7 +214,9 @@ export class TileMap {
 
   /** Torna alla mappa del livello (nuova partita): tile originali, niente crepe né macerie. */
   reset() {
-    if (!this.cracks.size && !this.debris.size && this.tiles.every((t, i) => t === this.original[i])) return;
+    // marked = qualcuno ha disegnato sopra la mappa (segni di battaglia cotti, GroundMarks)
+    if (!this.marked && !this.cracks.size && !this.debris.size && this.tiles.every((t, i) => t === this.original[i])) return;
+    this.marked = false;
     this.tiles.set(this.original);
     this.version = (this.version || 0) + 1;
     this.cracks.clear();
@@ -193,7 +227,10 @@ export class TileMap {
       g.clearRect(0, 0, this.pixelWidth, this.pixelHeight);
       g.drawImage(this.pristine, 0, 0);
     } else {
+      const hook = this.onRegion; // niente segni ricopiati: la mappa torna pulita
+      this.onRegion = null;
       this._renderRegion(0, 0, this.cols - 1, this.rows - 1);
+      this.onRegion = hook;
     }
   }
 
@@ -333,18 +370,19 @@ export class TileMap {
     y1 = Math.min(this.rows - 1, y1);
     if (x1 < x0 || y1 < y0) return;
     const s = this.size;
-    const g = this.canvas.getContext('2d');
-    g.imageSmoothingEnabled = false;
     const r = { x0, y0, x1, y1 };
     const px = x0 * s;
     const py = y0 * s;
     const w = (x1 - x0 + 1) * s;
     const h = (y1 - y0 + 1) * s;
+    // si disegna su una tela d'appoggio in memoria (lettura dei pixel veloce: fusione e dettagli a terra leggono
+    // e riscrivono la regione) e poi la si copia nella mappa. Leggere i pixel direttamente dal canvas della
+    // mappa (sulla scheda grafica) costava decine di ms a ogni cratere o tile rotto (scatti in partita).
+    const g = regionContext(w, h, px, py);
     g.save();
     g.beginPath();
     g.rect(px, py, w, h);
     g.clip();
-    g.clearRect(px, py, w, h);
     this._drawTiles(g, () => true, r);
     this._drawBlend(g, r);
     if (this.blend) paintScatter(g, this, r); // dettagli a terra (tileset.scatter); non nelle anteprime
@@ -354,6 +392,26 @@ export class TileMap {
     this._drawHeight(g, r);
     this._drawCracks(g, r);
     g.restore();
+    const mg = this.canvas.getContext('2d');
+    mg.imageSmoothingEnabled = false;
+    mg.clearRect(px, py, w, h);
+    mg.drawImage(g.canvas, 0, 0, w, h, px, py, w, h);
+    this.onRegion?.(px, py, w, h, mg); // es. segni di battaglia cotti nella mappa (GroundMarks)
+  }
+
+  /**
+   * Prepara il ridisegno delle regioni (pixel del tileset, tela d'appoggio, codice "caldo") ridisegnando una
+   * cella: il primo cratere o tile rotto della partita non costa decine di ms in più. Il risultato non cambia.
+   */
+  warmRedraw() {
+    if (!this.canvas || !this.cols || !this.rows) return;
+    this._tilesetImage(); // (anche i pixel del tileset)
+    // alcune regioni 3x3 (quelle con confini tra terreni esercitano anche la fusione): stesso risultato di prima
+    const cx = Math.floor(this.cols / 2);
+    const cy = Math.floor(this.rows / 2);
+    for (const [x, y] of [[cx, cy], [Math.floor(cx / 2), Math.floor(cy / 2)], [cx + Math.floor(cx / 2), cy + Math.floor(cy / 2)]]) {
+      this._renderRegion(x - 1, y - 1, x + 1, y + 1);
+    }
   }
 
   /** Altezza (px della faccia) del tile che ferma i colpi in (tx, ty), 0 = piatto o non bloccante. */
@@ -445,9 +503,29 @@ export class TileMap {
         if (!tile || !filter(tile)) continue;
         const sx = (tile.index % ts.cols) * s;
         const sy = Math.floor(tile.index / ts.cols) * s;
-        g.drawImage(ts.image, sx, sy, s, s, x * s, y * s, s, s);
+        g.drawImage(this._tilesetImage(), sx, sy, s, s, x * s, y * s, s, s);
       }
     }
+  }
+
+  /**
+   * Copia del tileset in memoria (non sulla scheda grafica), in cache sul tileset: le regioni si ridisegnano su
+   * una tela in memoria e poi se ne leggono i pixel; copiarci un'immagine che sta sulla scheda grafica costringe
+   * il browser a scaricarla a ogni lettura (centinaia di ms per un colpo su un muro).
+   */
+  _tilesetImage() {
+    const ts = this.tileset;
+    if (!ts._cpuImage) {
+      // dai pixel letti subito (putImageData): con un drawImage il browser rimanderebbe la copia, e lo
+      // scaricamento dalla scheda grafica, al primo uso vero (a metà partita)
+      const px = this._tilesetPixels();
+      const c = document.createElement('canvas');
+      c.width = px.width;
+      c.height = px.height;
+      c.getContext('2d', { willReadFrequently: true }).putImageData(px, 0, 0);
+      ts._cpuImage = c;
+    }
+    return ts._cpuImage;
   }
 
   /** Pixel del tileset (per copiare la texture di un terreno dentro una cella vicina), in cache sul tileset. */
@@ -917,10 +995,18 @@ export class TileMap {
     // canvas grande quanto la regione (le ombre vicine non si sommano); proiettano anche le celle appena fuori
     const ox = r.x0 * s;
     const oy = r.y0 * s;
-    const c = document.createElement('canvas');
-    c.width = (r.x1 - r.x0 + 1) * s;
-    c.height = (r.y1 - r.y0 + 1) * s;
-    const sg = c.getContext('2d');
+    // tela in memoria riusata (crearne una nuova sulla scheda grafica a ogni crepa o crollo costava molto)
+    const W = (r.x1 - r.x0 + 1) * s;
+    const H = (r.y1 - r.y0 + 1) * s;
+    if (!shadowCanvas || shadowCanvas.width < W || shadowCanvas.height < H) {
+      const old = shadowCanvas;
+      shadowCanvas = document.createElement('canvas');
+      shadowCanvas.width = Math.max(W, old?.width ?? 0, 256);
+      shadowCanvas.height = Math.max(H, old?.height ?? 0, 256);
+    }
+    const c = shadowCanvas;
+    const sg = c.getContext('2d', { willReadFrequently: true });
+    sg.clearRect(0, 0, W, H);
     sg.fillStyle = sh.color || '#000';
     const mx = Math.ceil(Math.abs(dx) / s);
     const my = Math.ceil(Math.abs(dy) / s);
@@ -932,7 +1018,7 @@ export class TileMap {
     }
     g.save();
     g.globalAlpha = sh.alpha ?? 0.3;
-    g.drawImage(c, ox, oy);
+    g.drawImage(c, 0, 0, W, H, ox, oy, W, H);
     g.restore();
     this._drawTiles(g, (t) => t.solid && !t.shootThrough, r);
   }

@@ -28,6 +28,9 @@ function shadeHex(hex, k) {
   return `#${((c((n >> 16) & 255) << 16) | (c((n >> 8) & 255) << 8) | c(n & 255)).toString(16).padStart(6, '0')}`;
 }
 
+// dimensione massima (px) dei dischi delle particelle negli atlanti per colore (oltre: disegnati a righe)
+const ATLAS_MAX = 40;
+
 // matrice di Bayer 4x4 (soglie 0..1) per le retinature
 const BAYER4 = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => (v + 0.5) / 16);
 const bayer = (x, y) => BAYER4[(y & 3) * 4 + (x & 3)];
@@ -103,7 +106,7 @@ export class Effects {
     this.rings = []; // onde d'urto delle esplosioni (anello di polvere che si allarga)
     this.embers = []; // braci rimaste accese nella bruciatura (gruppi di pixel che pulsano)
     this.maxEmbers = cfg.maxEmbers ?? 12;
-    this._puffs = new Map(); // sbuffi di fumo a tre toni già disegnati (dimensione + colori -> canvas)
+    this._puffs = new Map(); // atlanti dei dischi delle particelle per colore (e toni degli sbuffi): _discAtlas
     this.spots = []; // gocce a terra (sangue), pixel che svaniscono
     this.maxSpots = cfg.maxSpots ?? 400;
     this.lights = null; // Lights (game/lights.js), impostato da Game: aloni di vampate, esplosioni e fuochi
@@ -732,6 +735,40 @@ export class Effects {
     }
   }
 
+  /**
+   * Atlante dei dischi di un colore (shade = [chiaro, scuro] per gli sbuffi ombreggiati): tutte le dimensioni da
+   * 1 a ATLAS_MAX px in fila su un solo canvas, creato al primo uso del colore. Un canvas per dimensione e colore
+   * voleva dire decine di canvas creati alla prima esplosione (scatti, soprattutto sui telefoni).
+   */
+  _discAtlas(color, shade) {
+    const key = shade ? `${color}|${shade[0]}|${shade[1]}` : color;
+    let a = this._puffs.get(key);
+    if (a) return a;
+    const x = new Int32Array(ATLAS_MAX + 1);
+    let w = 0;
+    for (let s = 1; s <= ATLAS_MAX; s++) {
+      x[s] = w;
+      w += Math.ceil(s / 2) * 2;
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = Math.ceil(ATLAS_MAX / 2) * 2;
+    const g = canvas.getContext('2d');
+    g.fillStyle = color;
+    for (let s = 1; s <= ATLAS_MAX; s++) {
+      const h = Math.ceil(s / 2);
+      if (shade && s >= 5) shadedDisc(g, x[s] + h, h, s / 2, shade[1], color, shade[0]);
+      else {
+        g.fillStyle = color;
+        fillDisc(g, x[s] + h, h, s / 2);
+      }
+    }
+    a = { canvas, x };
+    if (this._puffs.size > 200) this._puffs.clear();
+    this._puffs.set(key, a);
+    return a;
+  }
+
   drawParticles(ctx) {
     for (const p of this.particles) {
       const t = 1 - p.life / p.maxLife;
@@ -749,21 +786,14 @@ export class Effects {
       } else if (p.round && s >= 3) {
         const cx = Math.round(p.x);
         const cy = Math.round(p.y);
-        const r = s / 2;
-        if (p.shade && s >= 5) {
-          // sbuffo con volume: ombra in basso a destra, colore pieno, riflesso in alto a sinistra (in cache)
-          const key = `${s}|${p.color}|${p.shade[0]}|${p.shade[1]}`;
-          let c = this._puffs.get(key);
-          if (!c) {
-            const h = Math.ceil(r);
-            c = document.createElement('canvas');
-            c.width = c.height = h * 2;
-            shadedDisc(c.getContext('2d'), h, h, r, p.shade[1], p.color, p.shade[0]);
-            if (this._puffs.size > 400) this._puffs.clear();
-            this._puffs.set(key, c);
-          }
-          ctx.drawImage(c, cx - c.width / 2, cy - c.width / 2);
-        } else fillDisc(ctx, cx, cy, r);
+        // sbuffo con volume (ombra in basso a destra, colore pieno, riflesso in alto a sinistra) o disco pieno:
+        // dall'atlante del colore, un drawImage invece di una riga per y
+        const shaded = p.shade && s >= 5;
+        const a = s <= ATLAS_MAX ? this._discAtlas(p.color, shaded ? p.shade : null) : null;
+        if (a) {
+          const h = Math.ceil(s / 2);
+          ctx.drawImage(a.canvas, a.x[s], 0, h * 2, h * 2, cx - h, cy - h, h * 2, h * 2);
+        } else fillDisc(ctx, cx, cy, s / 2);
       } else {
         ctx.fillRect(Math.round(p.x - s / 2), Math.round(p.y - s / 2), s, s);
       }

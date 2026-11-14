@@ -116,13 +116,17 @@ describe('gioco nel browser', { skip: chrome ? false : 'Chrome non trovato (impo
       const moved = await ev(`BAF2D.bots.map((b, i) => Math.hypot(b.unit.x - ${JSON.stringify(start)}[i][0], b.unit.y - ${JSON.stringify(start)}[i][1]))`);
       const avg = moved.reduce((a, b) => a + b, 0) / moved.length;
       assert.ok(avg > 40, `i bot si sono mossi in media solo di ${avg.toFixed(1)} px in 10 s`);
+      // bandiere: un cambio di padrone in una qualunque tappa (alla fine possono essere tornate com'erano,
+      // es. la bandiera centrale presa e poi neutralizzata)
+      await ev(`window._flagsChanged = false; window._owners0 = ${JSON.stringify(s0.owners)}`);
+      const watch = `(g) => { if (g.ctf.flags.some((f, i) => f.owner !== window._owners0[i])) window._flagsChanged = true; }`;
       for (let t = 20; t <= 90; t += 10) {
-        await T('step(10)');
+        await T(`step(10, ${watch})`);
         await assertSane(`dopo ${t} s`);
       }
+      const flagsChanged = await ev('window._flagsChanged');
       const s = await T('state()');
       await shot(`match-${lvl.id}`);
-      const flagsChanged = s.owners.some((o, i) => o !== s0.owners[i]);
       assert.ok(flagsChanged, `nessuna bandiera ha cambiato padrone in 90 s (${JSON.stringify(s0.owners)})`);
       assert.ok(s.kills > 0, 'nessuna uccisione in 90 s');
       assert.ok(Object.entries(s.tickets).some(([t, n]) => n < s0.tickets[t]), 'i ticket non sono scesi');
@@ -411,8 +415,44 @@ describe('gioco nel browser', { skip: chrome ? false : 'Chrome non trovato (impo
     // bossoli: dopo qualche secondo fermi non restano tra gli oggetti da disegnare
     const before = await ev(`BAF2D.effects.casings.length`);
     assert.equal(before, 0, `bossoli/detriti ancora da disegnare dopo 20 s: ${before}`);
+    // i segni sono cotti anche nel canvas della mappa (niente livello in più da disegnare a ogni fotogramma) e
+    // ci restano quando la regione si ridisegna (crollo, crepa)
+    const mapPx = `((x, y) => Array.from(BAF2D.map.canvas.getContext('2d').getImageData(Math.round(x), Math.round(y), 1, 1).data).join())`;
+    const pristine = await ev(`(() => { const c = document.createElement('canvas'); c.width = c.height = 1; const g = c.getContext('2d');
+      const src = BAF2D.map.pristine; if (!src) return null; g.drawImage(src, ${Math.round(p.x)}, ${Math.round(p.y)}, 1, 1, 0, 0, 1, 1); return Array.from(g.getImageData(0, 0, 1, 1).data).join(); })()`);
+    const marked = await ev(`${mapPx}(${p.x}, ${p.y})`);
+    if (pristine) assert.notEqual(marked, pristine, 'il cratere non è nel canvas della mappa');
+    const t = { x: Math.floor(p.x / 16), y: Math.floor(p.y / 16) };
+    await ev(`BAF2D.map._renderRegion(${t.x - 1}, ${t.y - 1}, ${t.x + 1}, ${t.y + 1})`);
+    assert.equal(await ev(`${mapPx}(${p.x}, ${p.y})`), marked, 'il ridisegno della regione ha cancellato il cratere dalla mappa');
     await ev(`BAF2D._reset()`); // come la rivincita
     assert.equal(await ev(`${alphaAt}(${p.x}, ${p.y})`), 0, 'la nuova partita non ha cancellato i segni');
+    if (pristine) assert.equal(await ev(`${mapPx}(${p.x}, ${p.y})`), pristine, 'la nuova partita non ha ripulito la mappa');
+  });
+
+  it('prestazioni: qualità grafica bassa, ridisegno delle regioni veloce dopo il riscaldamento', async () => {
+    await openGame();
+    await T(`start('countryside', { allies: 3, enemies: 3, weather: ${game.menu.weathers.indexOf('rain')} })`);
+    await T('step(0.5)');
+    const low = game.display.quality.low;
+    const r = await ev(`(() => { const g = BAF2D; const hi = { max: g.effects.maxParticles, drops: g.weather.drops.length };
+      g.setQuality('low'); T.step(0.2);
+      const lo = { rimOff: g.lighting.rimOff, skipSelf: g.atmosphere.skipSelf, max: g.effects.maxParticles, drops: g.weather.drops.length };
+      g.render();
+      g.setQuality('high'); T.step(0.2);
+      return { hi, lo, back: { rimOff: g.lighting.rimOff, skipSelf: g.atmosphere.skipSelf, max: g.effects.maxParticles } }; })()`);
+    assert.equal(r.lo.rimOff, low.rim === false, 'qualità bassa: luce sul bordo');
+    assert.equal(r.lo.skipSelf, low.gradeSelf === false, 'qualità bassa: passaggi "self" del colore');
+    assert.ok(r.lo.max < r.hi.max, 'qualità bassa: stesse particelle');
+    assert.ok(r.lo.drops < r.hi.drops, 'qualità bassa: stessa pioggia');
+    assert.deepEqual(r.back, { rimOff: false, skipSelf: false, max: r.hi.max }, 'tornando ad alta qualcosa resta basso');
+    // ridisegno di una regione dopo il riscaldamento della partita: niente scatti da decine di ms
+    const ms = await ev(`(() => { const m = BAF2D.map, t = performance.now(); for (let i = 0; i < 5; i++) m._renderRegion(10 + i * 8, 10, 12 + i * 8, 12); return (performance.now() - t) / 5; })()`);
+    assert.ok(ms < 40, `ridisegno di una regione 3x3 troppo lento: ${ms.toFixed(1)} ms`);
+    // l'opzione nel menu
+    await ev(`document.querySelector('#quality-choice [data-value="low"]').click()`);
+    assert.equal(await ev('BAF2D.quality'), 'low');
+    await ev(`document.querySelector('#quality-choice [data-value="high"]').click()`);
   });
 
   it("esplosioni: onda d'urto col colore del terreno, braci che si spengono, fumo con volume", async () => {

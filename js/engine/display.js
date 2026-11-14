@@ -11,6 +11,9 @@ export class Display {
     this.uiCtx = uiCanvas.getContext('2d');
 
     this.targetHeight = cfg.targetHeight ?? 216;
+    // densità massima del canvas "ui" (HUD, stick): sui telefoni a 3x un canvas a piena risoluzione da
+    // cancellare e ridisegnare a ogni fotogramma costa molto più di quanto si veda (display.uiMaxDpr)
+    this.uiMaxDpr = cfg.uiMaxDpr ?? 2;
     this.minScale = cfg.minScale ?? 1;
     this.maxScale = cfg.maxScale ?? 10;
 
@@ -51,14 +54,22 @@ export class Display {
     this.canvas.style.width = `${this.width * this.cssPerPixel}px`;
     this.canvas.style.height = `${this.height * this.cssPerPixel}px`;
 
-    this.ui.width = physW;
-    this.ui.height = physH;
+    // densità ridotta in modo che un pixel di gioco resti un numero intero di pixel dell'HUD (niente sfocature
+    // sulle forme a pixel): uiDpr = dpr · m / scale col massimo m che non supera uiMaxDpr
+    let uiDpr = dpr;
+    if (dpr > this.uiMaxDpr) {
+      const m = Math.max(1, Math.floor((this.uiMaxDpr * scale) / dpr));
+      uiDpr = (dpr * m) / scale;
+    }
+    this.uiDpr = uiDpr;
+    this.ui.width = Math.round(cssW * uiDpr);
+    this.ui.height = Math.round(cssH * uiDpr);
     this.ui.style.width = `${cssW}px`;
     this.ui.style.height = `${cssH}px`;
 
     // Cambiare width/height resetta lo stato del contesto
     this.ctx.imageSmoothingEnabled = false;
-    this.uiCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this.uiCtx.setTransform(uiDpr, 0, 0, uiDpr, 0, 0);
     this.uiCtx.imageSmoothingEnabled = false;
   }
 

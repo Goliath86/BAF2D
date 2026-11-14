@@ -101,7 +101,9 @@
     "minScale": 1,
     "maxScale": 10,
     "background": "#0b0b12",
-    "rotation": { "steps": 96, "cacheSize": 3000 }
+    "rotation": { "steps": 96, "cacheSize": 3000 },
+    "uiMaxDpr": 2,
+    "quality": { "default": "auto", "low": { "rim": false, "gradeSelf": false, "particles": 0.6, "weather": 0.5 } }
   },
 
   "audio": {

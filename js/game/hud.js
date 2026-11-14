@@ -230,16 +230,43 @@ export class Hud {
     if (c && c.map === map && c.version === v && c.w === w) return c.canvas;
     const cols = map.cols;
     const rows = map.rows;
-    // colore medio di ogni tile: la mappa disegnata rimpicciolita a un pixel per tile
+    // colore medio di ogni tile dai pixel del tileset (in memoria, una volta per tileset): leggere i pixel del
+    // canvas della mappa (sulla scheda grafica) costava centinaia di ms a ogni crollo
+    const ts = map.tileset;
+    if (!ts._avgColor) {
+      const src = map._tilesetPixels();
+      const s = map.size;
+      ts._avgColor = new Map();
+      for (const tile of ts.byId.values()) {
+        const bx = (tile.index % ts.cols) * s;
+        const by = Math.floor(tile.index / ts.cols) * s;
+        const sum = [0, 0, 0];
+        for (let y = 0; y < s; y++) {
+          for (let x = 0; x < s; x++) {
+            const q = ((by + y) * src.width + bx + x) * 4;
+            sum[0] += src.data[q];
+            sum[1] += src.data[q + 1];
+            sum[2] += src.data[q + 2];
+          }
+        }
+        ts._avgColor.set(tile.id, sum.map((v) => v / (s * s)));
+      }
+    }
     const t = document.createElement('canvas');
     t.width = cols;
     t.height = rows;
-    const g = t.getContext('2d', { willReadFrequently: true });
-    g.imageSmoothingEnabled = true;
-    g.imageSmoothingQuality = 'high';
-    g.drawImage(map.canvas, 0, 0, map.pixelWidth, map.pixelHeight, 0, 0, cols, rows);
-    const img = g.getImageData(0, 0, cols, rows);
+    const g = t.getContext('2d');
+    const img = g.createImageData(cols, rows);
     const d = img.data;
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        const a = ts._avgColor.get(map.tiles[y * cols + x]) || [0, 0, 0];
+        const i = (y * cols + x) * 4;
+        d[i] = a[0];
+        d[i + 1] = a[1];
+        d[i + 2] = a[2];
+      }
+    }
     const hex = (s) => [parseInt(s.slice(1, 3), 16), parseInt(s.slice(3, 5), 16), parseInt(s.slice(5, 7), 16)];
     const wall = hex(mc.wall || '#d8d2bc');
     const water = hex(mc.water || '#2a5a78');

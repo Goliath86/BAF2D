@@ -52,6 +52,7 @@ export class Atmosphere {
     if (!this.grade.length) return;
     ctx.save();
     for (const o of this.grade) {
+      if (o.op === 'self' && this.skipSelf) continue; // qualità grafica bassa: copia della scena troppo cara
       ctx.globalAlpha = Math.min(1, o.alpha ?? 1);
       ctx.globalCompositeOperation = o.mode || 'source-over';
       if (o.op === 'self') {
