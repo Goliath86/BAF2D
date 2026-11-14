@@ -59,8 +59,12 @@ export class Menu {
       timeLimit: range(this.cfg.timeLimit, Math.round((config.ctf?.timeLimit ?? 0) / 60), 60, 5),
     };
     // ora del giorno: indice in game.json -> lights.times (giorno, tramonto, notte)
-    this.timeIds = Object.keys(config.lights?.times || { day: null });
+    // (più i cicli lenti di lights.cycles, es. dal giorno alla notte)
+    this.timeIds = [...Object.keys(config.lights?.times || { day: null }), ...Object.keys(config.lights?.cycles || {})];
     this.limits.timeOfDay = { min: 0, max: this.timeIds.length - 1, def: Math.max(0, this.timeIds.indexOf(config.lights?.default)), step: 1 };
+    // meteo: "level" = quello della mappa, "clear" = sereno, altri = tipi di effects.json -> weather (game.json -> menu.weathers)
+    this.weatherIds = this.cfg.weathers?.length ? this.cfg.weathers : ['level'];
+    this.limits.weather = { min: 0, max: this.weatherIds.length - 1, def: 0, step: 1 };
     // valore salvato o di default, nei limiti e sul passo dello stepper
     const pick = (key) => {
       const l = this.limits[key];
@@ -75,6 +79,7 @@ export class Menu {
       tickets: pick('tickets'),
       timeLimit: pick('timeLimit'),
       timeOfDay: pick('timeOfDay'),
+      weather: pick('weather'),
     };
 
     this._buildMaps();
@@ -148,6 +153,7 @@ export class Menu {
       tickets: c.tickets,
       timeLimit: c.timeLimit * 60,
       timeOfDay: this.timeIds[c.timeOfDay] ?? null,
+      weather: this.weatherIds[c.weather] ?? null,
       attract: false,
     });
     game.running = true;
@@ -535,6 +541,7 @@ export class Menu {
   /** Valore mostrato da uno stepper: il tempo limite in minuti ("Nessuno" a 0), gli altri così come sono. */
   _stepperText(key, v) {
     if (key === 'timeOfDay') return this.i18n.t(`newGame.times.${this.timeIds[v]}`);
+    if (key === 'weather') return this.i18n.t(`newGame.weathers.${this.weatherIds[v]}`);
     if (key !== 'timeLimit') return String(v);
     return v > 0 ? this.i18n.t('newGame.minutes', { n: v }) : this.i18n.t('newGame.noLimit');
   }
@@ -873,6 +880,21 @@ export class Menu {
       });
     }
     renderNums();
+
+    // grana della pellicola (sì / no)
+    const grain = $('grain-choice');
+    const renderGrain = () => {
+      for (const b of grain.querySelectorAll('[data-value]')) b.setAttribute('aria-pressed', String((b.dataset.value === 'on') === !!this.game.atmosphere.grain));
+    };
+    for (const b of grain.querySelectorAll('[data-value]')) {
+      b.addEventListener('click', () => {
+        const on = b.dataset.value === 'on';
+        this.game.setGrain(on);
+        this.settings.set('grain', on);
+        renderGrain();
+      });
+    }
+    renderGrain();
 
     // mirino: un pulsante per stile (game.json -> hud.crosshair.styles) con l'anteprima disegnata a pixel
     const cross = $('crosshair-choice');

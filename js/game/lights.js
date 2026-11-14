@@ -21,6 +21,14 @@ function hexToRgb(hex) {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
+/** Colore a metà strada tra due esadecimali (f = 0..1). */
+function mixHex(a, b, f) {
+  const x = hexToRgb(a);
+  const y = hexToRgb(b);
+  const c = x.map((v, i) => Math.round(v + (y[i] - v) * f));
+  return `#${((1 << 24) | (c[0] << 16) | (c[1] << 8) | c[2]).toString(16).slice(1)}`;
+}
+
 export class Lights {
   constructor(cfg = {}) {
     this.cfg = cfg;
@@ -32,12 +40,61 @@ export class Lights {
     this.clock = 0; // tempo per il tremolio delle luci fisse
   }
 
-  /** Ora del giorno: chiave di cfg.times (null/assente = giorno pieno). */
+  /**
+   * Ora del giorno: chiave di cfg.times (null/assente = giorno pieno) oppure di cfg.cycles = { steps: [ore],
+   * duration (s per passare da un'ora alla successiva) }: la luce scorre lenta da un'ora all'altra e resta
+   * sull'ultima.
+   */
   setTime(id) {
+    const cyc = id ? this.cfg.cycles?.[id] : null;
+    if (cyc && (cyc.steps || []).length > 1) {
+      this.time = id;
+      this.cycle = { steps: cyc.steps, duration: Math.max(1, cyc.duration ?? 300), t: 0 };
+      this._applyCycle();
+      return;
+    }
+    this.cycle = null;
     const t = id ? this.cfg.times?.[id] : null;
     this.time = t ? id : null;
     this.ambient = t && t.darkness > 0 ? t : null;
     this.tint = t?.tint || null;
+  }
+
+  /** Ciclo dall'inizio (nuova partita, rivincita). */
+  restartCycle() {
+    if (!this.cycle) return;
+    this.cycle.t = 0;
+    this._applyCycle();
+  }
+
+  /** Ora attuale del ciclo (0 = primo passo, 1 = secondo...), per HUD e test. */
+  get cyclePhase() {
+    return this.cycle ? Math.min(this.cycle.steps.length - 1, this.cycle.t / this.cycle.duration) : 0;
+  }
+
+  /** Buio e tinta mescolati tra i due passi del ciclo attorno al momento attuale. */
+  _applyCycle() {
+    const c = this.cycle;
+    const ph = this.cyclePhase;
+    const i = Math.min(c.steps.length - 2, Math.floor(ph));
+    const f = ph - i;
+    const a = this.cfg.times?.[c.steps[i]] || null;
+    const b = this.cfg.times?.[c.steps[i + 1]] || null;
+    const lerp = (x, y) => x + (y - x) * f;
+    const darkness = lerp(a?.darkness ?? 0, b?.darkness ?? 0);
+    this.ambient = darkness > 0.001 ? {
+      color: mixHex(a?.color || b?.color || '#000', b?.color || a?.color || '#000', f),
+      darkness,
+      cutScale: lerp(a?.cutScale ?? b?.cutScale ?? 1.25, b?.cutScale ?? a?.cutScale ?? 1.25),
+      glowBoost: lerp(a?.glowBoost ?? 0, b?.glowBoost ?? 0),
+    } : null;
+    const ta = a?.tint;
+    const tb = b?.tint;
+    this.tint = ta || tb ? {
+      color: mixHex(ta?.color || tb.color, tb?.color || ta.color, f),
+      alpha: lerp(ta?.alpha ?? 0, tb?.alpha ?? 0),
+      mode: (f < 0.5 ? ta?.mode : tb?.mode) || ta?.mode || tb?.mode,
+    } : null;
   }
 
   /** È buio abbastanza da accendere fari e luce attorno al giocatore. */
@@ -69,6 +126,10 @@ export class Lights {
 
   update(dt) {
     this.clock += dt;
+    if (this.cycle) {
+      this.cycle.t += dt;
+      this._applyCycle();
+    }
     for (let i = this.flashes.length - 1; i >= 0; i--) {
       const f = this.flashes[i];
       f.time += dt;

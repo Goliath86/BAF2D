@@ -163,6 +163,32 @@ describe('configurazione', () => {
     }
   });
 
+  test('atmosfera: correzioni di colore, meteo del menu, cicli del giorno, suoni del meteo', () => {
+    const atm = game.atmosphere;
+    const ops = (list, where) => list.forEach((o, i) => {
+      assert.ok(['fill', 'self'].includes(o.op), `${where}[${i}]: op "${o.op}"`);
+      if (o.op === 'fill') assert.match(o.color, /^#[0-9a-f]{6}$/i, `${where}[${i}]: colore`);
+    });
+    for (const [id, list] of Object.entries(atm.grades)) {
+      assert.ok(assets.tilesets[id], `atmosphere.grades.${id}: non è un tileset (o usare level.grade)`);
+      ops(list, `atmosphere.grades.${id}`);
+    }
+    for (const [id, w] of Object.entries(effects.weather)) {
+      if (w.grade) ops(w.grade, `weather.${id}.grade`);
+      if (w.sound) assert.ok(assets.sounds[w.sound.name]?.loop, `weather.${id}.sound: "${w.sound.name}" senza loop in assets.json`);
+      if (w.rain) assert.ok(w.wind, `weather.${id}: la pioggia vuole un vento`);
+    }
+    for (const id of game.menu.weathers) {
+      assert.ok(id === 'level' || id === 'clear' || effects.weather[id], `menu.weathers: "${id}" non è in effects.json -> weather`);
+      assert.ok(lookup(en, `newGame.weathers.${id}`), `lingua: newGame.weathers.${id}`);
+    }
+    for (const [id, c] of Object.entries(game.lights.cycles)) {
+      for (const s of c.steps) assert.ok(s in game.lights.times, `lights.cycles.${id}: ora "${s}" non è in lights.times`);
+      assert.ok(lookup(en, `newGame.times.${id}`), `lingua: newGame.times.${id}`);
+    }
+    for (const id of Object.keys(effects.weather)) assert.ok(lookup(en, `editor.weather.${id}`), `lingua: editor.weather.${id}`);
+  });
+
   test('effetti: i tipi di impatto dei tile esistono', () => {
     for (const [ts, def] of Object.entries(assets.tilesets)) {
       for (const t of def.tiles) {

@@ -982,6 +982,20 @@
         "idle": 0.3
       }
     },
+    "rain": {
+      "src": null,
+      "volume": 0.07,
+      "loop": {
+        "layers": [
+          { "wave": "noise", "volume": 1 }
+        ],
+        "lowpass": 1400,
+        "lowpassOpen": 1,
+        "q": 0.4,
+        "throb": { "rate": [0.13, 0.13], "depth": 0.3 },
+        "idle": 1
+      }
+    },
     "vehicle_exit": {
       "src": null,
       "volume": 0.16,

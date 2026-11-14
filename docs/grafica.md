@@ -2,7 +2,7 @@
 
 Ordine = impatto stimato sul colpo d'occhio. Tutto procedurale (canvas), configurabile da JSON.
 
-## Da dove ripartire (aggiornato al 2026-11-13)
+## Da dove ripartire (aggiornato al 2026-11-14)
 - Fatto: bordi tra i terreni (fusione dei terreni, commit 30fa221): confini organici, fasce di riva/schiuma/orlo,
   varianti mescolate a chiazze, cache + preriscaldamento delle mappe (dettagli in CLAUDE.md, voce "Tile").
 - Fatto (2026-11-13): punto 1, primi tre sottopunti: luce sul bordo dei soldati dal lato della luce, ombra portata
@@ -47,7 +47,16 @@ Ordine = impatto stimato sul colpo d'occhio. Tutto procedurale (canvas), configu
   granata e cartuccia, popup e promozioni con rimbalzo, numeri dei danni (opzione), mirino a scelta tra 5 stili
   (opzione con anteprima).
 - Rimasto del punto 7: icone delle armi disegnate apposta per l'HUD (ora lo sprite a terra ingrandito).
-- Prossimo passo proposto: punto 8 (atmosfera e colore), poi 9 (menu).
+- Fatto (2026-11-14): punto 8. Correzione di colore per mappa (Arena fredda, deserto caldo e slavato, campagna
+  satura; `js/game/atmosphere.js`, `game.json -> atmosphere.grades`), vignettatura retinata, grana opzionale
+  (Opzioni), ombre delle nuvole che scorrono col vento, polvere più densa nelle raffiche del deserto, meteo nel menu
+  (della mappa, sereno, pioggia, nebbia mattutina): pioggia con gocce oblique, spruzzi, pozzanghere col cielo
+  riflesso e cerchi, suono continuo; nebbia a banchi; ciclo lento "dal giorno alla notte" (`lights.cycles`).
+- Rimasto del punto 8: riflessi veri nelle pozzanghere (soldati, luci), temporale con lampi; la pioggia non cambia
+  il gameplay (né la nebbia la vista dell'IA).
+- Prossimo passo proposto: punto 9 (menu).
+- Da misurare sul telefono: costo della correzione di colore (qualche riempimento con modi di fusione a tutto
+  schermo) e preparazione delle tessere di nebbia/nuvole (rumore 512x512 al primo uso, poi in cache).
 - Da misurare sul telefono anche il costo per frame della luce dei soldati (qualche drawImage su canvas piccoli
   per soldato + un livello delle ombre grande quanto la visuale).
 - Punto aperto: l'anteprima reale dell'editor si ricostruisce a ogni modifica e con la fusione costa ~0,4 s.
@@ -118,11 +127,12 @@ Ordine = impatto stimato sul colpo d'occhio. Tutto procedurale (canvas), configu
 - ~~Mirino con varianti scelte dal giocatore.~~ fatto
 
 ## 8. Atmosfera e colore
-- Correzione di colore per mappa (deserto caldo e slavato, campagna satura, Arena fredda).
-- Vignettatura leggera, grana opzionale.
-- Meteo: pioggia (campagna) con pozzanghere che riflettono, nebbia mattutina, polvere più densa nel deserto.
-- Nuvole che passano con la loro ombra sul terreno.
-- Ciclo giorno/sera lento (opzionale per mappa).
+- ~~Correzione di colore per mappa (deserto caldo e slavato, campagna satura, Arena fredda).~~ fatto
+- ~~Vignettatura leggera, grana opzionale.~~ fatto
+- ~~Meteo: pioggia (campagna) con pozzanghere che riflettono, nebbia mattutina, polvere più densa nel deserto.~~ fatto
+  (le pozzanghere riflettono il cielo, non ancora soldati e luci)
+- ~~Nuvole che passano con la loro ombra sul terreno.~~ fatto
+- ~~Ciclo giorno/sera lento (opzionale per mappa).~~ fatto (scelta "Dal giorno alla notte" nel menu)
 
 ## 9. Menu e schermate
 - Anteprime delle mappe più belle (con la fusione dei terreni e i prop, non solo i tile).

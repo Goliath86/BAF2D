@@ -39,7 +39,9 @@
     "noLimit": "None",
     "summaryTime": " · {minutes} min",
     "timeOfDay": "Time of day",
-    "times": { "day": "Day", "dusk": "Dusk", "night": "Night" },
+    "times": { "day": "Day", "dusk": "Dusk", "night": "Night", "dayToNight": "Day to night" },
+    "weather": "Weather",
+    "weathers": { "level": "Map default", "clear": "Clear", "rain": "Rain", "fog": "Morning fog" },
     "procedural": "Procedural",
     "proceduralDesc": "A new map generated for every match.",
     "comingSoon": "Coming soon",
@@ -79,6 +81,7 @@
     "autoReload": "Auto reload",
     "autoReloadHint": "Reload by itself as soon as the magazine is empty, without pressing the reload key.",
     "damageNumbers": "Damage numbers",
+    "grain": "Film grain",
     "crosshair": "Crosshair",
     "crosshairs": { "dynamic": "Dynamic cross", "cross": "Fixed cross", "circle": "Circle", "tee": "T", "dot": "Dot" },
     "on": "On",
@@ -586,7 +589,7 @@
     },
     "weather": {
       "desert_wind": "Desert wind",
-      "country_breeze": "Country breeze"
+      "country_breeze": "Country breeze", "rain": "Rain", "fog": "Morning fog"
     }
   }
 }

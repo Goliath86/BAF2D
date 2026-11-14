@@ -39,7 +39,9 @@
     "noLimit": "Nessuno",
     "summaryTime": " · {minutes} min",
     "timeOfDay": "Ora del giorno",
-    "times": { "day": "Giorno", "dusk": "Tramonto", "night": "Notte" },
+    "times": { "day": "Giorno", "dusk": "Tramonto", "night": "Notte", "dayToNight": "Dal giorno alla notte" },
+    "weather": "Meteo",
+    "weathers": { "level": "Della mappa", "clear": "Sereno", "rain": "Pioggia", "fog": "Nebbia mattutina" },
     "procedural": "Procedurale",
     "proceduralDesc": "Una mappa nuova generata a ogni partita.",
     "comingSoon": "Prossimamente",
@@ -79,6 +81,7 @@
     "autoReload": "Ricarica automatica",
     "autoReloadHint": "Ricarica da sola appena il caricatore è vuoto, senza premere il tasto di ricarica.",
     "damageNumbers": "Numeri dei danni",
+    "grain": "Grana della pellicola",
     "crosshair": "Mirino",
     "crosshairs": { "dynamic": "Croce dinamica", "cross": "Croce fissa", "circle": "Cerchio", "tee": "T", "dot": "Punto" },
     "on": "Sì",
@@ -586,7 +589,7 @@
     },
     "weather": {
       "desert_wind": "Vento del deserto",
-      "country_breeze": "Brezza di campagna"
+      "country_breeze": "Brezza di campagna", "rain": "Pioggia", "fog": "Nebbia mattutina"
     }
   }
 }

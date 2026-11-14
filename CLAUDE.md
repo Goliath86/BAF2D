@@ -78,7 +78,8 @@ js/game/marks.js      GroundMarks: segni che restano tutta la partita su un live
                       explosions.<t>.crater, tracce dei mezzi vehicles.json -> trail, bossoli fermi cotti
                       se effects.json -> bakeCasings), azzerato in _reset, disegnato dopo l'acqua e prima dei decal
 js/game/lights.js     Lights: luci dinamiche (aloni a gradini retinati in cache, lampi e luci del fotogramma) e buio
-                      dell'ora del giorno (game.json -> lights.times)
+                      dell'ora del giorno (game.json -> lights.times, cicli lenti lights.cycles)
+js/game/atmosphere.js Atmosphere: correzione di colore per mappa/meteo, vignettatura, grana (game.json -> atmosphere)
   loader.js           loadJSON / loadImage / loadArrayBuffer (errori = LocalizedError)
   errors.js           LocalizedError(key, params, fallbackMessage)
   i18n.js             I18n: load(cfg), t(key, params), applyToDOM() per [data-i18n], error(e)
@@ -106,7 +107,8 @@ js/game/
   vehicle_ai.js       VehicleBrain: IA di guida dei bot (bandiere, mitragliatrice/razzi, sblocco)
   rockets.js          RocketTypes (weapons.json -> rockets) + Rockets (razzi con scia, esplodono -> Game.explode)
   props.js            Props: decorazioni della mappa (palme overhead, cespugli/sassi a terra, ombre, oscillazione col vento)
-  weather.js          Weather: vento con raffiche, granelli, lingue di sabbia, velature, tinta (effects.json -> weather)
+  weather.js          Weather: vento con raffiche, granelli, lingue di sabbia, velature, tinta, ombre delle nuvole,
+                      banchi di nebbia/polvere, pioggia, pozzanghere (effects.json -> weather)
   pickups.js          Pickups: armi/granate a terra (lasciate dai caduti o da punti fissi della mappa con respawn)
   medals.js           Medals (config/medals.json): definizioni, collezione salvata in Settings, icon(id) a pixel
   ranks.js            Ranks (gradi da game.json -> ranks, insegne a pixel in canvas) + Career (xp in localStorage)
@@ -473,6 +475,21 @@ tests/                test di regressione (node --test): static.test.mjs, browse
   `new TileMap(level, tileset, { blend: false })` per anteprime/controlli, `{ deferred: true }` = canvas vuoto. Ogni tile placeholder è ritagliato
   nel suo riquadro. Legend: liste di varianti (`cellRandom(x, y, salt)` stabile), `prop`, `pickup`.
 - Livello: `weather` (tipo in effects.json -> weather; `game.weather`, `effects.wind` per il fumo) e `background`.
+  Meteo dal menu: stepper `weather` = indice in `game.json -> menu.weathers` (`level` = quello della mappa, `clear`
+  = sereno, altrimenti un tipo; testi `newGame.weathers.<id>`) -> `game.setup({ weather })`, `game.weatherId`.
+  Tipi nuovi: `rain`, `fog` (testi anche in `editor.weather.<id>`). Campi del tipo: `clouds` (ombre che scorrono
+  col vento, `Weather.drawShadows` prima delle luci, spariscono col buio), `fog` (lista di banchi in `drawAir`,
+  `gustAlpha`), banchi = tessere di rumore ripetibili retinate in cache (`DriftLayer`: size, scale, octaves,
+  threshold, soft, bands, color, alpha, speed); `rain` (gocce oblique col vento, spruzzi, cerchi su pozzanghere e
+  acqua), `puddles` (`weather.attach(map)` le prepara: stabili per cella, mai sui solidi, `puddleAt(x, y)`,
+  `drawPuddles` dopo l'acqua), `grade` (passaggi di colore aggiunti alla mappa), `sound` = { name, volume }
+  (`Game._updateAmbience`, loop `rain` in assets.json, fermato con i motori), `tint.mode`.
+- Atmosfera (`js/game/atmosphere.js`, `game.json -> atmosphere`, `game.atmosphere`): dopo la scena, prima del
+  mirino: `drawGrade` (passaggi `{ op: "fill", color, alpha, mode }` o `{ op: "self", mode, alpha }` da
+  `grades.<level.grade | tileset>` + `weather.grade`), tinte del meteo e dell'ora, `drawVignette` (gradini
+  retinati in cache), `drawGrain` (opzione Settings `grain`, `game.setGrain`, pulsanti `#grain-choice`).
+  Ciclo dell'ora: `lights.cycles.<id>` = { steps: [ore di times], duration (s per passo) } nello stepper
+  `timeOfDay` dopo le ore; `Lights._applyCycle` mescola buio e tinta, `restartCycle()` in `_reset`, `cyclePhase`.
   Ordine di disegno: mappa, decal, props a terra (+ ombre), lingue di sabbia, ..., soldati, ..., esplosioni,
   props overhead, granelli/velature, poi tinta a schermo.
 - Livelli: `legend` mappa caratteri a nome/id del tile o a `{ "tile", "spawn" }` / `{ "tile", "flag" }`
@@ -563,6 +580,8 @@ tests/                test di regressione (node --test): static.test.mjs, browse
   (nomi fittizi per i bot), 18 gradi con insegne a pixel, promozioni in partita e carriera salvata in localStorage.
 - Fatto anche: raccolta di armi (scambio con E, anche i bot) e granate da terra, punti fissi con respawn sulle mappe.
 - Fatto anche: editor di mappe (`editor.html`) con salvataggio/caricamento JSON, controllo e prova nel gioco.
+- Fatto anche: atmosfera (correzione di colore per mappa, vignettatura, grana opzionale, nuvole, pioggia con
+  pozzanghere, nebbia, ciclo dal giorno alla notte, meteo scelto dal menu).
 - Fatto anche: munizioni contate per tutte le armi dei soldati (scorta, raccolta da armi uguali a terra,
   rifornimento alle bandiere possedute e alla base, bot che vanno a rifornirsi).
 - Non ancora presenti: mappa procedurale, asset grafici reali.

@@ -19,6 +19,7 @@ import { Destruction } from './destruction.js';
 import { keyName } from '../engine/input.js';
 import { UnitLighting } from '../engine/lighting.js';
 import { Lights } from './lights.js';
+import { Atmosphere } from './atmosphere.js';
 import { Water } from './water.js';
 import { GroundMarks } from './marks.js';
 import { configureRotation, drawRotated } from '../engine/rotsprite.js';
@@ -83,6 +84,9 @@ export class Game {
     // luci dinamiche (aloni, fuochi, bandiere, fari) e buio dell'ora del giorno
     this.lights = new Lights(config.lights);
     this.effects.lights = this.lights;
+    // correzione di colore per mappa e meteo, vignettatura, grana (game.json -> atmosphere)
+    this.atmosphere = new Atmosphere(config.atmosphere);
+    this.ambience = null; // suono continuo del meteo (pioggia): { name, handle }
     // segni di battaglia che restano: crateri, tracce dei mezzi, bossoli fermi
     this.marks = new GroundMarks();
     this.effects.marks = this.marks;
@@ -156,7 +160,7 @@ export class Game {
    * Prepara una partita: level = JSON del livello, team = squadra del giocatore,
    * allies / enemies = bot compagni / avversari, attract = partita dimostrativa (tutti bot, niente HUD né audio).
    */
-  setup({ level, team, allies = 0, enemies = 4, tickets = null, timeLimit = null, timeOfDay = null, attract = false }) {
+  setup({ level, team, allies = 0, enemies = 4, tickets = null, timeLimit = null, timeOfDay = null, weather = null, attract = false }) {
     this.level = level;
     // ora del giorno (game.json -> lights.times): dal menu, altrimenti quella del livello, altrimenti il default
     this.lights.setTime(timeOfDay || level.timeOfDay || this.config.lights?.default || null);
@@ -170,9 +174,14 @@ export class Game {
     // decorazioni e meteo del livello (level.weather = tipo in effects.json -> weather)
     this.props.reset(this.map);
     this.water = new Water(this.map, this.map.tileset.water); // riflessi e increspature animati
-    this.weather = new Weather(level.weather ? this.effectsCfg.weather?.[level.weather] : null);
-    if (level.weather && !this.weather.active) console.warn(`Level weather "${level.weather}" not found in effects.json`);
+    // weather (dal menu): null / "level" = quello del livello, "clear" = sereno, altrimenti un tipo di effects.json
+    const wid = !weather || weather === 'level' ? level.weather || null : weather === 'clear' ? null : weather;
+    this.weatherId = wid;
+    this.weather = new Weather(wid ? this.effectsCfg.weather?.[wid] : null);
+    if (wid && !this.weather.active) console.warn(`Weather "${wid}" not found in effects.json`);
+    this.weather.attach(this.map); // pozzanghere
     this.effects.wind = this.weather.active ? this.weather.wind : null;
+    this.atmosphere.setGrade(this.atmosphere.gradeFor(level, this.weather.cfg));
     this.background = level.background || this.config.display?.background || '#000';
     this.nav = new Nav(this.map);
     this.playerTeam = this.teams[team] ? team : this.ctf.teamIds[0] || null;
@@ -207,6 +216,7 @@ export class Game {
     this.shake.time = 0;
     this.effects.clear();
     this.lights.clear();
+    this.lights.restartCycle(); // ciclo giorno -> notte dall'inizio
     this.marks.reset(this.map);
     this.corpses.length = 0;
     this.pickups.reset(this.map);
@@ -839,7 +849,7 @@ export class Game {
     this.attract = false;
     this.ended = null;
     this.map = null;
-    if (this.engines.size) this._silenceEngines();
+    if (this.engines.size || this.ambience) this._silenceEngines();
   }
 
   /** La schermata di fine partita è visibile da almeno restartDelay secondi. */
@@ -872,7 +882,7 @@ export class Game {
       } else {
         acc = 0;
         // pausa / dispositivo in verticale: i motori tacciono (ripartono alla ripresa)
-        if (this.engines.size) this._silenceEngines();
+        if (this.engines.size || this.ambience) this._silenceEngines();
       }
       this.render();
       requestAnimationFrame(frame);
@@ -958,7 +968,27 @@ export class Game {
     // ascoltatore dei suoni posizionali = centro della visuale
     this.audio.listener = { x: this.camera.x + display.width / 2, y: this.camera.y + display.height / 2 };
     this._updateEngines();
+    this._updateAmbience();
     input.endFrame();
+  }
+
+  /** Suono continuo del meteo (weather.sound = { name, volume }), non nella partita dimostrativa. */
+  _updateAmbience() {
+    const s = this.weather.cfg?.sound;
+    const name = !this.attract && s?.name ? s.name : null;
+    // fermato da fuori (audio muto): si ricrea quando torna l'audio
+    if (this.ambience && !this.audio.loops.has(this.ambience.handle)) this.ambience = null;
+    if (this.ambience && this.ambience.name !== name) {
+      this.ambience.handle.stop();
+      this.ambience = null;
+    }
+    if (!name) return;
+    if (!this.ambience) {
+      const handle = this.audio.loop(name);
+      if (!handle) return; // audio non ancora attivo o muto: si riprova al prossimo tick
+      this.ambience = { name, handle };
+    }
+    this.ambience.handle.set(Math.min(1, s.volume ?? 1), null);
   }
 
   /**
@@ -992,6 +1022,8 @@ export class Game {
   _silenceEngines() {
     for (const h of this.engines.values()) h.stop();
     this.engines.clear();
+    this.ambience?.handle.stop(); // anche la pioggia
+    this.ambience = null;
   }
 
   // ---------- Granate ----------
@@ -2252,6 +2284,7 @@ export class Game {
     const view = { x: cx, y: cy, w: W, h: H };
     this._view = view; // anche per l'HUD (minimappa, bordo schermo, numeri dei danni)
     this.water?.draw(ctx, view, this.lights.clock);
+    this.weather.drawPuddles(ctx, view, this.lights.clock); // pozzanghere della pioggia
     this.marks.draw(ctx, view); // crateri, tracce dei mezzi, bossoli fermi
     this.effects.drawDecals(ctx);
     this.effects.drawEmbers(ctx); // braci accese nelle bruciature
@@ -2295,16 +2328,21 @@ export class Game {
     this.effects.drawBlasts(ctx); // sopra il fumo, altrimenti ne coprirebbe il nucleo
     this.props.drawOverhead(ctx, view, wind); // chiome delle palme sopra i soldati
     for (const v of this.vehicles) if (v.high) v.draw(ctx); // elicotteri in volo sopra a tutto
+    // ombre delle nuvole su tutto (col buio non si vedono più)
+    this.weather.drawShadows(ctx, view, 1 - (this.lights.ambient?.darkness ?? 0));
     // luci: buio dell'ora del giorno e aloni (illuminano terreno, muri, soldati e fumo)
     this._addLights(view);
     this.lights.draw(ctx, view);
     if (!this.attract) this._drawSquadMarks(ctx);
     if (this.debug) this._drawBotDebug(ctx);
-    this.weather.drawAir(ctx); // granelli e polvere nell'aria
+    this.weather.drawAir(ctx, view); // granelli, polvere, nebbia e pioggia nell'aria
 
     ctx.restore();
+    this.atmosphere.drawGrade(ctx, W, H); // correzione di colore della mappa e del meteo
     this.weather.drawTint(ctx, W, H);
     this.lights.drawTint(ctx, W, H);
+    this.atmosphere.drawVignette(ctx, W, H);
+    this.atmosphere.drawGrain(ctx, W, H, this.lights.clock);
 
     const live = this.running && !this.attract; // partita del giocatore (non la dimostrativa del menu)
     const playing = live && !this.suspended && !this.ended && !this.player.dead;
@@ -2459,6 +2497,11 @@ export class Game {
   }
 
   /** Opzione del giocatore: numeri dei danni sopra i bersagli colpiti. */
+  /** Grana della pellicola sopra la scena (opzione del giocatore). */
+  setGrain(on) {
+    this.atmosphere.grain = !!on;
+  }
+
   setDamageNumbers(on) {
     this.damageNumbers = !!on;
     if (this.hud) this.hud.showNumbers = this.damageNumbers; // l'HUD nasce con la partita (_reset)

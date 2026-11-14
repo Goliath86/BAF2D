@@ -19,6 +19,11 @@
       "streaks": { "count": 90, "colors": ["#fff6de", "#f6e4b8", "#ead098"], "speed": [100, 170], "length": [3, 6], "alpha": [0.35, 0.8] },
       "wisps": { "count": 16, "color": "#fff3d4", "alpha": 0.5, "length": [30, 70], "speed": [30, 60], "wave": [2, 5] },
       "haze": { "count": 5, "color": "#f2d6a0", "alpha": 0.14, "size": [90, 160], "speed": [10, 22] },
+      "fog": [
+        { "size": 384, "scale": 128, "octaves": 3, "threshold": 0.5, "soft": 0.22, "bands": 3, "color": "#e8c890", "alpha": 0.1, "gustAlpha": 0.22, "speed": 40 },
+        { "size": 256, "scale": 48, "octaves": 2, "threshold": 0.56, "soft": 0.18, "bands": 2, "color": "#f4dcac", "alpha": 0.06, "gustAlpha": 0.16, "speed": 70 }
+      ],
+      "clouds": { "size": 512, "scale": 160, "octaves": 3, "threshold": 0.6, "soft": 0.1, "bands": 3, "color": "#3a2410", "alpha": 0.14, "speed": 14 },
       "tint": { "color": "#f0b860", "alpha": 0.04, "gustAlpha": 0.06 }
     },
     "country_breeze": {
@@ -33,7 +38,79 @@
       },
       "margin": 40,
       "streaks": { "count": 26, "colors": ["#f8f4e0", "#f0e8b0", "#e8f0d0"], "speed": [18, 40], "length": [1, 2], "alpha": [0.45, 0.85] },
+      "clouds": { "size": 512, "scale": 128, "octaves": 3, "threshold": 0.52, "soft": 0.12, "bands": 3, "color": "#0e1c14", "alpha": 0.2, "speed": 12 },
       "tint": { "color": "#f8e8a0", "alpha": 0.025, "gustAlpha": 0.01 }
+    },
+    "rain": {
+      "wind": {
+        "angleDeg": 25,
+        "base": 0.35,
+        "wobble": 0.1,
+        "angleWobbleDeg": 8,
+        "gustEvery": [7, 14],
+        "gustTime": [2, 4],
+        "gustStrength": [0.3, 0.6]
+      },
+      "margin": 40,
+      "rain": {
+        "count": 170,
+        "speed": [240, 320],
+        "height": [50, 120],
+        "slant": 0.3,
+        "length": [4, 7],
+        "colors": ["#c4d4e2", "#a8bccc", "#dce6ee"],
+        "alpha": [0.35, 0.6],
+        "maxSplashes": 180,
+        "splash": { "chance": 0.55, "life": 0.14, "color": "#d8e4ee", "alpha": 0.65 },
+        "ring": { "chance": 0.8, "life": 0.45, "radius": 3, "color": "#d0e0ea", "alpha": 0.6 }
+      },
+      "puddles": {
+        "on": ["terrain:dirt", "terrain:trench", "terrain:crater", "terrain:road", "floor", "floor_alt", "house_floor", "house_floor2", "rubble_floor", "planks"],
+        "chance": 0.07,
+        "size": [2.5, 8],
+        "flat": 0.6,
+        "color": "#101c26",
+        "alpha": 0.5,
+        "sky": "#b4c8d8",
+        "skyAlpha": 0.4,
+        "wet": "#000000",
+        "wetAlpha": 0.16,
+        "wetWidth": 0.4,
+        "glint": "#e4eef6"
+      },
+      "clouds": [
+        { "size": 512, "scale": 160, "octaves": 3, "threshold": 0.42, "soft": 0.14, "bands": 3, "color": "#0a1018", "alpha": 0.2, "speed": 18 }
+      ],
+      "fog": [
+        { "size": 384, "scale": 96, "octaves": 3, "threshold": 0.55, "soft": 0.2, "bands": 2, "color": "#b0bcc6", "alpha": 0.08, "speed": 30 }
+      ],
+      "grade": [
+        { "op": "fill", "color": "#808080", "mode": "saturation", "alpha": 0.32 },
+        { "op": "fill", "color": "#7c8ca0", "mode": "multiply", "alpha": 0.42 },
+        { "op": "fill", "color": "#3a5a7a", "mode": "soft-light", "alpha": 0.25 }
+      ],
+      "sound": { "name": "rain", "volume": 1 }
+    },
+    "fog": {
+      "wind": {
+        "angleDeg": -10,
+        "base": 0.12,
+        "wobble": 0.05,
+        "angleWobbleDeg": 15,
+        "gustEvery": [10, 20],
+        "gustTime": [3, 5],
+        "gustStrength": [0.1, 0.25]
+      },
+      "margin": 40,
+      "fog": [
+        { "size": 512, "scale": 160, "octaves": 4, "threshold": 0.36, "soft": 0.3, "bands": 4, "color": "#e4eaee", "alpha": 0.5, "speed": 6 },
+        { "size": 384, "scale": 72, "octaves": 3, "threshold": 0.5, "soft": 0.22, "bands": 3, "color": "#f2f6f8", "alpha": 0.22, "speed": 11 }
+      ],
+      "grade": [
+        { "op": "fill", "color": "#808080", "mode": "saturation", "alpha": 0.3 },
+        { "op": "fill", "color": "#c8d4dc", "mode": "screen", "alpha": 0.18 },
+        { "op": "fill", "color": "#a0b4c8", "mode": "soft-light", "alpha": 0.25 }
+      ]
     }
   },
 

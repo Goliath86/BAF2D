@@ -213,6 +213,83 @@ describe('gioco nel browser', { skip: chrome ? false : 'Chrome non trovato (impo
     assert.equal(await ev('BAF2D.lights.flashes.length'), 0, 'lampi rimasti accesi');
   });
 
+  it('atmosfera: correzione di colore per mappa, vignettatura, grana, pioggia, nebbia, ciclo giorno -> notte', async () => {
+    await openGame();
+    const W = game.menu.weathers;
+    const times = [...Object.keys(game.lights.times), ...Object.keys(game.lights.cycles)];
+    // luminosità media di un rettangolo del canvas di gioco (frazioni della visuale)
+    const lum = (x0, y0, x1, y1) => ev(`(() => { const g = BAF2D; g.render(); const c = g.display;
+      const x = Math.floor(${x0} * c.width), y = Math.floor(${y0} * c.height), w = Math.max(1, Math.floor((${x1} - ${x0}) * c.width)), h = Math.max(1, Math.floor((${y1} - ${y0}) * c.height));
+      const d = c.ctx.getImageData(x, y, w, h).data; let t = 0; for (let i = 0; i < d.length; i += 4) t += d[i] + d[i + 1] + d[i + 2]; return t / (d.length / 4); })()`);
+
+    // correzione di colore: ogni mappa ha la sua; senza, la scena cambia
+    await T(`start('countryside', { allies: 0, enemies: 0, weather: ${W.indexOf('clear')}, timeOfDay: 0 })`);
+    await T('step(0.2)');
+    assert.equal(await ev('BAF2D.weather.active'), false, 'sereno: niente meteo');
+    assert.ok((await ev('BAF2D.atmosphere.grade.length')) > 0, 'campagna senza correzione di colore');
+    const graded = await ev(`(() => { const g = BAF2D; g.render(); return Array.from(g.display.ctx.getImageData(40, 40, 8, 8).data).join(); })()`);
+    const plain = await ev(`(() => { const g = BAF2D, a = g.atmosphere, keep = a.grade; a.grade = []; g.render();
+      const d = Array.from(g.display.ctx.getImageData(40, 40, 8, 8).data).join(); a.grade = keep; return d; })()`);
+    assert.notEqual(graded, plain, 'la correzione di colore non cambia la scena');
+
+    // vignettatura: gli angoli più scuri che senza
+    const corner = await lum(0, 0, 0.06, 0.08);
+    const noVig = await ev(`(() => { const a = BAF2D.atmosphere, v = a.cfg.vignette; a.cfg.vignette = null; return v; })()`);
+    const cornerOff = await lum(0, 0, 0.06, 0.08);
+    await ev(`BAF2D.atmosphere.cfg.vignette = ${JSON.stringify(noVig)}`);
+    assert.ok(corner < cornerOff * 0.95, `vignettatura assente (angolo ${corner.toFixed(0)} contro ${cornerOff.toFixed(0)})`);
+
+    // grana (opzione): cambia i pixel
+    await ev('BAF2D.setGrain(true)');
+    const grained = await ev(`(() => { const g = BAF2D; g.render(); return Array.from(g.display.ctx.getImageData(100, 60, 32, 32).data).join(); })()`);
+    await ev('BAF2D.setGrain(false)');
+    const clean = await ev(`(() => { const g = BAF2D; g.render(); return Array.from(g.display.ctx.getImageData(100, 60, 32, 32).data).join(); })()`);
+    assert.notEqual(grained, clean, 'la grana non si vede');
+
+    // pioggia: gocce, spruzzi, pozzanghere mai sui tile solidi, scena più scura e meno satura
+    await T(`start('countryside', { allies: 0, enemies: 0, weather: ${W.indexOf('rain')}, timeOfDay: 0 })`);
+    await T('step(1)');
+    const rain = await ev(`(() => { const g = BAF2D, w = g.weather, m = g.map; let onSolid = 0, px = 0;
+      for (const p of w.puddles) for (let j = 0; j < p.h; j++) for (let i = 0; i < p.w; i++) if (p.mask[j * p.w + i]) { px++; if (m.isSolidAt(p.x + i, p.y + j)) onSolid++; }
+      return { id: g.weatherId, drops: w.drops.length, splashes: w.splashes.length, puddles: w.puddles.length, px, onSolid, grade: g.atmosphere.grade.length }; })()`);
+    assert.equal(rain.id, 'rain');
+    assert.ok(rain.drops > 50, `poche gocce: ${JSON.stringify(rain)}`);
+    assert.ok(rain.splashes > 0, `nessuno spruzzo: ${JSON.stringify(rain)}`);
+    assert.ok(rain.puddles > 10 && rain.px > 0, `poche pozzanghere: ${JSON.stringify(rain)}`);
+    assert.equal(rain.onSolid, 0, 'pozzanghere sopra tile solidi');
+    // una goccia che cade su una pozzanghera fa un cerchio
+    const ring = await ev(`(() => { const w = BAF2D.weather, p = w.puddles[0]; let k = p.mask.indexOf(1);
+      const x = p.x + (k % p.w) + 0.5, y = p.y + Math.floor(k / p.w) + 0.5; w.splashes.length = 0;
+      const d = w.drops[0], keep = w.cfg.rain.ring.chance; d.x = x; d.y = y; d.z = 0.001; w.cfg.rain.ring.chance = 1;
+      w.update(1 / 60, BAF2D._view); w.cfg.rain.ring.chance = keep;
+      return w.splashes.some((s) => s.ring); })()`);
+    assert.ok(ring, 'nessun cerchio sulla pozzanghera');
+    await shot('weather-rain');
+
+    // nebbia: banchi che scorrono col vento
+    await T(`start('countryside', { allies: 0, enemies: 0, weather: ${W.indexOf('fog')}, timeOfDay: 0 })`);
+    const fog0 = await ev('BAF2D.weather.fog.map((l) => l.ox)');
+    await T('step(1)');
+    const fog1 = await ev('BAF2D.weather.fog.map((l) => l.ox)');
+    assert.ok(fog0.length > 0, 'nebbia senza banchi');
+    assert.notDeepEqual(fog0, fog1, 'la nebbia non si muove');
+    await shot('weather-fog');
+
+    // ciclo dal giorno alla notte: si scurisce col tempo, la rivincita lo fa ripartire
+    await T(`start('countryside', { allies: 0, enemies: 0, weather: ${W.indexOf('clear')}, timeOfDay: ${times.indexOf('dayToNight')} })`);
+    await T('step(0.2)');
+    assert.equal(await ev('BAF2D.lights.time'), 'dayToNight');
+    assert.equal(await ev('BAF2D.lights.ambient'), null, 'il ciclo non parte dal giorno');
+    const dur = game.lights.cycles.dayToNight.duration;
+    await ev(`BAF2D.lights.cycle.t = ${dur * 1.5}`);
+    await T('step(0.1)');
+    const mid = await ev('BAF2D.lights.ambient?.darkness ?? 0');
+    const { dusk, night } = game.lights.times;
+    assert.ok(mid > dusk.darkness && mid < night.darkness, `buio a metà tra tramonto e notte: ${mid}`);
+    await ev('BAF2D._reset()');
+    assert.equal(await ev('BAF2D.lights.cyclePhase'), 0, 'la rivincita non fa ripartire il ciclo');
+  });
+
   it('segni di battaglia: il cratere resta, i bossoli fermi si cuociono a terra, la rivincita li cancella', async () => {
     await openGame();
     await T(`start('desert', { allies: 0, enemies: 0 })`);
