@@ -465,6 +465,12 @@ export class BotBrain {
     // un mezzo con un'arma che non lo scalfisce: niente colpi sprecati (sta cambiando arma);
     // l'elicottero (corazza leggera) si può colpire anche col fucile
     if (this.target?.isVehicle && !u.weapon.antiVehicle && !((this.target.def?.bulletFactor ?? 0) > 0)) wantFire = false;
+    // contro il giocatore umano: solo da dentro la sua visuale, più una coda dopo esserne usciti (Game.screenFire)
+    // (chiamato anche nelle pause della raffica: in vista la coda si rinnova)
+    if (aimPt && game.screenFire) {
+      const ok = game.screenFire(this, u, this.target, aimPt, wantFire && onTarget);
+      if (wantFire && onTarget && !ok) wantFire = false;
+    }
     const switchWeapon = this._wantSwitch();
     const firing = wantFire && onTarget && !u.reloading && u.ammo > 0;
     u.aimDistance = aimPt ? dist(aimPt, u) : null;

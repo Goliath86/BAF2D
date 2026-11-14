@@ -501,6 +501,7 @@
     "ensureAntiArmor": { "weapon": "launcher", "min": 1 },
     "player": { "speed": 78, "faceMoveWhenIdle": false, "grenades": 2 },
     "ai": {
+      "screenFire": { "enabled": true, "margin": 0, "grace": [1.5, 2.5], "suppressRadius": 60 },
       "grenades": true,
       "grenadeFirstDelay": [3, 8],
       "grenadeInterval": [4, 8],

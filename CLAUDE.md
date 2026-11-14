@@ -357,6 +357,12 @@ tests/                test di regressione (node --test): static.test.mjs, browse
   modo `objective` (bandiere da catturare, poi presidio) o `combat` con ruolo `fix`/`flank` e fasi
   `expose`/`cover`/`peek`; spara solo con bersaglio in vista (dopo `reactionTime`), poi fuoco di copertura
   su `suppressPoint` per `suppressTime`; avvisa i compagni liberi entro `commRadius` (`receive` -> aggiramento).
+  Fuoco sul giocatore umano solo dalla sua visuale (`bots.ai.screenFire` = { enabled, margin, grace,
+  suppressRadius }, `Game.screenFire(state, shooter, target, aimPt, want)`, chiamato da `BotBrain.think` e
+  `VehicleBrain.think` anche per i razzi): fuori dalla camera niente colpi contro il giocatore (o il suo mezzo, o
+  fuoco di copertura entro `suppressRadius` da lui); chi ha cominciato a sparargli in vista continua per `grace` s
+  (`state.screenFire.until`, rinnovata mentre è in vista e mira a lui). Le granate non sono limitate. Niente
+  effetto nella partita dimostrativa e contro i bot.
   Colpi dei bot: `unit.aimDistance` = distanza dal punto mirato -> gittata (+ `shotOvershoot`), quindi colpiscono
   o cadono vicino al bersaglio. Proiettili con `team`/`owner`: `_unitHit` (hitbox + `combat.hitPadding`, niente
   fuoco amico), a fine corsa `_hitJustBeyond` (`endHitReach`). Granate dei bot: `BotBrain._considerGrenade` ->

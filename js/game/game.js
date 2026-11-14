@@ -2503,6 +2503,40 @@ export class Game {
 
   /** Opzione del giocatore: numeri dei danni sopra i bersagli colpiti. */
   /**
+   * Fuoco dei bot contro il giocatore umano (game.json -> bots.ai.screenFire): solo da dentro la visuale del
+   * giocatore (rettangolo della camera ristretto di "margin" px). Chi ha cominciato a sparargli da dentro la
+   * visuale continua per "grace" s (scelto a ogni scontro) anche se la camera non lo inquadra più; la coda si
+   * rinnova finché è in vista e mira al giocatore. Contro gli altri bersagli (bot, mezzi senza il giocatore)
+   * non cambia nulla; neanche nella partita dimostrativa.
+   * state = oggetto del cervello che spara (vi tiene la coda), shooter = { x, y } di chi spara, target = suo
+   * bersaglio, aimPt = punto mirato (o null), want = vuole sparare. Restituisce se può sparare.
+   */
+  screenFire(state, shooter, target, aimPt, want) {
+    const sf = this.aiCfg.screenFire;
+    const p = this.player;
+    if (!sf || sf.enabled === false || this.attract || !p || p.dead) return want;
+    const atHuman = target === p || (!!p.vehicle && target === p.vehicle)
+      || (!!aimPt?.suppress && Math.hypot(aimPt.x - p.x, aimPt.y - p.y) < (sf.suppressRadius ?? 60));
+    if (!atHuman) return want;
+    const m = sf.margin ?? 0;
+    const cx = this.camera.x;
+    const cy = this.camera.y;
+    const onScreen = shooter.x >= cx + m && shooter.x <= cx + this.display.width - m
+      && shooter.y >= cy + m && shooter.y <= cy + this.display.height - m;
+    const tail = state.screenFire;
+    const active = !!tail && this.time < tail.until;
+    if (onScreen) {
+      // in vista: spara liberamente; la coda parte col primo colpo e si rinnova mentre mira al giocatore
+      if (want || (active && aimPt)) {
+        const g = active ? tail.grace : rand(sf.grace, 2);
+        state.screenFire = { grace: g, until: this.time + g };
+      }
+      return want;
+    }
+    return want && active;
+  }
+
+  /**
    * Illustrazione di fine partita: la scena disegnata dove si è combattuto di più (il punto con più caduti
    * entro matchEnd.art.radius px; senza caduti, il giocatore) con croci a pixel del colore della squadra sui
    * caduti. Restituisce un canvas grande quanto la visuale (null senza mappa). La visuale del gioco non cambia.

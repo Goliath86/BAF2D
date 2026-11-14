@@ -110,6 +110,12 @@ export class VehicleBrain {
           secondary = true;
           this.rocketTimer = rand(c.rocketInterval, 1);
         }
+        // contro il giocatore umano: solo da dentro la sua visuale, più una coda dopo esserne usciti
+        if (game.screenFire) {
+          const ok = game.screenFire(this, v, t, { x: t.x, y: t.y }, firing || secondary);
+          firing = firing && ok;
+          secondary = secondary && ok;
+        }
       }
     } else {
       this.burstOn = false;

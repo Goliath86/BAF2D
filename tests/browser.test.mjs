@@ -164,6 +164,73 @@ describe('gioco nel browser', { skip: chrome ? false : 'Chrome non trovato (impo
     assert.deepEqual(r.owners, s0.owners, 'bandiere non ripristinate');
   });
 
+  it('i bot sparano al giocatore solo da dentro la sua visuale, e per un po\' dopo esserne usciti', async () => {
+    await openGame();
+    await T(`start('arena', { allies: 0, enemies: 1 })`);
+    await T('step(0.1)');
+    const sf = game.bots.ai.screenFire;
+    const graceMax = Array.isArray(sf.grace) ? sf.grace[1] : sf.grace;
+    // la regola da sola
+    const rule = await ev(`(() => { const g = BAF2D, p = g.player, cam = g.camera, W = g.display.width, H = g.display.height;
+      const inside = { x: cam.x + W / 2, y: cam.y + H / 2 }, outside = { x: cam.x - 40, y: cam.y + H / 2 };
+      const s = {}, other = {};
+      const r = {
+        offStart: g.screenFire(s, outside, p, p, true),
+        onScreen: g.screenFire(s, inside, p, p, true),
+        offTail: g.screenFire(s, outside, p, p, true),
+        otherTarget: g.screenFire(other, outside, g.bots[0].unit, g.bots[0].unit, true),
+      };
+      const t0 = g.time; g.time += ${graceMax} + 0.1;
+      r.offAfter = g.screenFire(s, outside, p, p, true);
+      g.time = t0;
+      return r; })()`);
+    assert.equal(rule.offStart, false, 'fuori dalla visuale spara al giocatore senza aver cominciato in vista');
+    assert.equal(rule.onScreen, true, 'in vista non spara');
+    assert.equal(rule.offTail, true, 'appena uscito dalla visuale smette subito');
+    assert.equal(rule.offAfter, false, 'fuori dalla visuale continua oltre la coda');
+    assert.equal(rule.otherTarget, true, 'la regola blocca anche il fuoco contro i bot');
+
+    // un bot vero: fuori visuale (ma lo vede) non spara; in vista sì; uscito, continua per la coda e poi smette
+    const spot = await ev(`(() => { const g = BAF2D, p = g.player, cam = g.camera, W = g.display.width, H = g.display.height;
+      const range = g.aiCfg.viewRange ?? 220, map = g.map, nav = g.nav;
+      const off = (x, y) => x < cam.x - 6 || x > cam.x + W + 6 || y < cam.y - 6 || y > cam.y + H + 6;
+      const on = (x, y) => x > cam.x + 20 && x < cam.x + W - 20 && y > cam.y + 20 && y < cam.y + H - 20;
+      const free = (x, y) => !map.rectHitsSolid(x - 6, y - 6, 12, 12) && nav.los(p.x, p.y, x, y);
+      let o = null, i = null;
+      for (let d = 60; d <= range - 10 && (!o || !i); d += 6) for (let a = 0; a < 64; a++) {
+        const x = p.x + Math.cos(a / 64 * Math.PI * 2) * d, y = p.y + Math.sin(a / 64 * Math.PI * 2) * d;
+        if (!free(x, y)) continue;
+        if (!o && off(x, y)) o = { x, y };
+        if (!i && on(x, y) && d > 70) i = { x, y };
+      }
+      return { o, i }; })()`);
+    assert.ok(spot.o && spot.i, `nessun punto adatto per il test: ${JSON.stringify(spot)}`);
+    await ev(`(() => { const g = BAF2D; g._shots = 0; const fire = g.fire.bind(g);
+      g.fire = (s) => { if (s === g.bots[0].unit) g._shots++; return fire(s); };
+      g.player.damage = () => {}; })()`); // il giocatore non muore durante il test
+    const place = (p) => ev(`(() => { const u = BAF2D.bots[0].unit; u.x = ${p.x}; u.y = ${p.y}; })()`);
+    const shots = () => ev('BAF2D._shots');
+    // fermo nel punto, caricatore sempre pieno e niente ricariche (nelle pause della raffica il bot ricarica:
+    // una ricarica a metà prova non deve contare come "ha smesso di sparare")
+    const stay = (p, s) => T(`step(${s}, () => { const u = BAF2D.bots[0].unit; u.x = ${p.x}; u.y = ${p.y};
+      u.ammo = u.weapon.magazine; u.reload = null; })`);
+    await place(spot.o);
+    await stay(spot.o, 4);
+    assert.equal(await ev('BAF2D.bots[0].brain.target === BAF2D.player'), true, 'il bot non vede il giocatore');
+    assert.equal(await shots(), 0, 'il bot spara da fuori la visuale');
+    await stay(spot.i, 3);
+    const onShots = await shots();
+    assert.ok(onShots > 0, 'il bot in vista non spara');
+    // esce dalla visuale mentre spara: continua per un po'...
+    await stay(spot.o, 0.8);
+    assert.ok((await shots()) > onShots, 'appena uscito dalla visuale smette subito');
+    // ...poi smette
+    await stay(spot.o, graceMax + 0.5);
+    const late = await shots();
+    await stay(spot.o, 2);
+    assert.equal(await shots(), late, 'fuori dalla visuale continua a sparare oltre la coda');
+  });
+
   it('luce dei soldati: ombra dal lato delle ombre dei muri, luce sul bordo dal lato opposto', async () => {
     await openGame();
     await T(`start('arena', { allies: 0, enemies: 0 })`);
