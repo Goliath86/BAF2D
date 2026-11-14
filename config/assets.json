@@ -182,7 +182,7 @@
       "frameWidth": 58,
       "frameHeight": 58,
       "origin": [29, 29],
-      "placeholder": { "shape": "heli_rotor", "frames": 2, "blades": 4, "blade": "#1e1e1c", "bladeLight": "#4a4a44", "tip": "#c8a838", "hub": "#3a3a34", "blur": "#1a1a18" }
+      "placeholder": { "shape": "heli_rotor", "frames": 2, "blades": 4, "blade": "#1e1e1c", "bladeLight": "#4a4a44", "tip": "#c8a838", "hub": "#3a3a34", "blur": "#1a1a18", "tipBlur": "#8a7a3a", "blurSteps": 5 }
     },
     "tank_turret": {
       "src": null,

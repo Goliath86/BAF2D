@@ -528,12 +528,9 @@ export class Vehicle {
       const r = this.assets.sprite(d.rotorSprite);
       const hub = this._rotorHub();
       if (this.rotorSpeed > 0.6) {
-        // pale veloci: disco sfocato + due posizioni delle pale semitrasparenti
-        ctx.globalAlpha = fade * 0.4;
-        drawSprite(ctx, r, 1, hub.x, hub.y, 0);
-        ctx.globalAlpha = fade * 0.28;
-        drawSprite(ctx, r, 0, hub.x, hub.y, this.rotor);
-        drawSprite(ctx, r, 0, hub.x, hub.y, this.rotor + Math.PI / (d.rotorBlades ?? 2)); // a metà tra le pale
+        // pale veloci: disco sfocato con le scie delle pale, che gira con loro (più trasparente a regime pieno)
+        ctx.globalAlpha = fade * (d.rotorBlurAlpha ?? 0.85) * (1.15 - this.rotorSpeed * 0.15);
+        drawSprite(ctx, r, 1, hub.x, hub.y, this.rotor);
       } else {
         drawSprite(ctx, r, 0, hub.x, hub.y, this.rotor);
       }

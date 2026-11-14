@@ -937,6 +937,7 @@ export class Game {
       }
     }
     for (const v of this.vehicles) this.marks.vehicle(v); // tracce di ruote e cingoli
+    this._kickUp(dt);
     this._updateBullets(dt);
     this.rockets.update(dt, this, (r, x, y, v) => {
       // colpo diretto su un mezzo + esplosione
@@ -1020,6 +1021,72 @@ export class Game {
       y = player.y;
     }
     this.grenades.spawn(def, x, y, player.angle, dist, player.vx, player.vy, player);
+  }
+
+  /**
+   * Polvere sollevata (effects.json -> kickup), coi colori del terreno (effects.groundDust; niente su acqua e
+   * pavimenti senza "dust"): "run" = soldati che corrono, un pugno di polvere ogni "every" px; "vehicle" = mezzi a
+   * terra, dalle ruote posteriori ("rear" = [indietro, lato] in frazioni di hw/hh), più fitta con la velocità;
+   * "rotor" = elicotteri sotto "maxAlt" col rotore acceso: anello di polvere spinta verso l'esterno.
+   */
+  _kickUp(dt) {
+    const k = this.effectsCfg?.kickup;
+    if (!k) return;
+    const fx = this.effects;
+    const puff = (sec, x, y, nx = 0, ny = 0) => {
+      const defs = sec.emitters || [];
+      const colors = fx.groundDust(x, y, this.map, sec.lighten ?? 0);
+      if (!colors || this.map.blocksShotAt(x, y)) return;
+      for (const em of defs) fx.emit({ ...em, colors }, x, y, nx, ny);
+    };
+    // true ogni "every" px percorsi (contatore per tipo di segno sull'oggetto)
+    const travel = (o, every, key = '_dustRun') => {
+      o[key] = (o[key] ?? 0) + Math.hypot(o.vx, o.vy) * dt;
+      if (o[key] < every) return false;
+      o[key] = 0;
+      return true;
+    };
+    const bleed = k.bleed;
+    for (const u of this.units) {
+      if (u.dead || u.vehicle) continue;
+      if (k.run && u.sprinting && travel(u, k.run.every ?? 10)) puff(k.run, u.x, u.y + 2, -u.vx, -u.vy);
+      // feriti gravi: gocce di sangue lungo la strada
+      if (bleed && u.health < u.maxHealth * (bleed.ratio ?? 0.35) && travel(u, bleed.every ?? 14, '_bleedRun')) {
+        fx.drops(bleed.drops, u.x, u.y + 1);
+      }
+    }
+    for (const v of this.vehicles) {
+      if (v.destroyed) continue;
+      if (v.def.flying) {
+        const r = k.rotor;
+        if (!r || v.rotorSpeed < 0.5 || v.alt > (r.maxAlt ?? 0.6)) continue;
+        v._rotorDust = (v._rotorDust ?? 0) - dt;
+        if (v._rotorDust > 0) continue;
+        v._rotorDust = r.interval ?? 0.05;
+        // più forte vicino a terra (decollo, atterraggio)
+        const n = Math.round((r.count ?? 3) * (1 - v.alt / (r.maxAlt ?? 0.6)) * v.rotorSpeed + 0.5);
+        for (let i = 0; i < n; i++) {
+          const a = Math.random() * Math.PI * 2;
+          const d = (r.radius ?? 20) * (0.6 + Math.random() * 0.4);
+          puff(r, v.x + Math.cos(a) * d, v.y + Math.sin(a) * d, Math.cos(a), Math.sin(a));
+        }
+        continue;
+      }
+      const r = k.vehicle;
+      if (!r || Math.abs(v.speed) < (r.minSpeed ?? 15)) continue;
+      // più veloce = più spesso (every px percorsi, fino a metà sopra maxSpeed)
+      const fast = Math.min(1, Math.abs(v.speed) / (r.fullSpeed ?? 80));
+      if (!travel(v, (r.every ?? 8) * (1.5 - fast * 0.5))) continue;
+      const [back, side] = r.rear || [0.9, 0.7];
+      const cos = Math.cos(v.angle);
+      const sin = Math.sin(v.angle);
+      const dir = v.speed >= 0 ? 1 : -1; // in retromarcia la polvere esce davanti
+      for (const s of [-1, 1]) {
+        const x = v.x - cos * v.hw * back * dir - sin * v.hh * side * s;
+        const y = v.y - sin * v.hw * back * dir + cos * v.hh * side * s;
+        puff(r, x, y, -cos * dir, -sin * dir);
+      }
+    }
   }
 
   /**
@@ -1733,10 +1800,18 @@ export class Game {
     }
 
     const sprite = this.assets.sprite(w.bulletSprite || 'bullet');
+    // tracciante (weapons.json -> tracer = tipo in effects.json -> tracers): un colpo ogni "every" del tiratore
+    let tracer = null;
+    const tdef = w.tracer ? this.effectsCfg.tracers?.[w.tracer] : null;
+    if (tdef) {
+      const holder = shooter.fromVehicle || shooter;
+      holder._tracerN = ((holder._tracerN ?? -1) + 1) % (tdef.every ?? 1);
+      if (holder._tracerN === 0) tracer = tdef;
+    }
     // damage: danno del singolo proiettile/pallino (verrà applicato ai bersagli colpiti)
     // team/owner: i colpi non feriscono la propria squadra; il bersaglio sa da dove arrivano (IA)
     this.bullets.push({
-      x: m.x, y: m.y, dx, dy, angle: a, speed: w.bulletSpeed || 300, range, sprite,
+      x: m.x, y: m.y, x0: m.x, y0: m.y, tracer, dx, dy, angle: a, speed: w.bulletSpeed || 300, range, sprite,
       damage: w.damage ?? 0, team: shooter.team, owner: shooter.owner ?? shooter, fromVehicle: shooter.fromVehicle ?? null, weapon: w.id,
       fromAir,
     });
@@ -2046,6 +2121,7 @@ export class Game {
       L.add(it.x, it.y, l, flick, 0.92 + 0.08 * flick);
     }
     if (c.rocket) for (const r of this.rockets.list) L.add(r.x, r.y, c.rocket);
+    for (const b of this.bullets) if (b.tracer?.light) L.add(b.x, b.y, b.tracer.light); // traccianti
     if (c.flag) {
       const H = this.ctf.look?.poleHeight ?? 22;
       const blink = 0.5 + 0.5 * Math.sin(this.ctf.time * Math.PI * 2 * (c.flag.blinkHz ?? 2.5));
@@ -2071,6 +2147,26 @@ export class Game {
     if (c.player && !this.attract && this.player && !this.player.dead) {
       const p = this.player.vehicle || this.player;
       L.add(p.x, p.y, c.player);
+    }
+  }
+
+  /**
+   * Tracciante: scia luminosa di "length" px dietro al proiettile (non oltre la volata), dal colore della testa
+   * (colors[0]) a quello della coda; ogni pixel è un quadratino, la testa è larga 2 px se "head" è 2.
+   */
+  _drawTracer(ctx, b) {
+    const t = b.tracer;
+    const colors = t.colors || ['#fff4c2', '#ffd36b', '#ff9a2a'];
+    const len = Math.min(t.length ?? 10, Math.hypot(b.x - b.x0, b.y - b.y0));
+    for (let k = Math.floor(len); k >= 0; k--) {
+      const u = len > 0 ? k / len : 0;
+      ctx.fillStyle = colors[Math.min(colors.length - 1, Math.floor(u * colors.length))];
+      ctx.fillRect(Math.round(b.x - b.dx * k), Math.round(b.y - b.dy * k), 1, 1);
+    }
+    if ((t.head ?? 1) > 1) {
+      ctx.fillStyle = colors[0];
+      ctx.fillRect(Math.round(b.x) - 1, Math.round(b.y), 2, 1);
+      ctx.fillRect(Math.round(b.x), Math.round(b.y) - 1, 1, 2);
     }
   }
 
@@ -2136,7 +2232,10 @@ export class Game {
     }
     this.effects.drawCasings(ctx, true); // bossoli in volo
     this.grenades.draw(ctx, true); // granate in volo
-    for (const b of this.bullets) drawSprite(ctx, b.sprite, 0, b.x, b.y, b.angle);
+    for (const b of this.bullets) {
+      if (b.tracer) this._drawTracer(ctx, b);
+      else drawSprite(ctx, b.sprite, 0, b.x, b.y, b.angle);
+    }
     this.rockets.draw(ctx);
     this.effects.drawFlashes(ctx);
     this.effects.drawRings(ctx); // onde d'urto (polvere), sotto il fumo

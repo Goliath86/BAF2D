@@ -179,6 +179,7 @@
       "maxRange": 600,
       "muzzleOffset": 14,
       "muzzleFlash": "rifle",
+      "tracer": "mg",
       "casing": "rifle"
     },
     "vehicle_rockets": {

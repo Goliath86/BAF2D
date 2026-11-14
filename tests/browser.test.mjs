@@ -256,6 +256,60 @@ describe('gioco nel browser', { skip: chrome ? false : 'Chrome non trovato (impo
     assert.equal(await ev('BAF2D.effects.rings.length + BAF2D.effects.embers.length + BAF2D.effects.blasts.length'), 0, 'onde, braci o palle di fuoco rimaste');
   });
 
+  it('effetti: polvere di corsa e mezzi, gocce di sangue e scia dei feriti, traccianti, cerchi nell\'acqua', async () => {
+    await openGame();
+    await T(`start('countryside', { allies: 0, enemies: 0 })`);
+    await T('step(0.2)');
+    const r = await ev(`(() => { const g = BAF2D, e = g.effects, p = g.player, out = {};
+      // corsa: polvere coi colori del terreno
+      e.particles.length = 0;
+      for (let i = 0; i < 30; i++) { p.sprinting = true; p.vx = 120; p.vy = 0; g._kickUp(1 / 60); }
+      p.sprinting = false;
+      out.run = e.particles.length;
+      // ferito grave che si muove: gocce a terra
+      e.spots.length = 0;
+      p.health = p.maxHealth * 0.2;
+      for (let i = 0; i < 30; i++) { p.vx = 120; g._kickUp(1 / 60); }
+      out.bleed = e.spots.length;
+      p.health = p.maxHealth;
+      for (let i = 0; i < 30; i++) { p.vx = 120; g._kickUp(1 / 60); }
+      out.healthy = e.spots.length - out.bleed;
+      p.vx = 0;
+      // mezzo in movimento: polvere dalle ruote
+      const v = g.vehicles.find((v) => !v.def.flying);
+      e.particles.length = 0;
+      for (let i = 0; i < 30; i++) { v.speed = 70; v.vx = 70; v.vy = 0; g._kickUp(1 / 60); }
+      out.vehicle = e.particles.length;
+      v.speed = 0; v.vx = 0;
+      // colpo in un corpo: gocce davanti nella direzione del proiettile
+      e.spots.length = 0;
+      e.impact('flesh', p.x, p.y, p.x, p.y, 1, 0);
+      out.forward = e.spots.filter((s) => s.x >= p.x - 1).length / Math.max(1, e.spots.length);
+      // traccianti: uno ogni "every" colpi della mitragliatrice
+      g.bullets.length = 0;
+      const w = g.weapons.get('vehicle_mg'), sh = { weapon: w, angle: 0, muzzle: { x: p.x, y: p.y }, x: p.x, y: p.y, team: 'red', owner: null, fromVehicle: null, aimDistance: 100 };
+      for (let i = 0; i < 6; i++) g.fire(sh);
+      out.tracers = g.bullets.filter((b) => b.tracer).length;
+      out.bullets = g.bullets.length;
+      g.bullets.length = 0;
+      // acqua: cerchio che si allarga
+      e.rings.length = 0;
+      e.impact('water', p.x, p.y);
+      out.ring = e.rings.length;
+      return out; })()`);
+    assert.ok(r.run > 0, 'nessuna polvere correndo');
+    assert.ok(r.bleed > 0, 'nessuna goccia dal ferito grave');
+    assert.equal(r.healthy, 0, 'gocce anche da chi non è ferito');
+    assert.ok(r.vehicle > 0, 'nessuna polvere dal mezzo');
+    assert.ok(r.forward > 0.8, `gocce non nella direzione del colpo (${r.forward})`);
+    assert.equal(r.bullets, 6);
+    assert.equal(r.tracers, 2, 'un tracciante ogni 3 colpi');
+    assert.equal(r.ring, 1, "nessun cerchio nell'acqua");
+    await T('step(0.1)');
+    await T('step(25)');
+    assert.equal(await ev('BAF2D.effects.spots.length + BAF2D.effects.rings.length'), 0, 'gocce o cerchi rimasti');
+  });
+
   it('animazioni del soldato: rinculo, colpito, lancio, caduta lontano dal colpo, pose dei caduti', async () => {
     await openGame();
     await T(`start('arena', { allies: 0, enemies: 0 })`);

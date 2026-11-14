@@ -781,16 +781,31 @@ const SPRITE_SHAPES = {
     const cy = h / 2;
     const R = Math.floor(Math.min(w, h) / 2) - 1;
     if (frame === 1) {
-      const r = rng(97);
+      // disco sfocato: velo trasparente con la scia di ogni pala (piena sulla pala, sfuma dietro di lei),
+      // più denso verso le punte; trasparenza a gradini (stile pixel art). Si disegna ruotato con le pale.
+      const blades = p.blades ?? 2;
+      const period = (Math.PI * 2) / blades;
+      const steps = p.blurSteps ?? 5;
       for (let y = 0; y < h; y++) {
         for (let x = 0; x < w; x++) {
-          const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy);
-          if (d > R) continue;
-          // più denso verso il bordo (le punte "disegnano" il cerchio)
-          if (d > R - 1.2 || r() < 0.06 + (d / R) * 0.12) rect(g, x, y, 1, 1, d > R - 1.2 ? p.bladeLight : p.blur);
+          const dx = x + 0.5 - cx;
+          const dy = y + 0.5 - cy;
+          const d = Math.hypot(dx, dy);
+          if (d > R || d < 2.5) continue;
+          // distanza angolare dietro la pala più vicina (le pale girano in senso orario: angolo crescente)
+          let behind = (-Math.atan2(dy, dx)) % period;
+          if (behind < 0) behind += period;
+          const smear = Math.exp(-(behind / period) * 4.5);
+          const a = (0.12 + 0.55 * smear) * (0.45 + 0.55 * (d / R));
+          const q = Math.round(a * steps) / steps;
+          if (q <= 0) continue;
+          g.globalAlpha = Math.min(1, q);
+          rect(g, x, y, 1, 1, d > R - 1.5 ? p.tipBlur || p.bladeLight : smear > 0.6 ? p.bladeLight : p.blur);
         }
       }
+      g.globalAlpha = 1;
       disc(g, cx, cy, 2.5, p.hub);
+      rect(g, cx - 1, cy - 1, 1, 1, p.bladeLight);
       return;
     }
     rect(g, cx - R, cy - 1, R * 2, 2, p.blade);

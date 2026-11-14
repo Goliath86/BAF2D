@@ -25,7 +25,7 @@ function shadeHex(hex, k) {
   const t = k > 0 ? 255 : 0;
   const a = Math.abs(k);
   const c = (v) => Math.round(v + (t - v) * a);
-  return `rgb(${c((n >> 16) & 255)},${c((n >> 8) & 255)},${c(n & 255)})`;
+  return `#${((c((n >> 16) & 255) << 16) | (c((n >> 8) & 255) << 8) | c(n & 255)).toString(16).padStart(6, '0')}`;
 }
 
 // matrice di Bayer 4x4 (soglie 0..1) per le retinature
@@ -103,6 +103,9 @@ export class Effects {
     this.rings = []; // onde d'urto delle esplosioni (anello di polvere che si allarga)
     this.embers = []; // braci rimaste accese nella bruciatura (gruppi di pixel che pulsano)
     this.maxEmbers = cfg.maxEmbers ?? 12;
+    this._puffs = new Map(); // sbuffi di fumo a tre toni già disegnati (dimensione + colori -> canvas)
+    this.spots = []; // gocce a terra (sangue), pixel che svaniscono
+    this.maxSpots = cfg.maxSpots ?? 400;
     this.lights = null; // Lights (game/lights.js), impostato da Game: aloni di vampate, esplosioni e fuochi
     this.marks = null; // GroundMarks (game/marks.js), impostato da Game: crateri e bossoli che restano
     this.bakeCasings = cfg.bakeCasings !== false; // bossoli fermi cotti nei segni a terra (restano tutta la partita)
@@ -140,10 +143,18 @@ export class Effects {
    * Colori della polvere del terreno nel punto (x, y): impacts.<impatto del tile>.dust (null se non definiti, es.
    * acqua o pavimenti). Usati da onde d'urto, polvere delle esplosioni e polvere sollevata da mezzi e soldati.
    */
-  groundDust(x, y, map) {
+  groundDust(x, y, map, lighten = 0) {
     if (!map) return null;
     const tile = map.tileAt(Math.floor(x / map.size), Math.floor(y / map.size));
-    return this.impacts[tile?.impact || 'ground']?.dust || null;
+    const type = tile?.impact || 'ground';
+    const dust = this.impacts[type]?.dust;
+    if (!dust || !lighten) return dust || null;
+    // schiarita (polvere in controluce): in cache per tipo e quantità
+    const key = `${type}:${lighten}`;
+    this._dustCache ??= new Map();
+    let list = this._dustCache.get(key);
+    if (!list) this._dustCache.set(key, (list = dust.map((c) => shadeHex(c, lighten))));
+    return list;
   }
 
   /**
@@ -409,8 +420,39 @@ export class Effects {
       return;
     }
     if (def.decal) this.addDecal(def.decal, x, y);
+    if (def.drops) this.drops(def.drops, ex, ey, nx, ny);
+    // cerchio che si allarga (acqua): stesso disegno delle onde d'urto, colori propri
+    if (def.ring) this.rings.push({ def: def.ring, x: Math.round(x), y: Math.round(y), time: 0, colors: def.ring.colors, front: def.ring.front || def.ring.colors, map: null });
+    // pezzi che volano e ricadono (foglie, schegge): tipi di "casings" lanciati lungo la normale
+    for (const deb of def.debris || []) {
+      const n = Math.round(range(deb.count, 1));
+      const a = nx !== 0 || ny !== 0 ? Math.atan2(ny, nx) : null;
+      for (let i = 0; i < n; i++) this.casing(deb.type, ex, ey, a === null ? Math.random() * Math.PI * 2 : a + (Math.random() - 0.5) * (deb.spreadDeg ?? 100) * DEG);
+    }
     for (const em of def.emitters || []) this.emit(em, ex, ey, nx, ny);
     if (def.sound) this.audio.play(def.sound, { x, y });
+  }
+
+  /**
+   * Gocce a terra (sangue): d = { count, reach: [min, max] px lungo (nx, ny), spreadDeg, colors, size: [min, max],
+   * life, fade, alpha }. Senza direzione cadono attorno al punto. Non sui tile che fermano i colpi.
+   */
+  drops(d, x, y, nx = 0, ny = 0) {
+    const map = this.marks?.map;
+    const has = nx !== 0 || ny !== 0;
+    const base = has ? Math.atan2(ny, nx) : 0;
+    const n = Math.round(range(d.count, 2));
+    const [s0, s1] = d.size || [1, 1];
+    for (let i = 0; i < n; i++) {
+      const a = has ? base + (Math.random() - 0.5) * (d.spreadDeg ?? 40) * DEG : Math.random() * Math.PI * 2;
+      const r = range(d.reach, 4);
+      const px = Math.round(x + Math.cos(a) * r);
+      const py = Math.round(y + Math.sin(a) * r);
+      if (map?.blocksShotAt(px, py)) continue;
+      const life = range(d.life, 15);
+      this.spots.push({ x: px, y: py, size: Math.round(s0 + Math.random() * (s1 - s0)), color: pick(d.colors, '#6e1010'), life, fade: d.fade ?? 3, alpha: d.alpha ?? 0.9 });
+    }
+    if (this.spots.length > this.maxSpots) this.spots.splice(0, this.spots.length - this.maxSpots);
   }
 
   /**
@@ -506,6 +548,7 @@ export class Effects {
     this.fires.length = 0;
     this.rings.length = 0;
     this.embers.length = 0;
+    this.spots.length = 0;
   }
 
   /** map: TileMap per far rimbalzare i bossoli sui tile solidi (opzionale). */
@@ -559,6 +602,9 @@ export class Effects {
       d.life -= dt;
       if (d.life <= 0) this.decals.splice(i, 1);
     }
+    let dead = 0;
+    for (const s of this.spots) if ((s.life -= dt) <= 0) dead++;
+    if (dead) this.spots = this.spots.filter((s) => s.life > 0);
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const p = this.particles[i];
       const k = Math.exp(-p.drag * dt);
@@ -668,6 +714,11 @@ export class Effects {
       if (d.canvas) ctx.drawImage(d.canvas, d.x - d.half, d.y - d.half);
       else drawSprite(ctx, d.sprite, d.frame, d.x, d.y, d.angle);
     }
+    for (const s of this.spots) {
+      ctx.globalAlpha = s.alpha * Math.min(1, s.life / s.fade);
+      ctx.fillStyle = s.color;
+      ctx.fillRect(s.x, s.y, s.size, s.size === 2 ? 1 : s.size); // le gocce grandi sono schizzi orizzontali
+    }
     ctx.globalAlpha = 1;
   }
 
@@ -700,8 +751,18 @@ export class Effects {
         const cy = Math.round(p.y);
         const r = s / 2;
         if (p.shade && s >= 5) {
-          // sbuffo con volume: ombra in basso a destra, colore pieno, riflesso in alto a sinistra
-          shadedDisc(ctx, cx, cy, r, p.shade[1], p.color, p.shade[0]);
+          // sbuffo con volume: ombra in basso a destra, colore pieno, riflesso in alto a sinistra (in cache)
+          const key = `${s}|${p.color}|${p.shade[0]}|${p.shade[1]}`;
+          let c = this._puffs.get(key);
+          if (!c) {
+            const h = Math.ceil(r);
+            c = document.createElement('canvas');
+            c.width = c.height = h * 2;
+            shadedDisc(c.getContext('2d'), h, h, r, p.shade[1], p.color, p.shade[0]);
+            if (this._puffs.size > 400) this._puffs.clear();
+            this._puffs.set(key, c);
+          }
+          ctx.drawImage(c, cx - c.width / 2, cy - c.width / 2);
         } else fillDisc(ctx, cx, cy, r);
       } else {
         ctx.fillRect(Math.round(p.x - s / 2), Math.round(p.y - s / 2), s, s);

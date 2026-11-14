@@ -513,6 +513,13 @@ tests/                test di regressione (node --test): static.test.mjs, browse
   Colori del terreno: `effects.groundDust(x, y, map)` = `impacts.<impatto del tile>.dust`. Palla di fuoco
   procedurale (`explosion`): `frames` passi × `sheetVariants` forme, non ruotata (luce in alto a sinistra);
   bruciatura `scorch` retinata (nero -> marrone `brown`, zolle `clod`). Disegno: palle di fuoco sopra le particelle.
+  Sbuffi `shade` in cache (`Effects._puffs`). Impatti: anche `drops` (gocce a terra lungo la normale,
+  `Effects.drops`/`spots`, disegnate con i decal), `ring` (cerchi nell'acqua) e `debris` (foglie, schegge).
+- Polvere e scie (`Game._kickUp`, `effects.json -> kickup`): `run` (chi corre, ogni `every` px), `vehicle` (ruote
+  posteriori `rear`, più fitta con la velocità), `rotor` (elicottero sotto `maxAlt`), colori del terreno schiariti
+  di `lighten`; `bleed` = gocce dei feriti sotto `ratio` della vita. Traccianti: arma con `tracer` (tipo in
+  `effects.json -> tracers` = { every, length, colors, light }) -> `bullet.tracer`, `Game._drawTracer`.
+  Rotore: frame 1 di `heli_rotor` = disco sfocato con le scie delle pale (alpha a gradini), ruotato con le pale.
 - Suoni: `placeholder` può essere una lista di strati (ognuno con `volume` relativo).
 - `input.endFrame()` va chiamato a fine di ogni tick di update (azzera i `wasPressed`).
 - Tasti di debug F4..F9 (arma, vita, granate, squadra, punti di carriera) attivi solo con `?debug=1` nell'URL o

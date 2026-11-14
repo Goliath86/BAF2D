@@ -30,7 +30,13 @@ Ordine = impatto stimato sul colpo d'occhio. Tutto procedurale (canvas), configu
   che restano (`marks.js`: crateri, tracce di ruote e cingoli, bossoli cotti a terra).
 - Rimasto del punto 4: oggetti solidi nuovi (carri, pozzi, carcasse d'auto, tende): servono tile e generatori
   (e il controllo dei vicoli ciechi); case del deserto con tetti (vedi punto 2).
-- Prossimo passo proposto: punto 5 (effetti), poi 6 (mezzi).
+- Fatto (2026-11-14): punto 5. Bruciatura retinata nero -> marrone con zolle e braci che pulsano, palla di fuoco a
+  14 passi × 3 forme ombreggiata che si dissolve in fumo, onda d'urto di polvere col colore del terreno, fumo a
+  sbuffi con volume (in cache), polvere sollevata da corsa, mezzi e rotore (per terreno), rotore a disco sfocato,
+  gocce di sangue nella direzione del colpo e scia dei feriti gravi, traccianti della mitragliatrice dei mezzi,
+  cerchi nell'acqua, foglie e schegge che cadono dagli impatti.
+- Rimasto del punto 5: fumogeni (serve prima l'arma).
+- Prossimo passo proposto: punto 6 (mezzi), poi 7 (HUD).
 - Da misurare sul telefono anche il costo per frame della luce dei soldati (qualche drawImage su canvas piccoli
   per soldato + un livello delle ombre grande quanto la visuale).
 - Punto aperto: l'anteprima reale dell'editor si ricostruisce a ogni modifica e con la fusione costa ~0,4 s.
@@ -77,14 +83,15 @@ Ordine = impatto stimato sul colpo d'occhio. Tutto procedurale (canvas), configu
 - Varianti di tile più numerose per spezzare la ripetizione residua dei motivi interni.
 
 ## 5. Effetti
-- Bruciatura delle esplosioni: sfumatura retinata dal nero al marrone, braci che restano accese, terra smossa.
-- Esplosioni: palla di fuoco con più fotogrammi, onda d'urto (anello), detriti più vari, fumo che sale e si allarga.
-- Rotore dell'elicottero: disco sfumato in movimento invece dei cerchi di linee.
-- Polvere sollevata dai mezzi e dalla corsa (diversa per terreno: sabbia, terra, fango).
-- Impatti dei colpi per materiale: schizzi d'acqua, foglie dalle siepi, schegge di legno, scintille sul metallo.
-- Sangue: spruzzi direzionali, gocce a terra, scie quando un ferito si muove.
-- Traccianti visibili per alcune armi (mitragliatrice dei mezzi).
-- Fumo delle granate fumogene (se si aggiungono) e del fuoco.
+- ~~Bruciatura delle esplosioni: sfumatura retinata dal nero al marrone, braci che restano accese, terra smossa.~~ fatto
+- ~~Esplosioni: palla di fuoco con più fotogrammi, onda d'urto (anello), detriti più vari, fumo che sale e si
+  allarga.~~ fatto
+- ~~Rotore dell'elicottero: disco sfumato in movimento invece dei cerchi di linee.~~ fatto
+- ~~Polvere sollevata dai mezzi e dalla corsa (diversa per terreno: sabbia, terra, fango).~~ fatto
+- ~~Impatti dei colpi per materiale: schizzi d'acqua, foglie dalle siepi, schegge di legno, scintille sul metallo.~~ fatto
+- ~~Sangue: spruzzi direzionali, gocce a terra, scie quando un ferito si muove.~~ fatto
+- ~~Traccianti visibili per alcune armi (mitragliatrice dei mezzi).~~ fatto
+- Fumo delle granate fumogene (se si aggiungono); ~~fumo del fuoco~~ fatto.
 
 ## 6. Mezzi
 - Più dettaglio: portelli, ruote/cingoli animati, antenne, taniche, mimetica.
