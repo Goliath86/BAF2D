@@ -231,10 +231,17 @@ describe('gioco nel browser', { skip: chrome ? false : 'Chrome non trovato (impo
     assert.equal(await ev('BAF2D.bots[0].brain.target === BAF2D.player'), true, 'il bot non vede il giocatore');
     assert.equal(await shots(), 0, 'il bot spara da fuori la visuale');
     await stay(spot.i, 3);
+    assert.ok((await shots()) > 0, 'il bot in vista non spara');
+    // esce dalla visuale mentre spara (subito dopo un colpo: la coda screenFire.grace si conta dall'ultimo momento
+    // in cui voleva sparargli in vista, quindi uscire durante una pausa tra raffiche la accorcerebbe): continua per
+    // un po'... (finestra appena sotto la coda minima: dopo lo spostamento può essere in pausa e deve rigirarsi)
+    const n0 = await shots();
+    await T(`step(2, () => { const u = BAF2D.bots[0].unit; u.x = ${spot.i.x}; u.y = ${spot.i.y};
+      u.ammo = u.weapon.magazine; u.reload = null; return BAF2D._shots > ${n0}; })`);
     const onShots = await shots();
-    assert.ok(onShots > 0, 'il bot in vista non spara');
-    // esce dalla visuale mentre spara: continua per un po'...
-    await stay(spot.o, 0.8);
+    assert.ok(onShots > n0, 'il bot in vista ha smesso di sparare');
+    const graceMin = Array.isArray(sf.grace) ? sf.grace[0] : sf.grace;
+    await stay(spot.o, graceMin - 0.05);
     assert.ok((await shots()) > onShots, 'appena uscito dalla visuale smette subito');
     // ...poi smette
     await stay(spot.o, graceMax + 0.5);
