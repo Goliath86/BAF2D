@@ -177,7 +177,10 @@ tests/                test di regressione (node --test): static.test.mjs, browse
   e ferma il suo suono (`audio.play()` restituisce `{ stop() }`).
 - Pulsanti touch (`input.touch.buttons`): la chiave è l'azione, `input.wasPressed(azione)` li legge insieme
   alla tastiera; posizione relativa alla posizione di riposo di uno stick; il gioco passa lo stato da disegnare
-  (`label`, `progress`, `alert`) a `sticks.draw(ui, state)`. Tocco sul pulsante = niente stick.
+  (`label`, `progress`, `alert`) a `sticks.draw(ui, state)`, chiamato dopo `hud.draw` (controlli in primo piano).
+  Tocco sul pulsante = niente stick. I pulsanti destri stanno ad arco a sinistra dello stick, sotto la minimappa
+  (in alto a destra): il test "touch su telefono" controlla su più schermi che non finiscano sotto la minimappa,
+  fuori schermo o uno sopra l'altro.
   Pulsanti con `debugOnly: true` solo con `?debug=1` nell'URL (main.js -> `new Input(..., { debug })`):
   `debugHurt`/`debugHeal` sopra lo stick sinistro, per testare vita e game over su telefono.
 - HUD: disegnato sul canvas `ui` ma in unità di pixel di gioco (`u = display.cssPerPixel`, rettangoli a multipli

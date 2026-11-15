@@ -2401,32 +2401,6 @@ export class Game {
     // UI ad alta risoluzione
     const ui = display.uiCtx;
     ui.clearRect(0, 0, display.cssWidth, display.cssHeight);
-    if (playing && input.mode === 'touch') {
-      const p = this.player;
-      const v = p.vehicle;
-      if (v) {
-        // alla guida: ricarica = arma principale, "granata" = razzi, raccogli = scendi
-        const g0 = v.guns[0];
-        const g1 = v.guns[1];
-        input.sticks.draw(ui, {
-          reload: { label: String(g0?.ammo ?? 0), progress: v.reloadProgress(0), alert: g0 && g0.ammo === 0 && !g0.reload },
-          grenade: g1
-            ? { icon: 'rocket', badge: String(g1.ammo), progress: v.reloadProgress(1), disabled: !!g1.reload }
-            : { icon: 'rocket', disabled: true },
-          pickup: { hidden: false, icon: 'exit' },
-          switchWeapon: { hidden: true },
-        });
-      } else {
-        input.sticks.draw(ui, {
-          reload: { label: String(p.ammo), progress: p.reloadProgress, alert: p.ammo === 0 && !p.reloading },
-          grenade: { badge: String(p.grenades), disabled: p.grenades <= 0 },
-          // compare solo sopra un'arma raccoglibile o vicino a un mezzo libero
-          pickup: { hidden: !this.pickupOffer && !this.vehicleOffer, icon: this.vehicleOffer ? 'enter' : 'pickup' },
-          switchWeapon: { hidden: !p.holster }, // solo con due armi
-          squadOrder: { hidden: !this.bots.some((b) => b.playerSquad) },
-        });
-      }
-    }
     if (live) {
       const r = this.respawn;
       const pr = this.ranks.progress(this.career.xp);
@@ -2455,6 +2429,33 @@ export class Game {
         stamina: this.player.cfg.sprint && !this.player.vehicle && this.player.stamina < 1 ? this.player.stamina : null,
         suppression: playing ? this.player.suppression : 0,
       });
+    }
+    // controlli touch dopo l'HUD: stick e pulsanti restano sempre in primo piano (mai coperti da minimappa o testi)
+    if (playing && input.mode === 'touch') {
+      const p = this.player;
+      const v = p.vehicle;
+      if (v) {
+        // alla guida: ricarica = arma principale, "granata" = razzi, raccogli = scendi
+        const g0 = v.guns[0];
+        const g1 = v.guns[1];
+        input.sticks.draw(ui, {
+          reload: { label: String(g0?.ammo ?? 0), progress: v.reloadProgress(0), alert: g0 && g0.ammo === 0 && !g0.reload },
+          grenade: g1
+            ? { icon: 'rocket', badge: String(g1.ammo), progress: v.reloadProgress(1), disabled: !!g1.reload }
+            : { icon: 'rocket', disabled: true },
+          pickup: { hidden: false, icon: 'exit' },
+          switchWeapon: { hidden: true },
+        });
+      } else {
+        input.sticks.draw(ui, {
+          reload: { label: String(p.ammo), progress: p.reloadProgress, alert: p.ammo === 0 && !p.reloading },
+          grenade: { badge: String(p.grenades), disabled: p.grenades <= 0 },
+          // compare solo sopra un'arma raccoglibile o vicino a un mezzo libero
+          pickup: { hidden: !this.pickupOffer && !this.vehicleOffer, icon: this.vehicleOffer ? 'enter' : 'pickup' },
+          switchWeapon: { hidden: !p.holster }, // solo con due armi
+          squadOrder: { hidden: !this.bots.some((b) => b.playerSquad) },
+        });
+      }
     }
     if (this.debug) this._drawDebug(ui);
   }

@@ -274,6 +274,37 @@ describe('gioco nel browser', { skip: chrome ? false : 'Chrome non trovato (impo
     assert.ok(easy.taken < hard.taken * 0.6, `recluta ${easy.taken} danni, veterano ${hard.taken}`);
   });
 
+  it('touch su telefono: i pulsanti non finiscono sotto la minimappa, fuori schermo o uno sopra l\'altro', async () => {
+    const sizes = [[844, 390], [740, 360], [926, 428], [667, 375]];
+    try {
+      for (const [w, h] of sizes) {
+        await page.send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 3, mobile: true });
+        await openGame();
+        const bad = await ev(`(() => { BAF2D_MENU.input._setMode('touch'); T.start('crossroads', { allies: 3, enemies: 3 });
+          const g = BAF2D, s = g.input.sticks, u = g.display.cssPerPixel;
+          const r = g.hud._miniRect(Math.floor(g.display.cssWidth / u), g.map);
+          // minimappa con cornice (2 px) e la riga dell'ordine di squadra sotto (12 px di gioco)
+          const mini = { x: (r.x - 2) * u, y: (r.y - 2) * u, w: (r.w + 4) * u, h: (r.h + 4 + 12) * u };
+          const bad = [];
+          const list = s.buttons.filter((b) => !b.debugOnly).map((b) => ({ b, c: s.buttonGeometry(b) }));
+          for (const { b, c } of list) {
+            const nx = Math.max(mini.x, Math.min(c.x, mini.x + mini.w)), ny = Math.max(mini.y, Math.min(c.y, mini.y + mini.h));
+            if (Math.hypot(c.x - nx, c.y - ny) < c.r) bad.push(b.action + ' sotto la minimappa');
+            if (c.x - c.r < 0 || c.y - c.r < 0 || c.x + c.r > innerWidth || c.y + c.r > innerHeight) bad.push(b.action + ' fuori schermo');
+            if (c.y - c.r < g.hud.topHeight(g.display) && c.x > innerWidth / 3 && c.x < innerWidth * 2 / 3) bad.push(b.action + ' sotto i ticket');
+          }
+          for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) {
+            const a = list[i].c, b = list[j].c;
+            if (Math.hypot(a.x - b.x, a.y - b.y) < a.r + b.r) bad.push(list[i].b.action + ' sopra ' + list[j].b.action);
+          }
+          return bad; })()`);
+        assert.deepEqual(bad, [], `schermo ${w}x${h}`);
+      }
+    } finally {
+      await page.send('Emulation.clearDeviceMetricsOverride');
+    }
+  });
+
   it('luce dei soldati: ombra dal lato delle ombre dei muri, luce sul bordo dal lato opposto', async () => {
     await openGame();
     await T(`start('arena', { allies: 0, enemies: 0 })`);
