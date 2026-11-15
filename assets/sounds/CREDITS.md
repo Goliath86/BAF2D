@@ -32,3 +32,4 @@ Only **CC0 / public domain** sounds go here: they are committed to the repositor
 |------|--------------|--------|---------|
 | shoot_rifle_1.mp3 | TODO | TODO | CC0 |
 | shoot_rifle_2.mp3 | TODO | TODO | CC0 |
+| shoot_shotgun_1.mp3 | TODO | TODO | CC0 |
