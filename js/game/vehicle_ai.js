@@ -98,14 +98,14 @@ export class VehicleBrain {
       const gun = t.isVehicle ? rocketGun || (mgUseful ? mg : null) : useRocket && Math.random() < 0.02 ? rocketGun : mg;
       if (gun) {
         const speed = gun.w.bulletSpeed || 300;
-        const lead = (d / speed) * (c.leadFactor ?? 0.6);
+        const lead = (d / speed) * (c.leadFactor ?? 0.6) * (game.humanFoe?.(t)?.lead ?? 1);
         const ax = t.x + (t.vx || 0) * lead;
         const ay = t.y + (t.vy || 0) * lead;
         const p = v.pivot;
         this.aimAngle = Math.atan2(ay - p.y, ax - p.x) + this.aimErr;
         v.aimDistance = Math.hypot(ax - p.x, ay - p.y);
         const onTarget = Math.abs(angleDiff(this.aimAngle, v.turret)) <= (c.fireConeDeg ?? 6) * DEG;
-        if (mg && mgUseful && d <= (mg.w.maxRange ?? 600) * 0.8) firing = onTarget && this._burst(dt);
+        if (mg && mgUseful && d <= (mg.w.maxRange ?? 600) * 0.8) firing = onTarget && this._burst(dt, game);
         if (useRocket && onTarget && this.rocketTimer <= 0) {
           secondary = true;
           this.rocketTimer = rand(c.rocketInterval, 1);
@@ -191,7 +191,7 @@ export class VehicleBrain {
     }
     if (best) {
       if (best !== this.target) {
-        this.reactAt = this.time + rand(c.reactionTime, 0.4);
+        this.reactAt = this.time + rand(c.reactionTime, 0.4) * (game.humanFoe?.(best)?.reaction ?? 1);
         this.target = best;
       }
       this.visible = true;
@@ -205,13 +205,15 @@ export class VehicleBrain {
     }
   }
 
-  _burst(dt) {
+  /** Raffiche della mitragliatrice; contro il giocatore umano errore e pause dalla difficoltà (game.humanFoe). */
+  _burst(dt, game) {
     const c = this.cfg;
+    const hd = game?.humanFoe?.(this.target);
     this.burstTimer -= dt;
     if (this.burstTimer <= 0) {
       this.burstOn = !this.burstOn;
-      this.burstTimer = rand(this.burstOn ? c.burst : c.burstPause, 0.6);
-      if (this.burstOn) this.aimErr = (Math.random() + Math.random() - 1) * (c.aimErrorDeg ?? 3) * DEG;
+      this.burstTimer = rand(this.burstOn ? c.burst : c.burstPause, 0.6) * (this.burstOn ? 1 : hd?.burstPause ?? 1);
+      if (this.burstOn) this.aimErr = (Math.random() + Math.random() - 1) * (c.aimErrorDeg ?? 3) * (hd?.aimError ?? 1) * DEG;
     }
     return this.burstOn;
   }

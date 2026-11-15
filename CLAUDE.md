@@ -381,6 +381,15 @@ tests/                test di regressione (node --test): static.test.mjs, browse
   fuoco di copertura entro `suppressRadius` da lui); chi ha cominciato a sparargli in vista continua per `grace` s
   (`state.screenFire.until`, rinnovata mentre è in vista e mira a lui). Le granate non sono limitate. Niente
   effetto nella partita dimostrativa e contro i bot.
+  Difficoltà (`bots.difficulty` = { default, levels: { easy, normal, hard } }, stepper `difficulty` del menu =
+  indice, testi `newGame.difficulties.<id>`, `game.setup({ difficulty })` -> `game.difficulty`/`difficultyId`):
+  vale solo per i bot che combattono contro il giocatore umano (`game.humanFoe(target)`: null contro i bot, in
+  dimostrativa e col pilota automatico dei test). Fattori `reaction` (tempo di reazione), `aimError` (errore per
+  raffica), `lead` (anticipo), `burstPause` (pause tra raffiche), `damage` (`_foeDamage`: colpi ed esplosioni dei
+  bot sul giocatore) e `screenReaction` [min, max] s = niente colpi appena entrati nella visuale del giocatore
+  (`screenFire`, `state.screenIn`). Applicati in `BotBrain._perceive/_onHurt/_aimPoint/_burst` e in `VehicleBrain`.
+  `hard` = valori pieni di `bots.ai`. Misura: bot contro giocatore fermo a 80-140 px, morto in ~2,5-3,5 s
+  (hard), ~5-7 s (normal), 8+ s (easy).
   Colpi dei bot: `unit.aimDistance` = distanza dal punto mirato -> gittata (+ `shotOvershoot`), quindi colpiscono
   o cadono vicino al bersaglio. Proiettili con `team`/`owner`: `_unitHit` (hitbox + `combat.hitPadding`, niente
   fuoco amico), a fine corsa `_hitJustBeyond` (`endHitReach`). Granate dei bot: `BotBrain._considerGrenade` ->

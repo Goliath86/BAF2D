@@ -66,6 +66,10 @@ export class Menu {
     // meteo: "level" = quello della mappa, "clear" = sereno, altri = tipi di effects.json -> weather (game.json -> menu.weathers)
     this.weatherIds = this.cfg.weathers?.length ? this.cfg.weathers : ['level'];
     this.limits.weather = { min: 0, max: this.weatherIds.length - 1, def: 0, step: 1 };
+    // difficoltà: indice in game.json -> bots.difficulty.levels (bravura dei bot contro il giocatore)
+    const dc = config.bots?.difficulty || {};
+    this.difficultyIds = Object.keys(dc.levels || { normal: null });
+    this.limits.difficulty = { min: 0, max: this.difficultyIds.length - 1, def: Math.max(0, this.difficultyIds.indexOf(dc.default)), step: 1 };
     // valore salvato o di default, nei limiti e sul passo dello stepper
     const pick = (key) => {
       const l = this.limits[key];
@@ -81,6 +85,7 @@ export class Menu {
       timeLimit: pick('timeLimit'),
       timeOfDay: pick('timeOfDay'),
       weather: pick('weather'),
+      difficulty: pick('difficulty'),
     };
 
     this._buildMaps();
@@ -155,6 +160,7 @@ export class Menu {
       timeLimit: c.timeLimit * 60,
       timeOfDay: this.timeIds[c.timeOfDay] ?? null,
       weather: this.weatherIds[c.weather] ?? null,
+      difficulty: this.difficultyIds[c.difficulty] ?? null,
       attract: false,
     });
     game.running = true;
@@ -211,6 +217,8 @@ export class Menu {
     const wid = this.weatherIds[c.weather];
     const w = wid === 'level' || !wid ? lvl.data.weather : wid === 'clear' ? null : wid;
     tag(w ? i18n.t(`editor.weather.${w}`) : i18n.t('newGame.weathers.clear'));
+    const did = this.difficultyIds[c.difficulty];
+    if (did) tag(i18n.t(`newGame.difficulties.${did}`));
     $('briefing-status').textContent = i18n.t('briefing.deploying');
     const tips = i18n.list('tips');
     $('briefing-tip').textContent = tips.length ? i18n.t('briefing.tip', { tip: tips[Math.floor(Math.random() * tips.length)] }) : '';
@@ -678,6 +686,7 @@ export class Menu {
   _stepperText(key, v) {
     if (key === 'timeOfDay') return this.i18n.t(`newGame.times.${this.timeIds[v]}`);
     if (key === 'weather') return this.i18n.t(`newGame.weathers.${this.weatherIds[v]}`);
+    if (key === 'difficulty') return this.i18n.t(`newGame.difficulties.${this.difficultyIds[v]}`);
     if (key !== 'timeLimit') return String(v);
     return v > 0 ? this.i18n.t('newGame.minutes', { n: v }) : this.i18n.t('newGame.noLimit');
   }

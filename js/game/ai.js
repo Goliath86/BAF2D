@@ -448,7 +448,7 @@ export class BotBrain {
       this.burstOn = false;
       desired = Math.atan2(plan.point.y - u.y, plan.point.x - u.x);
     } else if (aimPt) {
-      wantFire = this._burst(dt, aimPt);
+      wantFire = this._burst(dt, aimPt, game);
       desired = Math.atan2(aimPt.y - u.y, aimPt.x - u.x) + this.aimErr;
     } else {
       this.burstOn = false;
@@ -554,12 +554,14 @@ export class BotBrain {
     }
 
     if (best) {
+      // contro il giocatore umano la reazione dipende dalla difficoltà (bots.difficulty -> reaction)
+      const rk = game.humanFoe?.(best)?.reaction ?? 1;
       if (best !== this.target) {
         this._engage(best, game);
-        this.reactAt = this.time + rand(c.reactionTime, 0.35);
+        this.reactAt = this.time + rand(c.reactionTime, 0.35) * rk;
       } else if (!this.visible) {
         // riavvistato dopo poco: reazione più rapida
-        this.reactAt = Math.max(this.reactAt, this.time + rand(c.reactionTime, 0.35) * 0.5);
+        this.reactAt = Math.max(this.reactAt, this.time + rand(c.reactionTime, 0.35) * 0.5 * rk);
       }
       this.visible = true;
       this.lastSeen = { x: best.x, y: best.y, time: this.time };
@@ -604,7 +606,7 @@ export class BotBrain {
     if (a && !a.dead && a.team !== u.team && !this.visible) {
       if (this.target !== a) this._engage(a, game);
       this.lastSeen = { x: h.x, y: h.y, time: this.time };
-      this.reactAt = this.time + rand(c.reactionTime, 0.35);
+      this.reactAt = this.time + rand(c.reactionTime, 0.35) * (game.humanFoe?.(a)?.reaction ?? 1);
       if (game.nav.los(u.x, u.y, h.x, h.y)) {
         this.suppressPoint = { x: h.x, y: h.y };
         this.suppressUntil = this.time + rand(c.suppressTime, 1.2) * 0.7;
@@ -1576,7 +1578,8 @@ export class BotBrain {
     if (t && this.visible && this.time >= this.reactAt) {
       const d = dist(t, u);
       if (d > this._effRange() * 1.05) return null;
-      const lead = (d / (u.weapon.bulletSpeed || 300)) * (c.leadFactor ?? 0.6);
+      const lk = game.humanFoe?.(t)?.lead ?? 1; // anticipo sul giocatore umano: dalla difficoltà
+      const lead = (d / (u.weapon.bulletSpeed || 300)) * (c.leadFactor ?? 0.6) * lk;
       return { x: t.x + t.vx * lead, y: t.y + t.vy * lead, suppress: false };
     }
     if (this.suppressPoint && this.time < this.suppressUntil) {
@@ -1588,19 +1591,23 @@ export class BotBrain {
     return null;
   }
 
-  /** Raffiche: alterna fuoco e pause; a ogni raffica un nuovo errore di mira. */
-  _burst(dt, aimPt) {
+  /**
+   * Raffiche: alterna fuoco e pause; a ogni raffica un nuovo errore di mira. Contro il giocatore umano errore
+   * e pause sono moltiplicati da difficulty.aimError / burstPause (game.humanFoe).
+   */
+  _burst(dt, aimPt, game) {
     const c = this.cfg;
+    const t = this.target;
+    const hd = game?.humanFoe?.(t);
     this.burstTimer -= dt;
     if (this.burstTimer <= 0) {
       this.burstOn = !this.burstOn;
-      this.burstTimer = rand(this.burstOn ? c.burst : c.burstPause, 0.5);
+      this.burstTimer = rand(this.burstOn ? c.burst : c.burstPause, 0.5) * (this.burstOn ? 1 : hd?.burstPause ?? 1);
       if (this.burstOn) {
-        const t = this.target;
         const tSpeed = Math.abs((t?.isVehicle ? t.def.maxSpeed : t?.speed) || 90);
         const speed = t && !aimPt.suppress ? Math.min(1.5, Math.hypot(t.vx, t.vy) / tSpeed) : 0;
         const err = (c.aimErrorDeg ?? 3) + speed * (c.aimErrorMovingDeg ?? 4) + (aimPt.suppress ? c.suppressErrorDeg ?? 5 : 0);
-        this.aimErr = (Math.random() + Math.random() - 1) * err * DEG;
+        this.aimErr = (Math.random() + Math.random() - 1) * err * (hd?.aimError ?? 1) * DEG;
       }
     }
     return this.burstOn;

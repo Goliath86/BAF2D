@@ -189,6 +189,18 @@ describe('configurazione', () => {
     for (const id of Object.keys(effects.weather)) assert.ok(lookup(en, `editor.weather.${id}`), `lingua: editor.weather.${id}`);
   });
 
+  test('difficoltà: livelli completi, default esistente, testi nelle lingue', () => {
+    const dc = game.bots.difficulty;
+    assert.ok(dc.levels[dc.default], `bots.difficulty.default "${dc.default}" non è in levels`);
+    for (const [id, d] of Object.entries(dc.levels)) {
+      for (const k of ['reaction', 'aimError', 'lead', 'burstPause', 'damage']) {
+        assert.ok(typeof d[k] === 'number' && d[k] >= 0, `bots.difficulty.levels.${id}.${k}`);
+      }
+      assert.ok(Array.isArray(d.screenReaction) && d.screenReaction[0] <= d.screenReaction[1], `bots.difficulty.levels.${id}.screenReaction`);
+      assert.ok(lookup(en, `newGame.difficulties.${id}`), `lingua: newGame.difficulties.${id}`);
+    }
+  });
+
   test('effetti: i tipi di impatto dei tile esistono', () => {
     for (const [ts, def] of Object.entries(assets.tilesets)) {
       for (const t of def.tiles) {

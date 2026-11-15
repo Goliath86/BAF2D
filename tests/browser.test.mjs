@@ -178,18 +178,22 @@ describe('gioco nel browser', { skip: chrome ? false : 'Chrome non trovato (impo
     const rule = await ev(`(() => { const g = BAF2D, p = g.player, cam = g.camera, W = g.display.width, H = g.display.height;
       const inside = { x: cam.x + W / 2, y: cam.y + H / 2 }, outside = { x: cam.x - 40, y: cam.y + H / 2 };
       const s = {}, other = {};
-      const r = {
-        offStart: g.screenFire(s, outside, p, p, true),
-        onScreen: g.screenFire(s, inside, p, p, true),
-        offTail: g.screenFire(s, outside, p, p, true),
-        otherTarget: g.screenFire(other, outside, g.bots[0].unit, g.bots[0].unit, true),
-      };
-      const t0 = g.time; g.time += ${graceMax} + 0.1;
+      const t0 = g.time;
+      const r = { offStart: g.screenFire(s, outside, p, p, true), entering: g.screenFire(s, inside, p, p, true) };
+      // dopo la reazione all'ingresso nella visuale (bots.difficulty -> screenReaction) spara
+      g.time += (s.screenIn?.delay ?? 0) + 0.01;
+      r.onScreen = g.screenFire(s, inside, p, p, true);
+      r.offTail = g.screenFire(s, outside, p, p, true);
+      r.otherTarget = g.screenFire(other, outside, g.bots[0].unit, g.bots[0].unit, true);
+      r.delay = s.screenIn === null ? 'reset' : 'kept';
+      g.time += ${graceMax} + 0.1;
       r.offAfter = g.screenFire(s, outside, p, p, true);
       g.time = t0;
       return r; })()`);
     assert.equal(rule.offStart, false, 'fuori dalla visuale spara al giocatore senza aver cominciato in vista');
+    assert.equal(rule.entering, false, 'spara appena entrato nella visuale, senza tempo di reazione');
     assert.equal(rule.onScreen, true, 'in vista non spara');
+    assert.equal(rule.delay, 'reset', 'uscito dalla visuale la reazione d\'ingresso non riparte');
     assert.equal(rule.offTail, true, 'appena uscito dalla visuale smette subito');
     assert.equal(rule.offAfter, false, 'fuori dalla visuale continua oltre la coda');
     assert.equal(rule.otherTarget, true, 'la regola blocca anche il fuoco contro i bot');
@@ -233,6 +237,37 @@ describe('gioco nel browser', { skip: chrome ? false : 'Chrome non trovato (impo
     const late = await shots();
     await stay(spot.o, 2);
     assert.equal(await shots(), late, 'fuori dalla visuale continua a sparare oltre la coda');
+  });
+
+  it('difficoltà: in un duello col giocatore fermo il bot "recluta" fa meno danni del "veterano"', async () => {
+    await openGame();
+    const ids = Object.keys(game.bots.difficulty.levels);
+    const duel = async (id) => {
+      await T(`start('arena', { team: 'blue', allies: 0, enemies: 1, difficulty: ${ids.indexOf(id)} })`);
+      return ev(`(() => { const g = BAF2D, p = g.player, u = g.bots[0].unit, map = g.map, D = 110;
+        if (g.difficultyId !== ${JSON.stringify(id)}) return { error: 'difficoltà ' + g.difficultyId };
+        if (g.humanFoe(u) !== null) return { error: 'humanFoe vale anche per i bot' };
+        // punto aperto con vista libera sul bot a D px
+        let ok = false;
+        for (let ty = 5; ty < map.rows - 5 && !ok; ty++) for (let tx = 5; tx < map.cols - 5 && !ok; tx++) {
+          const x = tx * map.size + 8, y = ty * map.size + 8;
+          let clear = true;
+          for (let k = -8; k <= D + 8 && clear; k += 4) if (map.rectHitsSolid(x + k - 6, y - 6, 12, 12)) clear = false;
+          if (clear) { p.x = x; p.y = y; u.x = x + D; u.y = y; ok = true; }
+        }
+        if (!ok) return { error: 'nessun punto aperto' };
+        g._snapCamera();
+        let taken = 0;
+        const hurt = p.damage.bind(p);
+        p.damage = (n, s) => { taken += n; return hurt(0, s); }; // conta i danni ma resta vivo
+        T.step(8);
+        return { taken }; })()`);
+    };
+    const easy = await duel('easy');
+    const hard = await duel('hard');
+    assert.ok(!easy.error && !hard.error, easy.error || hard.error);
+    assert.ok(hard.taken > 0, 'il veterano non colpisce il giocatore');
+    assert.ok(easy.taken < hard.taken * 0.6, `recluta ${easy.taken} danni, veterano ${hard.taken}`);
   });
 
   it('luce dei soldati: ombra dal lato delle ombre dei muri, luce sul bordo dal lato opposto', async () => {

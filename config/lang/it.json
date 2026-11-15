@@ -63,6 +63,8 @@
     "times": { "day": "Giorno", "dusk": "Tramonto", "night": "Notte", "dayToNight": "Dal giorno alla notte" },
     "weather": "Meteo",
     "weathers": { "level": "Della mappa", "clear": "Sereno", "rain": "Pioggia", "fog": "Nebbia mattutina" },
+    "difficulty": "Difficoltà",
+    "difficulties": { "easy": "Recluta", "normal": "Soldato", "hard": "Veterano" },
     "procedural": "Procedurale",
     "proceduralDesc": "Una mappa nuova generata a ogni partita.",
     "comingSoon": "Prossimamente",

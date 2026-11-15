@@ -107,6 +107,8 @@ export class Game {
     this.nav = null;
     this.botsCfg = config.bots || {};
     this.aiCfg = this.botsCfg.ai || {};
+    // difficoltà (game.json -> bots.difficulty): quanto i bot sono bravi contro il giocatore umano
+    this.setDifficulty(null);
     this.combat = config.combat || {};
     this.bots = []; // { unit, brain, team, weapon, respawn }
     this.botCounts = this.botsCfg.teams || {}; // { squadra: numero di bot }
@@ -161,8 +163,9 @@ export class Game {
    * Prepara una partita: level = JSON del livello, team = squadra del giocatore,
    * allies / enemies = bot compagni / avversari, attract = partita dimostrativa (tutti bot, niente HUD né audio).
    */
-  setup({ level, team, allies = 0, enemies = 4, tickets = null, timeLimit = null, timeOfDay = null, weather = null, attract = false }) {
+  setup({ level, team, allies = 0, enemies = 4, tickets = null, timeLimit = null, timeOfDay = null, weather = null, difficulty = null, attract = false }) {
     this.level = level;
+    this.setDifficulty(difficulty);
     // ora del giorno (game.json -> lights.times): dal menu, altrimenti quella del livello, altrimenti il default
     this.lights.setTime(timeOfDay || level.timeOfDay || this.config.lights?.default || null);
     this.map = new TileMap(level, this.assets.tileset(level.tileset));
@@ -194,6 +197,34 @@ export class Game {
     this.attract = !!attract;
     this.suspended = false;
     this._reset();
+  }
+
+  /**
+   * Difficoltà: id in game.json -> bots.difficulty.levels (null o sconosciuto = bots.difficulty.default).
+   * Ogni livello = { reaction, aimError, lead, burstPause, damage (fattori), screenReaction: [min, max] s }:
+   * valgono solo per i bot che combattono contro il giocatore umano (vedi humanFoe), non tra bot.
+   */
+  setDifficulty(id) {
+    const dc = this.botsCfg.difficulty || {};
+    const levels = dc.levels || {};
+    this.difficultyId = levels[id] ? id : levels[dc.default] ? dc.default : null;
+    this.difficulty = this.difficultyId ? levels[this.difficultyId] : null;
+  }
+
+  /**
+   * Parametri di difficoltà se "target" è il giocatore umano (o il suo mezzo) in una partita vera, altrimenti
+   * null (bersagli bot, partita dimostrativa, pilota automatico dei test).
+   */
+  humanFoe(target) {
+    const p = this.player;
+    if (!this.difficulty || this.attract || this.playerBrain || !p || !target) return null;
+    return target === p || (!!p.vehicle && target === p.vehicle) ? this.difficulty : null;
+  }
+
+  /** Danno di un'arma di "owner" su "target": × difficulty.damage se un bot colpisce il giocatore umano. */
+  _foeDamage(n, owner, target) {
+    const d = owner?.isBot ? this.humanFoe(target) : null;
+    return d ? n * (d.damage ?? 1) : n;
   }
 
   /** Stato di una nuova partita: ticket e bandiere iniziali, giocatore alla base, niente proiettili/effetti. */
@@ -1154,7 +1185,7 @@ export class Game {
       const d = Math.hypot(p.x - x, p.y - y);
       if (p.dead || p.vehicle || d >= radius || blocked.has(p)) continue;
       // unit: null = l'IA non "vede" chi l'ha lanciata; by = a chi vanno uccisione e assist
-      p.damage(Math.round((def.damage ?? 80) * falloff(d)), { unit: null, x, y, by: owner, cause });
+      p.damage(Math.round(this._foeDamage((def.damage ?? 80) * falloff(d), owner, p)), { unit: null, x, y, by: owner, cause });
     }
     // mezzi: distanza dal bordo dello scafo, danno × vehicleFactor (granate: ridotto, razzi: pieno)
     const vf = def.vehicleFactor ?? 1;
@@ -1894,7 +1925,7 @@ export class Game {
 
   _hitUnit(b, u) {
     const o = b.owner;
-    u.damage(b.damage, o ? { unit: o, x: o.x, y: o.y, cause: 'bullet', weapon: b.weapon } : null);
+    u.damage(this._foeDamage(b.damage, o, u), o ? { unit: o, x: o.x, y: o.y, cause: 'bullet', weapon: b.weapon } : null);
     this.effects.impact(this.combat.hitImpact || 'flesh', b.x, b.y, b.x, b.y, b.dx, b.dy);
   }
 
@@ -2528,6 +2559,12 @@ export class Game {
       && shooter.y >= cy + m && shooter.y <= cy + this.display.height - m;
     const tail = state.screenFire;
     const active = !!tail && this.time < tail.until;
+    // appena entrato nella visuale (bersaglio già visto da fuori): il giocatore ha bisogno di un istante per
+    // accorgersene -> niente colpi per difficulty.screenReaction s (non a raffica già cominciata)
+    const sr = this.humanFoe(target)?.screenReaction;
+    if (!onScreen) state.screenIn = null;
+    else if (!state.screenIn) state.screenIn = { time: this.time, delay: sr ? rand(sr, 0.3) : 0 };
+    if (onScreen && !active && this.time < state.screenIn.time + state.screenIn.delay) return false;
     if (onScreen) {
       // in vista: spara liberamente; la coda parte col primo colpo e si rinnova mentre mira al giocatore
       if (want || (active && aimPt)) {

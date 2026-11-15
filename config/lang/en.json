@@ -63,6 +63,8 @@
     "times": { "day": "Day", "dusk": "Dusk", "night": "Night", "dayToNight": "Day to night" },
     "weather": "Weather",
     "weathers": { "level": "Map default", "clear": "Clear", "rain": "Rain", "fog": "Morning fog" },
+    "difficulty": "Difficulty",
+    "difficulties": { "easy": "Recruit", "normal": "Soldier", "hard": "Veteran" },
     "procedural": "Procedural",
     "proceduralDesc": "A new map generated for every match.",
     "comingSoon": "Coming soon",

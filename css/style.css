@@ -1029,9 +1029,10 @@ button {
   color: var(--menu-gold);
 }
 
-/* tempo limite e ora del giorno: "20 min" / "Nessuno" / "Tramonto" sono più larghi dei numeri */
+/* tempo limite, ora del giorno e difficoltà: "20 min" / "Tramonto" / "Veterano" sono più larghi dei numeri */
 [data-stepper="timeLimit"] .step-value,
-[data-stepper="timeOfDay"] .step-value {
+[data-stepper="timeOfDay"] .step-value,
+[data-stepper="difficulty"] .step-value {
   min-width: 104px;
   font-size: 18px;
 }
