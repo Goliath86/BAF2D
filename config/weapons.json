@@ -137,7 +137,7 @@
       "name": "weapons.launcher",
       "bodySprite": "soldier_launcher",
       "pickupSprite": "pickup_launcher",
-      "sound": "shoot_rocket",
+      "sound": "shoot_launcher",
       "reloadSound": "reload_launcher",
       "projectile": "rocket",
       "rocket": "rpg",
