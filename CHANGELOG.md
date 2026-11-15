@@ -3,6 +3,33 @@
 All notable changes to BAF2D. Versions follow [semantic versioning](https://semver.org/); the current version is
 in `config/game.json` (`version`) and shown at the bottom of the main menu panel.
 
+## [1.5.5] — 2026-11-15
+
+### Added
+- **Training** (main menu → *Training*): a drill sergeant takes you through 13 exercises on a new training ground:
+  moving, sprinting, shooting at a firing range, reloading, grenades against dug-in targets, picking up the rocket
+  launcher, knocking out a tank target, switching weapons, capturing a flag, getting in a jeep, driving and getting
+  out, and a timed assault course at the end. A yellow marker on the ground (and an arrow at the screen edge) shows
+  where to go, and the instructions match your keys or the touch controls. If you run out of time on the final
+  test, it starts over.
+- **Basic training medal**: complete the training to earn it and 250 career points (the points are only awarded
+  the first time).
+- **Difficulty** (*New game* → *Difficulty*): **Recruit**, **Soldier** (default) or **Veteran**. It changes how
+  quickly the enemy bots react to you, how well they aim and lead their shots, how long they pause between bursts
+  and how much damage they deal to you. Bots that spot you before you see them also wait a moment after they come
+  on screen before opening fire. It only affects bots fighting *you*: bots fight each other exactly as before.
+  *Veteran* plays like 1.5.0.
+
+### Changed
+- **One-on-one fights against bots are fairer.** At the default difficulty a bot takes about twice as long to bring
+  you down in a duel (about 5–7 s instead of 2.5–3.5 s at medium range).
+- **Briefing**: the match no longer starts on its own after a couple of seconds. It waits until you press a key or
+  tap the screen.
+- **Touch controls**: the reload and switch-weapon buttons moved to an arc on the left of the right stick, so they
+  are no longer hidden under the minimap on phones. Sticks and buttons are always drawn on top of the HUD.
+- *New game*: the "Procedural" map card ("coming soon") is gone.
+- The weather selector in *New game* uses the same text size as the other options.
+
 ## [1.5.0] — 2026-11-14
 
 ### Added

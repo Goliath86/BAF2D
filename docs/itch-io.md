@@ -1,4 +1,4 @@
-# BAF2D — itch.io page (v1.5.0)
+# BAF2D — itch.io page (v1.5.5)
 
 Copy each block into the matching field of the itch.io "Edit game" page.
 
@@ -10,12 +10,12 @@ BAF2D
 
 ## Short description or tagline
 
-Top-down pixel-art capture the flag in sun, rain, fog or darkness: destructible maps, your own squad, vehicles and helicopters, medals, unlocks and a map editor.
+Top-down pixel-art capture the flag in sun, rain, fog or darkness: boot camp training, destructible maps, your own squad, vehicles and helicopters, medals, unlocks and a map editor.
 
 ## Classification / Kind of project
 
 - Classification: **Games**
-- Kind of project: **HTML** (upload `dist/BAF2D-1.5.0-html5.zip`, tick "This file will be played in the browser")
+- Kind of project: **HTML** (upload `dist/BAF2D-1.5.5-html5.zip`, tick "This file will be played in the browser")
 - Release status: **Released**
 
 ## Embed options (Uploads → HTML)
@@ -45,6 +45,11 @@ pick up better weapons and jump into vehicles. Every match feeds your career: sc
 
 <h3>Features</h3>
 <ul>
+  <li><strong>Boot camp.</strong> New to the game? A drill sergeant takes you through 13 exercises on the training
+    ground: firing range, grenades, rocket launcher, flags, driving a jeep and a timed assault course. Pass them all
+    to earn the <em>Basic training</em> medal.</li>
+  <li><strong>Three difficulty levels.</strong> Recruit, Soldier or Veteran: choose how sharp the enemy bots are
+    when they fight you.</li>
   <li><strong>Capture the Flag with tickets.</strong> Raise your flag in contested zones: flags you hold drain the
     enemy's tickets, and every death costs your team one. Pick the ticket count before each match.</li>
   <li><strong>Four large maps.</strong> The industrial <em>Test Arena</em>, <em>Crossroads</em> with its two
@@ -81,8 +86,8 @@ pick up better weapons and jump into vehicles. Every match feeds your career: sc
     that rewards short bursts. A tactical minimap and arrows at the screen edge keep you oriented.</li>
   <li><strong>Career and ranks.</strong> Points for kills, assists, defending, capturing and destroying vehicles. Your
     rank is saved in the browser and grows from match to match, with a promotion screen when you rank up.</li>
-  <li><strong>Medals.</strong> 16 feats to earn in battle: double and triple kills, killing sprees, grenade and
-    rocket kills, tank buster, roadkill, long shot, revenge, MVP, untouchable... each with its own pixel-art medal,
+  <li><strong>Medals.</strong> 17 feats to earn: double and triple kills, killing sprees, grenade and rocket kills,
+    tank buster, roadkill, long shot, revenge, MVP, untouchable, basic training... each with its own pixel-art medal,
     bonus points and a place in your collection.</li>
   <li><strong>Your soldier.</strong> Pick your call sign and starting weapon, then dress your soldier: camo,
     tactical vest, headgear, eyewear, beard, gloves, boots, headset, shemagh, knee pads, all shown on a full-body
@@ -125,6 +130,7 @@ Keys can be remapped in Options, where you can also turn on <strong>auto reload<
 
 <h3>Notes</h3>
 <ul>
+  <li>First time here? Start with <em>Training</em> from the main menu.</li>
   <li>Progress (rank, medals, your soldier, settings) is stored in your browser's local storage.</li>
   <li>The main menu runs a live thermal-camera drone feed over a city at war.</li>
   <li>On phones, play in landscape: the game asks for fullscreen on the first tap. Graphics quality switches to
@@ -156,20 +162,71 @@ Source code licensed under the GNU GPL v3.</p>
   2. `night_countryside.png` — Night battle in the countryside: a tank takes a flag by the light of a burning wreck.
   3. `desert_explosion.png` — A vehicle blows up at the desert oasis: fireball, shockwave and flying earth.
   4. `fog_countryside.png` — Morning fog rolls over the trenches.
-  5. `briefing.png` — Every match opens with a briefing over the battlefield.
-  6. `dusk_desert.png` — Dusk in the desert village: torches, craters and fires after the fight.
-  7. `main_menu.png` — The main menu: a live thermal drone feed over a city at war.
-  8. `new_game.png` — Pick the map, the teams, the time of day and the weather.
-  9. `dusk_rain_crossroads.png` — Rain at dusk on Crossroads: a flag lights up while it's being captured.
-  10. `match_end.png` — Victory: where the fighting was fiercest, leaderboard, medals, promotion and unlocks.
-  11. `soldier_customization.png` — Build your soldier: call sign, starting weapon, camo, vest, gear.
-  12. `apache_strike.png` — Attack helicopter run: rockets and cannon fire on the enemy trench line.
-  13. `map_editor.png` — The map editor: paint tiles, place flags, bases, pickups and vehicles, then test the map.
-  14. `medal_ingame.png` — Medals in battle: 16 feats, each with its own pixel-art medal.
+  5. `training_range.png` — Boot camp: the drill sergeant walks you through the firing range.
+  6. `training_grenade.png` — Bullets won't reach dug-in targets: time for a grenade.
+  7. `briefing.png` — Every match opens with a briefing over the battlefield.
+  8. `dusk_desert.png` — Dusk in the desert village: torches, craters and fires after the fight.
+  9. `main_menu.png` — The main menu: a live thermal drone feed over a city at war.
+  10. `new_game.png` — Pick the map, the difficulty, the teams, the time of day and the weather.
+  11. `dusk_rain_crossroads.png` — Rain at dusk on Crossroads: a flag lights up while it's being captured.
+  12. `match_end.png` — Victory: where the fighting was fiercest, leaderboard, medals, promotion and unlocks.
+  13. `soldier_customization.png` — Build your soldier: call sign, starting weapon, camo, vest, gear.
+  14. `apache_strike.png` — Attack helicopter run: rockets and cannon fire on the enemy trench line.
+  15. `map_editor.png` — The map editor: paint tiles, place flags, bases, pickups and vehicles, then test the map.
+  16. `training_complete.png` — Training complete: your first medal.
+  17. `medal_ingame.png` — Medals in battle: 17 feats, each with its own pixel-art medal.
 - Not in the list: `day_countryside.png`, `night_arena.png`, `vehicle_combat.png`, `medals.png`,
   `soldier_unlocks.png` (still valid, use them if you want more), `leaderboard.png` (superseded by `match_end.png`),
   `editor.png` (superseded by `map_editor.png`), and the pre-1.4 battle shots `oasis_battle.png`,
   `crossroads_firefight.png`, `promotion.png`, `apache_rocket.png` (older graphics).
+
+## Release notes (devlog) — v1.5.5
+
+Title: **BAF2D 1.5.5 — Boot camp and fair duels**
+
+Type: Update. Attach `training_range.png` (cover of the post), `training_grenade.png`, `training_complete.png` and
+`new_game.png`.
+
+BAF2D could be hard to get into, and a one-on-one with a bot was almost impossible to win. This update fixes both:
+a proper training course for new players, and bots that fight you fairly.
+
+**Boot camp**
+- There's a new **Training** entry in the main menu. A drill sergeant takes you through 13 exercises on a brand-new
+  training ground:
+  - moving and sprinting;
+  - shooting at the firing range, then reloading;
+  - grenades against targets dug in behind sandbags (bullets just hit the bags);
+  - picking up the rocket launcher and knocking out a tank target;
+  - switching weapons and capturing a flag;
+  - getting in a jeep, driving it down the road and getting out;
+  - a final assault course: six targets among the trenches in 60 seconds.
+- The sergeant's orders show your own keys, or describe the sticks and buttons if you're on a phone. A yellow
+  marker on the ground shows where to go next, and an arrow at the edge of the screen points to it when it's out of
+  view.
+- Run out of time on the final test and it starts over ("From the top, recruit!"). Pass it to earn the new
+  **Basic training** medal and 250 career points.
+- The targets are drawn in code like everything else: plywood men on posts that fall over when hit, a steel tank
+  silhouette that shrugs off bullets, and sandbagged targets that only a grenade can reach.
+
+**Fair duels**
+- New **Difficulty** option in *New game*: **Recruit**, **Soldier** (the default) and **Veteran**.
+- It changes how fast enemy bots react to you, how well they aim and lead their shots, how long they pause between
+  bursts and how hard they hit you. *Veteran* is the old behaviour.
+- I measured it: in a duel at medium range, a bot used to take you down in about 2.5–3.5 seconds. On *Soldier* it
+  now takes about 5–7 seconds, which is enough time to fight back.
+- Bots that spot you from off-screen no longer open fire the instant they come into view. They wait a moment, so
+  you can react.
+- This only applies to bots fighting **you**. Bots fight each other exactly as before, so the teams stay balanced.
+
+**Smaller fixes**
+- The briefing no longer starts the match by itself after a couple of seconds. Take your time, then press a key or
+  tap.
+- On phones, the reload and switch-weapon buttons no longer hide under the minimap. They now sit in an arc on the
+  left of the right stick, and the touch controls are always drawn on top of the HUD.
+- The "Procedural map — coming soon" card is gone from *New game*: I don't plan to make it after all.
+
+Your rank, medals and soldier carry over. New to BAF2D? Start with *Training*! And if *Soldier* feels too easy or
+too hard, tell me in the comments.
 
 ## Release notes (devlog) — v1.5.0
 

@@ -1,6 +1,6 @@
 {
   "title": "BAF2D",
-  "version": "1.5.0",
+  "version": "1.5.5",
   "assets": "config/assets.json",
   "effects": "config/effects.json",
   "weapons": "config/weapons.json",
@@ -260,7 +260,7 @@
   "hud": {
     "reloadPrompt": { "y": 0.62, "fontSize": 10, "color": "#ffd36b", "blink": 0.5, "duty": 0.6 },
     "minimap": { "top": 52, "width": 72, "alpha": 0.92, "border": "#000000", "frame": "#8a8a96", "frameLight": "#4a4a56", "wall": "#d8d2bc", "water": "#2a5a78", "ground": "#1c2018", "view": "#ffffff", "viewAlpha": 0.3, "neutral": "#e8e8e8", "enemy": "#ff4a3a", "squad": "#7cf07c", "player": "#ffffff", "emptyVehicle": "#9a9a9a", "enemyMemory": 3 },
-    "training": { "fontSize": 6, "width": 220, "side": 88, "padding": 4, "top": 4, "back": "rgba(11,11,18,0.8)", "kicker": "#ffd36b", "done": "#7cf07c", "failed": "#ff4a3a", "progress": "#8ad4ff" },
+    "training": { "fontSize": 6, "width": 220, "side": 98, "padding": 4, "top": 4, "back": "rgba(11,11,18,0.8)", "kicker": "#ffd36b", "done": "#7cf07c", "failed": "#ff4a3a", "progress": "#8ad4ff" },
     "edge": { "show": true, "left": 8, "right": 8, "top": 44, "bottom": 8, "miniPad": 40, "alpha": 0.85, "fontSize": 6, "neutral": "#e8e8e8" },
     "damageNumbers": { "show": false, "life": 0.9, "rise": 12, "offset": 10, "bounce": 4, "bounceTime": 0.25, "popTime": 0.12, "mergeTime": 0.25, "fontSize": 6, "killFontSize": 8, "max": 12, "colors": { "hit": "#ffffff", "armor": "#ffb43a", "kill": "#ff4a3a" } },
     "squadFontSize": 6,
