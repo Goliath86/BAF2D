@@ -20,6 +20,8 @@ Only **CC0 / public domain** sounds go here: they are committed to the repositor
    }
    ```
    - `src`: one file or a list of variants (one picked at random each time, never the same twice in a row).
+     A variant can also be `{ "file": "assets/sounds/shoot_rifle_2.mp3", "volume": 1.8 }` to make a file
+     that was recorded quieter (or louder) match the others: its volume multiplies the sound's `volume`.
    - `pitchJitter`: random pitch change (0.05 = ±5%), so the same shot repeated doesn't sound fake.
    - `maxVoices`: how many copies of the sound can play at once (default 6).
 4. Add a row to the table below and run `node --test tests/static.test.mjs`.
@@ -28,3 +30,5 @@ Only **CC0 / public domain** sounds go here: they are committed to the repositor
 
 | File | Source (URL) | Author | Licence |
 |------|--------------|--------|---------|
+| shoot_rifle_1.mp3 | TODO | TODO | CC0 |
+| shoot_rifle_2.mp3 | TODO | TODO | CC0 |

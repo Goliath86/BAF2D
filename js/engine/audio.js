@@ -2,9 +2,14 @@
 //
 // Voce di assets.json -> sounds:
 //   src         = file (es. "assets/sounds/shoot_rifle.mp3") o lista di varianti (una a caso a ogni riproduzione,
-//                 mai la stessa due volte di fila); null = solo sintetizzato. Le varianti che non si caricano sono
-//                 saltate; se non se ne carica nessuna si usa "placeholder" (avviso in console).
+//                 mai la stessa due volte di fila); null = solo sintetizzato. Ogni variante è un percorso oppure
+//                 { file, volume } (volume della variante, moltiplica "volume": pareggia file registrati più piano).
+//                 Le varianti che non si caricano sono saltate; se non se ne carica nessuna si usa "placeholder"
+//                 (avviso in console).
 //   volume      = volume relativo (0..1)
+//   variantMode = "random" (default: una variante a caso a ogni riproduzione) | "owner" (ogni soldato o mezzo
+//                 riceve una variante, a turno tra i nuovi, e la tiene: es. gli spari di un'arma; il soldato la
+//                 riperde cambiando arma, Player.equip azzera soundVariants)
 //   pitchJitter = variazione casuale del tono dei file (es. 0.06 = ±6%): lo stesso sparo ripetuto non suona finto
 //   maxVoices   = copie dello stesso suono da file che suonano insieme (default 6): oltre, si ferma la più vecchia
 //   placeholder = suono sintetizzato (fallback), loop = motore sintetizzato (vedi loop())
@@ -12,10 +17,20 @@
 import { loadArrayBuffer } from './loader.js';
 
 export class AudioManager {
-  constructor(sounds = {}, cfg = {}) {
+  /**
+   * sounds = assets.json -> sounds, cfg = game.json -> audio, music = game.json -> music
+   * ({ tracks: { id: { src, volume } }, fadeIn, fadeOut, defaultVolume }: brani in loop su un canale a parte).
+   */
+  constructor(sounds = {}, cfg = {}, music = {}) {
     this.defs = sounds;
-    this.buffers = new Map(); // nome -> [AudioBuffer] (varianti caricate)
+    this.musicCfg = music;
+    this.musicVolume = music.defaultVolume ?? 0.6; // volume della musica 0..1 (opzioni), sotto quello generale
+    this.music = null; // brano in corso { id, src, gain }
+    this.wantMusic = null; // brano richiesto (parte appena l'audio è sbloccato e il file è pronto)
+    this.musicBuffers = new Map(); // id -> AudioBuffer | null (null = non caricabile)
+    this.buffers = new Map(); // nome -> [{ buffer: AudioBuffer, volume }] (varianti caricate)
     this.lastVariant = new Map(); // nome -> indice dell'ultima variante suonata
+    this.nextOwnerVariant = new Map(); // nome -> prossima variante da assegnare (variantMode "owner", a turno)
     this.voices = new Map(); // nome -> [sorgenti da file in corso] (maxVoices)
     this.hearing = cfg.hearing || {};
     this.listener = null; // { x, y } posizione dell'ascoltatore nel mondo (vedi gainAt)
@@ -28,6 +43,10 @@ export class AudioManager {
       this.master = this.ctx.createGain();
       this.master.gain.value = this.volume;
       this.master.connect(this.ctx.destination);
+      // musica: volume proprio, poi quello generale (la musica non è toccata da setMuted)
+      this.musicBus = this.ctx.createGain();
+      this.musicBus.gain.value = this.musicVolume;
+      this.musicBus.connect(this.master);
       this._autoUnlock();
     }
   }
@@ -80,9 +99,11 @@ export class AudioManager {
       .filter(([, d]) => d.src)
       .map(async ([name, d]) => {
         const list = Array.isArray(d.src) ? d.src : [d.src];
-        const loaded = await Promise.all(list.map(async (src) => {
+        const loaded = await Promise.all(list.map(async (v) => {
+          const src = typeof v === 'string' ? v : v?.file;
           try {
-            return await this.ctx.decodeAudioData(await loadArrayBuffer(src));
+            const buffer = await this.ctx.decodeAudioData(await loadArrayBuffer(src));
+            return { buffer, volume: typeof v === 'object' ? v.volume ?? 1 : 1 };
           } catch (e) {
             console.warn(`Sound "${name}": "${src}" not loaded (${e.message})`);
             return null;
@@ -95,21 +116,105 @@ export class AudioManager {
     await Promise.all(jobs);
   }
 
-  /** Una variante a caso del suono "name" (mai la stessa due volte di fila), o null se non ha file caricati. */
-  _variant(name) {
+  /**
+   * Variante del suono "name": { buffer, volume }, o null se non ha file caricati. Con variantMode "owner" e un
+   * "owner" (oggetto di chi suona) quella assegnata a lui in owner.soundVariants (la prima volta: la prossima a
+   * turno, partendo da una a caso); altrimenti una a caso, mai la stessa due volte di fila.
+   */
+  _variant(name, owner = null) {
     const list = this.buffers.get(name);
     if (!list?.length) return null;
+    if (owner && this.defs[name]?.variantMode === 'owner') {
+      const mine = (owner.soundVariants ??= {});
+      let k = mine[name];
+      if (k === undefined || k >= list.length) {
+        k = this.nextOwnerVariant.get(name) ?? Math.floor(Math.random() * list.length);
+        this.nextOwnerVariant.set(name, (k + 1) % list.length);
+        mine[name] = k;
+      }
+      return list[k];
+    }
     let i = Math.floor(Math.random() * list.length);
     if (list.length > 1 && i === this.lastVariant.get(name)) i = (i + 1) % list.length;
     this.lastVariant.set(name, i);
     return list[i];
   }
 
+  // ---------- Musica (game.json -> music) ----------
+
+  setMusicVolume(v) {
+    this.musicVolume = Math.min(1, Math.max(0, v));
+    if (this.musicBus) this.musicBus.gain.value = this.musicVolume;
+  }
+
+  /**
+   * Fa partire in loop il brano "id" (game.json -> music.tracks) con una dissolvenza in entrata; se è già in corso
+   * non fa nulla. Senza audio sbloccato (nessun gesto dell'utente) o col file ancora da caricare parte appena
+   * possibile. Un brano senza "src" o non caricabile resta in silenzio (niente fallback sintetizzato).
+   */
+  playMusic(id) {
+    this.wantMusic = id;
+    if (this.music?.id === id) return;
+    this.stopMusic();
+    this.wantMusic = id;
+    this._startMusic();
+  }
+
+  /** Ferma la musica con una dissolvenza in uscita (music.fadeOut s). */
+  stopMusic() {
+    this.wantMusic = null;
+    const m = this.music;
+    if (!m) return;
+    this.music = null;
+    const t = this.ctx.currentTime;
+    const fade = this.musicCfg.fadeOut ?? 0.8;
+    m.gain.gain.cancelScheduledValues(t);
+    m.gain.gain.setValueAtTime(m.gain.gain.value, t);
+    m.gain.gain.linearRampToValueAtTime(0, t + fade);
+    try {
+      m.src.stop(t + fade + 0.05);
+    } catch (e) {
+      // già fermato
+    }
+  }
+
+  /** Carica (una volta) e avvia il brano richiesto, se l'audio è attivo. */
+  async _startMusic() {
+    const id = this.wantMusic;
+    const ctx = this.ctx;
+    const def = this.musicCfg.tracks?.[id];
+    if (!ctx || !id || !def?.src) return;
+    if (!this.musicBuffers.has(id)) {
+      this.musicBuffers.set(id, undefined); // in caricamento
+      try {
+        this.musicBuffers.set(id, await ctx.decodeAudioData(await loadArrayBuffer(def.src)));
+      } catch (e) {
+        this.musicBuffers.set(id, null);
+        console.warn(`Music "${id}": "${def.src}" not loaded (${e.message})`);
+      }
+    }
+    const buffer = this.musicBuffers.get(id);
+    // ancora in caricamento (ci pensa la chiamata che lo sta caricando), cambiato brano, già in corso o audio fermo
+    if (!buffer || this.wantMusic !== id || this.music || ctx.state !== 'running') return;
+    const gain = ctx.createGain();
+    const t = ctx.currentTime;
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(def.volume ?? 1, t + (this.musicCfg.fadeIn ?? 1.5));
+    gain.connect(this.musicBus);
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    src.loop = true;
+    src.connect(gain);
+    src.start();
+    this.music = { id, src, gain };
+  }
+
   /** I browser richiedono un gesto utente prima di riprodurre audio. */
   unlock() {
     const ctx = this.ctx;
     if (!ctx || ctx.state === 'running') return;
-    ctx.resume().catch(() => {});
+    // la musica richiesta prima del primo gesto parte appena il contesto si sblocca
+    ctx.resume().then(() => this._startMusic()).catch(() => {});
     // buffer muto di 1 campione: su iOS "sblocca" davvero l'uscita audio dentro il gesto
     const src = ctx.createBufferSource();
     src.buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
@@ -135,8 +240,9 @@ export class AudioManager {
   /**
    * Riproduce un suono; restituisce { stop() } per interromperlo (es. ricarica annullata).
    * pos (opzionale) = punto del mondo da cui proviene: il volume cala con la distanza dall'ascoltatore.
+   * owner (opzionale) = chi lo emette, per i suoni con variantMode "owner" (tiene sempre la stessa variante).
    */
-  play(name, pos = null) {
+  play(name, pos = null, owner = null) {
     const none = { stop() {} };
     const ctx = this.ctx;
     if (!ctx || ctx.state !== 'running' || this.muted) return none;
@@ -145,15 +251,15 @@ export class AudioManager {
     const gain = this.gainAt(pos);
     if (gain <= 0.01) return none;
     const vol = (def.volume ?? 1) * gain;
-    const buffer = this._variant(name);
+    const variant = this._variant(name, owner);
     let sources = [];
-    if (buffer) {
+    if (variant) {
       const src = ctx.createBufferSource();
-      src.buffer = buffer;
+      src.buffer = variant.buffer;
       const j = def.pitchJitter ?? 0;
       if (j > 0) src.playbackRate.value = 1 + (Math.random() * 2 - 1) * j;
       const g = ctx.createGain();
-      g.gain.value = vol;
+      g.gain.value = vol * variant.volume;
       src.connect(g).connect(this.master);
       src.start();
       sources = [src];
@@ -220,10 +326,11 @@ export class AudioManager {
     let filter = null;
     let lfo = null;
 
-    const buffer = this._variant(name); // suono continuo: una variante per tutta la durata
-    if (buffer) {
+    const variant = this._variant(name); // suono continuo: una variante per tutta la durata
+    const variantVol = variant?.volume ?? 1;
+    if (variant) {
       const src = ctx.createBufferSource();
-      src.buffer = buffer;
+      src.buffer = variant.buffer;
       src.loop = true;
       src.connect(out);
       src.start();
@@ -286,7 +393,7 @@ export class AudioManager {
           lfo.frequency.setTargetAtTime(f0 + (f1 - f0) * r, t, 0.1);
         }
         const idle = L.idle ?? 0.5;
-        const vol = (def.volume ?? 1) * self.gainAt(pos) * (idle + (1 - idle) * r);
+        const vol = (def.volume ?? 1) * variantVol * self.gainAt(pos) * (idle + (1 - idle) * r);
         out.gain.setTargetAtTime(vol, t, 0.1);
       },
       /** Dissolvenza breve, poi le sorgenti si fermano. */

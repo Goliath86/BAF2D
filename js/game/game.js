@@ -1847,7 +1847,8 @@ export class Game {
    */
   fire(shooter) {
     const w = shooter.weapon;
-    if (w.sound) this.audio.play(w.sound, shooter);
+    // variante del suono legata a chi spara (soldato, o il mezzo per le sue armi): vedi variantMode "owner"
+    if (w.sound) this.audio.play(w.sound, shooter, shooter.fromVehicle || shooter);
     // vampata e fumo alla volata (non se la canna è dentro un muro)
     const m = shooter.muzzle;
     const air = !!shooter.fromVehicle?.airborne; // dall'elicottero in volo: sopra i muri

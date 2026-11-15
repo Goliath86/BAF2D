@@ -247,31 +247,51 @@ describe('configurazione', () => {
     assert.deepEqual(res.deadEnds.length, 0, 'vicoli ciechi');
   });
 
-  test('suoni: i file indicati esistono, sono pubblicabili e hanno i crediti; ogni suono ha un fallback', () => {
-    const credits = read('assets/sounds/CREDITS.md');
-    const rows = credits.split('\n').filter((l) => /^\|\s*[^|\s-][^|]*\.(mp3|ogg|wav|m4a)\s*\|/i.test(l));
+  /** Ogni file audio di "dir" ha la sua riga in dir/CREDITS.md (fonte, autore, CC0) e viceversa. */
+  const checkCredits = (dir) => {
+    const rows = read(`${dir}/CREDITS.md`).split('\n').filter((l) => /^\|\s*[^|\s-][^|]*\.(mp3|ogg|wav|m4a)\s*\|/i.test(l));
     const credited = new Map(rows.map((l) => {
       const cells = l.split('|').map((c) => c.trim());
       return [cells[1], cells];
     }));
+    const filesHere = fs.readdirSync(path.join(ROOT, dir)).filter((f) => /\.(mp3|ogg|wav|m4a)$/i.test(f));
+    for (const f of filesHere) {
+      const row = credited.get(f);
+      assert.ok(row, `${dir}/${f}: manca la riga nei crediti (${dir}/CREDITS.md)`);
+      assert.match(row[4] || '', /cc0|public domain/i, `${dir}/${f}: licenza "${row[4]}" (solo CC0 / pubblico dominio)`);
+      assert.ok(row[2] && row[3], `${dir}/${f}: fonte e autore nei crediti`);
+    }
+    for (const f of credited.keys()) assert.ok(filesHere.includes(f), `crediti: "${f}" non è in ${dir}/`);
+  };
+
+  test('musica: brani in assets/music/ con i crediti, menu configurato', () => {
+    const m = game.music;
+    assert.ok(m?.tracks?.menu, 'game.json -> music.tracks.menu');
+    for (const [id, t] of Object.entries(m.tracks)) {
+      if (t.volume !== undefined) assert.ok(t.volume > 0 && t.volume <= 2, `music.tracks.${id}.volume`);
+      if (!t.src) continue;
+      assert.match(t.src, /^assets\/music\/[\w.-]+\.(mp3|ogg|wav|m4a)$/i, `music.tracks.${id}: "${t.src}" deve stare in assets/music/`);
+      assert.ok(fs.existsSync(path.join(ROOT, t.src)), `music.tracks.${id}: "${t.src}" non esiste`);
+    }
+    checkCredits('assets/music');
+  });
+
+  test('suoni: i file indicati esistono, sono pubblicabili e hanno i crediti; ogni suono ha un fallback', () => {
     for (const [name, def] of Object.entries(assets.sounds)) {
       assert.ok(def.placeholder || def.loop, `suono "${name}": manca il fallback sintetizzato (placeholder o loop)`);
       if (def.pitchJitter !== undefined) assert.ok(def.pitchJitter >= 0 && def.pitchJitter <= 0.5, `suono "${name}": pitchJitter`);
+      if (def.variantMode !== undefined) assert.ok(['random', 'owner'].includes(def.variantMode), `suono "${name}": variantMode "${def.variantMode}"`);
       if (def.maxVoices !== undefined) assert.ok(Number.isInteger(def.maxVoices) && def.maxVoices >= 1, `suono "${name}": maxVoices`);
       if (!def.src) continue;
-      for (const src of Array.isArray(def.src) ? def.src : [def.src]) {
-        assert.match(src, /^assets\/sounds\/[\w.-]+\.(mp3|ogg|wav|m4a)$/i, `suono "${name}": "${src}" deve stare in assets/sounds/ (mp3/ogg/wav/m4a)`);
+      for (const v of Array.isArray(def.src) ? def.src : [def.src]) {
+        // variante = percorso oppure { file, volume }
+        const src = typeof v === 'string' ? v : v?.file;
+        if (typeof v === 'object') assert.ok(v.volume === undefined || (v.volume > 0 && v.volume <= 8), `suono "${name}": volume della variante "${src}"`);
+        assert.match(src || '', /^assets\/sounds\/[\w.-]+\.(mp3|ogg|wav|m4a)$/i, `suono "${name}": "${src}" deve stare in assets/sounds/ (mp3/ogg/wav/m4a)`);
         assert.ok(fs.existsSync(path.join(ROOT, src)), `suono "${name}": "${src}" non esiste`);
       }
     }
-    const filesHere = fs.readdirSync(path.join(ROOT, 'assets/sounds')).filter((f) => /\.(mp3|ogg|wav|m4a)$/i.test(f));
-    for (const f of filesHere) {
-      const row = credited.get(f);
-      assert.ok(row, `assets/sounds/${f}: manca la riga nei crediti (assets/sounds/CREDITS.md)`);
-      assert.match(row[4] || '', /cc0|public domain/i, `assets/sounds/${f}: licenza "${row[4]}" (solo CC0 / pubblico dominio)`);
-      assert.ok(row[2] && row[3], `assets/sounds/${f}: fonte e autore nei crediti`);
-    }
-    for (const f of credited.keys()) assert.ok(filesHere.includes(f), `crediti: "${f}" non è in assets/sounds/`);
+    checkCredits('assets/sounds');
   });
 
   test('effetti: i tipi di impatto dei tile esistono', () => {

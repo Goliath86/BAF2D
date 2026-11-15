@@ -129,8 +129,9 @@ async function boot() {
     }
 
     loadingStep(i18n, 'audio', 0.7);
-    const audio = new AudioManager(assetsCfg.sounds, config.audio);
+    const audio = new AudioManager(assetsCfg.sounds, config.audio, config.music);
     audio.setVolume(settings.get('volume', audio.volume));
+    audio.setMusicVolume(settings.get('musicVolume', audio.musicVolume)); // opzione "volume musica"
     await audio.load();
 
     loadingStep(i18n, 'ready', 0.9);

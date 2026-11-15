@@ -119,6 +119,8 @@ export class Player {
     this.cooldown = 0;
     this.casingTimer = null;
     this.bloom = 0;
+    // varianti dei suoni assegnate a questo soldato (assets.json -> variantMode "owner"): arma nuova, nuove varianti
+    this.soundVariants = null;
     // triggerHeld resta quello reale: se si stava tenendo premuto, una semiautomatica
     // appena impugnata non spara finché non si rilascia
     this.shotQueued = false;

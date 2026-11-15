@@ -522,10 +522,20 @@ tests/                test di regressione (node --test): static.test.mjs, browse
 - Suoni reali (solo CC0 / pubblico dominio) in `assets/sounds/` (committati, inclusi negli zip e nella build Windows),
   ognuno con la sua riga in `assets/sounds/CREDITS.md` (file | fonte | autore | licenza: lo controlla il test
   statico, che vieta anche `src` fuori da `assets/sounds/`). Voce di `assets.json -> sounds`: `src` = file o lista di
-  varianti (`_variant`: una a caso, mai la stessa due volte di fila; per i suoni continui una per tutta la durata),
+  varianti, ognuna percorso o `{ file, volume }` (volume della variante × `volume` del suono, per pareggiare file
+  registrati a livelli diversi; `buffers` = nome -> [{ buffer, volume }]) (`_variant`: una a caso, mai la stessa due
+  volte di fila; per i suoni continui una per tutta la durata; con `variantMode: "owner"` e `audio.play(nome, pos,
+  owner)` ogni soldato o mezzo riceve una variante a turno e la tiene in `owner.soundVariants`, azzerata da
+  `Player.equip`: così gli spari, `Game.fire` passa `shooter.fromVehicle || shooter`),
   `pitchJitter` (±tono), `maxVoices` (copie insieme, default 6: oltre si ferma la più vecchia), `placeholder`/`loop`
   = fallback sintetizzato obbligatorio (usato se nessuna variante si carica, con un avviso in console). Nomi dei
   file: `<suono>_<n>.mp3`. MP3 mono 44,1 kHz consigliato (OGG non va sui vecchi iPhone).
+- Musica (`game.json -> music` = { defaultVolume, fadeIn, fadeOut, tracks: { id: { src, volume } } }, file CC0 in
+  `assets/music/` con `CREDITS.md`, inclusi nelle build): `audio.playMusic(id)` / `stopMusic()` su un canale
+  proprio (`musicBus`, volume dall'opzione "Volume musica" = Settings `musicVolume`, sotto quello generale; non
+  toccato da `setMuted`), in loop con dissolvenze; senza audio sbloccato parte al primo gesto (`unlock` ->
+  `_startMusic`); brano senza file = silenzio. `Menu.showMain` chiede `menu.music` (default "menu"), `launch`,
+  `startMatch` e `startTraining` la fermano.
 - Sprite con `extends`: ereditano tutto tranne `src`, `placeholder` fuso campo per campo.
 - Movimento touch analogico: lunghezza vettore stick SX (dopo deadzone, elevata a `moveCurve`) × `speed`.
 - `Animator.update(dt)` accetta dt negativo (animazione all'indietro).

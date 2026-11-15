@@ -103,6 +103,7 @@
     "title": "Options",
     "language": "Language",
     "volume": "Volume",
+    "musicVolume": "Music volume",
     "controls": "Controls",
     "mouse": "Mouse: aim · Left button: fire",
     "pressKey": "Press a key...",

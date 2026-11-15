@@ -721,8 +721,11 @@
 
   "sounds": {
     "shoot_rifle": {
-      "src": null,
+      "src": ["assets/sounds/shoot_rifle_1.mp3", { "file": "assets/sounds/shoot_rifle_2.mp3", "volume": 1.15 }],
+      "variantMode": "owner",
       "volume": 0.25,
+      "pitchJitter": 0.05,
+      "maxVoices": 6,
       "placeholder": { "wave": "square", "freqStart": 900, "freqEnd": 180, "duration": 0.08 }
     },
     "shoot_pistol": {

@@ -292,7 +292,7 @@ describe('gioco nel browser', { skip: chrome ? false : 'Chrome non trovato (impo
       const broken = 'data:audio/mpeg;base64,' + btoa('not audio');
       const synth = { wave: 'square', freqStart: 400, duration: 0.05 };
       const a = new AudioManager({
-        shot: { src: [${JSON.stringify(wav(440))}, ${JSON.stringify(wav(660))}, broken], pitchJitter: 0.1, maxVoices: 2, placeholder: synth },
+        shot: { src: [${JSON.stringify(wav(440))}, { file: ${JSON.stringify(wav(660))}, volume: 2.5 }, broken], pitchJitter: 0.1, maxVoices: 2, placeholder: synth },
         onlyBroken: { src: broken, placeholder: synth },
         synthOnly: { src: null, placeholder: synth },
       }, {});
@@ -307,12 +307,22 @@ describe('gioco nel browser', { skip: chrome ? false : 'Chrome non trovato (impo
         rates.add(live[live.length - 1].playbackRate.value.toFixed(3));
       }
       const fb = a.play('onlyBroken');
-      return { state: a.ctx.state, variants: a.buffers.get('shot')?.length ?? 0, broken: a.buffers.has('onlyBroken'), synth: a.buffers.has('synthOnly'),
+      // volume della variante: la seconda suona a 2,5 volte il volume del suono (gain del nodo creato da play)
+      const gains = [];
+      const create = a.ctx.createGain.bind(a.ctx);
+      a.ctx.createGain = () => { const g = create(); gains.push(g); return g; };
+      for (let i = 0; i < 6; i++) a.play('shot');
+      a.ctx.createGain = create;
+      return { state: a.ctx.state, variants: a.buffers.get('shot')?.length ?? 0,
+        variantVolumes: a.buffers.get('shot').map((v) => v.volume).sort().join(','),
+        gains: [...new Set(gains.map((g) => g.gain.value.toFixed(2)))].sort().join(','), broken: a.buffers.has('onlyBroken'), synth: a.buffers.has('synthOnly'),
         repeats: seq.some((v, i) => i > 0 && v === seq[i - 1]), used: [...new Set(seq)].length, voices: a.voices.get('shot').length,
         rates: rates.size, fallback: typeof fb.stop };
     })()`);
     assert.equal(r.state, 'running', 'contesto audio non attivo');
     assert.equal(r.variants, 2, 'varianti caricate (quella rotta va saltata)');
+    assert.equal(r.variantVolumes, '1,2.5', 'volume per variante');
+    assert.equal(r.gains, '1.00,2.50', 'il volume della variante non arriva al suono');
     assert.equal(r.broken, false, 'un suono senza file validi non deve avere buffer');
     assert.equal(r.synth, false);
     assert.equal(r.repeats, false, 'la stessa variante due volte di fila');
@@ -322,6 +332,74 @@ describe('gioco nel browser', { skip: chrome ? false : 'Chrome non trovato (impo
     assert.equal(r.fallback, 'function', 'il fallback sintetizzato non suona');
     // gli avvisi per i file non caricati ci sono (e non sono errori)
     assert.ok(page.warnings.some((w) => w.includes('onlyBroken')), 'manca l\'avviso del suono senza file');
+  });
+
+  it('suoni con variantMode "owner": ogni tiratore tiene la sua variante finché non cambia arma', async () => {
+    await openGame();
+    const r = await ev(`(async () => {
+      const g = BAF2D, a = g.audio;
+      // due varianti finte per il suono dello sparo del fucile (stesso buffer, volumi diversi per riconoscerle)
+      const buf = a.ctx.createBuffer(1, 100, 22050);
+      a.buffers.set('test_shot', [{ buffer: buf, volume: 1 }, { buffer: buf, volume: 2 }]);
+      a.defs.test_shot = { variantMode: 'owner', placeholder: { wave: 'square', duration: 0.01 } };
+      const pick = (o) => a._variant('test_shot', o).volume;
+      const p = { soundVariants: null }, b1 = {}, b2 = {};
+      const seqP = [1, 2, 3, 4, 5].map(() => pick(p));
+      const first = [pick(p), pick(b1), pick(b2)];
+      // il giocatore vero: Player.equip azzera la variante
+      T.start('arena', { allies: 0, enemies: 1 });
+      const pl = g.player;
+      const before = pick(pl);
+      pl.equip(pl.weapon.id);
+      const reset = pl.soundVariants === null;
+      // senza owner (o variantMode casuale) torna la scelta a caso, mai uguale due volte di fila
+      a.defs.test_shot.variantMode = 'random';
+      const rnd = [1, 2, 3, 4, 5, 6].map(() => a._variant('test_shot', p).volume);
+      return { stable: new Set(seqP).size === 1, spread: first[1] !== first[2], reset, before: [1, 2].includes(before),
+        randomAlternates: rnd.every((v, i) => i === 0 || v !== rnd[i - 1]) };
+    })()`);
+    assert.deepEqual(r, { stable: true, spread: true, reset: true, before: true, randomAlternates: true });
+  });
+
+  it('musica: in loop sul suo canale, una sola copia, dissolvenza allo stop; il menu la chiede e la partita la ferma', async () => {
+    await openGame();
+    // WAV di 0,5 s come URL data:
+    const n = 11025;
+    const b = Buffer.alloc(44 + n * 2);
+    b.write('RIFF', 0); b.writeUInt32LE(36 + n * 2, 4); b.write('WAVEfmt ', 8); b.writeUInt32LE(16, 16);
+    b.writeUInt16LE(1, 20); b.writeUInt16LE(1, 22); b.writeUInt32LE(22050, 24); b.writeUInt32LE(44100, 28);
+    b.writeUInt16LE(2, 32); b.writeUInt16LE(16, 34); b.write('data', 36); b.writeUInt32LE(n * 2, 40);
+    for (let i = 0; i < n; i++) b.writeInt16LE(Math.round(Math.sin(i / 10) * 6000), 44 + i * 2);
+    const url = `data:audio/wav;base64,${b.toString('base64')}`;
+    const r = await ev(`(async () => {
+      const { AudioManager } = await import('/js/engine/audio.js');
+      const a = new AudioManager({}, {}, { defaultVolume: 0.5, fadeIn: 0.1, fadeOut: 0.1, tracks: { menu: { src: ${JSON.stringify(url)}, volume: 0.8 }, silent: { src: null } } });
+      await a.ctx.resume();
+      a.playMusic('menu');
+      await new Promise((r) => setTimeout(r, 300));
+      const first = a.music?.src;
+      a.playMusic('menu'); // già in corso: niente seconda copia
+      const same = a.music?.src === first;
+      const loop = !!first?.loop;
+      a.setMusicVolume(0.25);
+      const bus = a.musicBus.gain.value;
+      a.setMuted(true); // il muto degli effetti non tocca la musica
+      const afterMute = !!a.music;
+      a.stopMusic();
+      const stopped = a.music === null && a.wantMusic === null;
+      a.playMusic('silent');
+      await new Promise((r) => setTimeout(r, 100));
+      return { loop, same, bus, afterMute, stopped, silent: a.music === null };
+    })()`);
+    assert.deepEqual(r, { loop: true, same: true, bus: 0.25, afterMute: true, stopped: true, silent: true });
+    // nel gioco: il menu principale chiede il brano "menu", la partita lo ferma, il ritorno al menu lo richiede
+    assert.equal(await ev('BAF2D.audio.wantMusic'), 'menu', 'il menu principale non chiede la musica');
+    await T(`start('arena', { allies: 0, enemies: 0 })`);
+    assert.equal(await ev('BAF2D.audio.wantMusic'), null, 'la musica del menu continua in partita');
+    await ev('BAF2D_MENU.showMain(); true');
+    assert.equal(await ev('BAF2D.audio.wantMusic'), 'menu', 'tornando al menu la musica non riparte');
+    // opzione "volume musica"
+    assert.ok(await ev(`!!document.getElementById('music-volume')`), 'manca il cursore del volume della musica');
   });
 
   it('addestramento: dal menu, tutti gli esercizi in ordine (colpi, granate, razzo veri), medaglia e schermata finale', async () => {

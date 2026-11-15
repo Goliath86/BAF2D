@@ -112,6 +112,15 @@
     "hearing": { "near": 220, "far": 520 }
   },
 
+  "music": {
+    "defaultVolume": 0.6,
+    "fadeIn": 1.5,
+    "fadeOut": 0.8,
+    "tracks": {
+      "menu": { "src": "assets/music/menu_intro.mp3", "volume": 0.8 }
+    }
+  },
+
   "mobile": {
     "requestFullscreen": true,
     "lockLandscape": true

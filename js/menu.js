@@ -117,6 +117,7 @@ export class Menu {
     this.input.enabled = false;
     this.input.releaseAll();
     this.audio.setMuted(true);
+    this.audio.playMusic(this.cfg.music || 'menu'); // musica del menu (game.json -> music.tracks)
     this.mode = 'menu';
     this._syncDeploy();
     this.stack = [];
@@ -148,6 +149,7 @@ export class Menu {
     this.settings.set('newGame', { ...c });
     if (this.input.isTouchDevice) this.fullscreen?.();
     this.audio.unlock();
+    this.audio.stopMusic();
     this.audio.setMuted(false);
     this._hide();
     const { game } = this;
@@ -174,6 +176,7 @@ export class Menu {
     if (!tr) return;
     if (this.input.isTouchDevice) this.fullscreen?.();
     this.audio.unlock();
+    this.audio.stopMusic();
     this.audio.setMuted(false);
     this._hide();
     const { game } = this;
@@ -206,6 +209,7 @@ export class Menu {
     // gesti dell'utente: schermo intero e audio vanno chiesti adesso, non dopo i fotogrammi d'attesa
     if (this.input.isTouchDevice) this.fullscreen?.();
     this.audio.unlock();
+    this.audio.stopMusic(); // la musica del menu sfuma durante il briefing
     const bc = this.cfg.briefing || {};
     const b = (this.briefing = { start: performance.now(), ready: false, timer: 0 });
     this._fillBriefing(lvl);
@@ -1012,6 +1016,20 @@ export class Menu {
       this.settings.set('volume', Number(slider.value) / 100);
       this.audio.unlock();
       this.audio.preview(this.cfg.volumeSound || 'dry_fire');
+    });
+
+    // volume della musica (sotto quello generale): si sente subito sulla musica del menu
+    const music = $('music-volume');
+    music.value = String(Math.round(this.audio.musicVolume * 100));
+    const showMusic = () => ($('music-volume-value').textContent = `${music.value}%`);
+    showMusic();
+    music.addEventListener('input', () => {
+      this.audio.setMusicVolume(Number(music.value) / 100);
+      showMusic();
+    });
+    music.addEventListener('change', () => {
+      this.settings.set('musicVolume', Number(music.value) / 100);
+      this.audio.unlock();
     });
 
     // ricarica automatica a caricatore vuoto (sì / no)
