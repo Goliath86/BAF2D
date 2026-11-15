@@ -31,8 +31,9 @@ export class Menu {
    * fullscreen() = richiesta di schermo intero + landscape (solo touch, dentro un gesto);
    * soldierCfg = config/soldier.json (personalizzazione del soldato del giocatore).
    */
-  constructor({ config, i18n, game, input, audio, assets, display, levels, testId = null, sceneCfg = null, settings, fullscreen, soldierCfg = {} }) {
-    Object.assign(this, { config, i18n, game, input, audio, assets, display, levels, testId, settings, fullscreen, soldierCfg });
+  constructor({ config, i18n, game, input, audio, assets, display, levels, training = null, testId = null, sceneCfg = null, settings, fullscreen, soldierCfg = {} }) {
+    // training = { cfg (config/training.json), level } per la voce "Addestramento" (null = voce nascosta)
+    Object.assign(this, { config, i18n, game, input, audio, assets, display, levels, training, testId, settings, fullscreen, soldierCfg });
     this.cfg = config.menu || {};
     this.root = $('menu');
     this.panel = this.root.querySelector('.menu-panel');
@@ -111,7 +112,7 @@ export class Menu {
     // con una mappa di prova dall'editor la partita dimostrativa si gioca su quella
     const lvl = this._level(this.testId) || this._level(a.level) || this._level(this.choice.level);
     const { game } = this;
-    document.body.classList.remove('match-over', 'match-victory', 'match-defeat', 'match-draw');
+    document.body.classList.remove('match-over', 'match-victory', 'match-defeat', 'match-draw', 'match-training');
     $('overlay-matchend').classList.add('hidden');
     this.input.enabled = false;
     this.input.releaseAll();
@@ -167,15 +168,40 @@ export class Menu {
     this._play();
   }
 
+  /** "Addestramento": il campo d'addestramento con gli esercizi di config/training.json (sincrona come startMatch). */
+  startTraining() {
+    const tr = this.training;
+    if (!tr) return;
+    if (this.input.isTouchDevice) this.fullscreen?.();
+    this.audio.unlock();
+    this.audio.setMuted(false);
+    this._hide();
+    const { game } = this;
+    game.viewOffsetX = 0;
+    game.setup({
+      level: tr.level,
+      team: tr.cfg.team,
+      allies: 0,
+      enemies: 0,
+      timeOfDay: tr.cfg.timeOfDay ?? null,
+      weather: tr.cfg.weather ?? 'clear',
+      training: tr.cfg,
+      attract: false,
+    });
+    game.running = true;
+    this._play();
+  }
+
   /**
    * "Inizia" dal pulsante: schermata di briefing (mappa che scorre, nome, condizioni, obiettivo, consiglio) che
    * copre la preparazione della partita; il gioco resta fermo finché il giocatore non preme un tasto o tocca lo
    * schermo, accettati solo a partita pronta e dopo menu.briefing.minTime s. startMatch() resta sincrona (la usano
    * anche i test).
    */
-  launch() {
+  launch({ training = false } = {}) {
     if (this.briefing) return;
-    const lvl = this._level(this.choice.level);
+    // addestramento: stesso briefing, col campo d'addestramento e i suoi testi
+    const lvl = training ? (this.training ? { id: 'training', data: this.training.level, training: true } : null) : this._level(this.choice.level);
     if (!lvl) return;
     // gesti dell'utente: schermo intero e audio vanno chiesti adesso, non dopo i fotogrammi d'attesa
     if (this.input.isTouchDevice) this.fullscreen?.();
@@ -188,7 +214,8 @@ export class Menu {
     // due fotogrammi: la schermata si vede prima del lavoro pesante (fusione dei terreni se non in cache)
     requestAnimationFrame(() => requestAnimationFrame(() => {
       if (this.briefing !== b) return;
-      this.startMatch();
+      if (training) this.startTraining();
+      else this.startMatch();
       this.game.suspended = true;
       this.input.enabled = false;
       this._briefingMap();
@@ -208,7 +235,6 @@ export class Menu {
   _fillBriefing(lvl) {
     const { i18n } = this;
     const c = this.choice;
-    $('briefing-name').textContent = this._levelText(lvl, 'name');
     const tags = $('briefing-tags');
     tags.textContent = '';
     const tag = (text, color) => {
@@ -216,6 +242,20 @@ export class Menu {
       if (color) t.style.setProperty('--team', color);
       tags.append(t);
     };
+    $('briefing-objective').textContent = i18n.t(lvl.training ? 'training.objective' : 'start.objective');
+    if (lvl.training) {
+      // addestramento: nome del campo, numero di esercizi, consiglio fisso del sergente
+      $('briefing-name').textContent = i18n.t('training.name');
+      tag(i18n.t('training.tag'), this.config.teams?.[this.training.cfg.team]?.color);
+      tag(i18n.t('training.exercises', { n: this.training.cfg.steps?.length ?? 0 }));
+      $('briefing-status').textContent = i18n.t('briefing.deploying');
+      $('briefing-tip').textContent = i18n.t('training.tip');
+      const cv = $('briefing-map');
+      cv.getAnimations?.().forEach((a) => a.cancel());
+      cv.style.opacity = '0';
+      return;
+    }
+    $('briefing-name').textContent = this._levelText(lvl, 'name');
     tag(i18n.t(`teams.${c.team}`), this.config.teams?.[c.team]?.color);
     tag(i18n.t('briefing.versus', { allies: c.allies + 1, enemies: c.enemies }));
     tag(i18n.t(`newGame.times.${this.timeIds[c.timeOfDay]}`));
@@ -334,10 +374,19 @@ export class Menu {
     this._syncDeploy();
     this._updatePauseButton();
     const ov = $('overlay-matchend');
+    const training = outcome === 'training';
     $('matchend-title').textContent = this.i18n.t(`matchEnd.${outcome}`);
-    // finita per tempo scaduto: sottotitolo apposito (vince chi aveva più ticket)
-    const byTime = this.game.ctf?.result?.reason === 'time';
-    $('matchend-subtitle').textContent = this.i18n.t(`matchEnd.${outcome}${byTime ? 'Time' : ''}Subtitle`);
+    if (training) {
+      // addestramento completato: tempo impiegato, "Ripeti" al posto di "Rivincita", niente classifica (CSS)
+      const s = Math.round(this.game.ended?.trainingTime ?? 0);
+      const time = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+      $('matchend-subtitle').textContent = this.i18n.t('matchEnd.trainingSubtitle', { time });
+    } else {
+      // finita per tempo scaduto: sottotitolo apposito (vince chi aveva più ticket)
+      const byTime = this.game.ctf?.result?.reason === 'time';
+      $('matchend-subtitle').textContent = this.i18n.t(`matchEnd.${outcome}${byTime ? 'Time' : ''}Subtitle`);
+    }
+    ov.querySelector('[data-action="rematch"]').textContent = this.i18n.t(training ? 'matchEnd.repeatTraining' : 'matchEnd.rematch');
     // illustrazione: dove si è combattuto di più, con i caduti
     const art = this.game.battleArt();
     const cv = $('matchend-art');
@@ -347,7 +396,8 @@ export class Menu {
       cv.getContext('2d').drawImage(art, 0, 0);
     }
     const lvl = this._level(this.choice.level);
-    $('matchend-place').textContent = lvl ? this.i18n.t('matchEnd.place', { map: this._levelText(lvl, 'name') }) : '';
+    const map = training ? this.i18n.t('training.name') : lvl ? this._levelText(lvl, 'name') : '';
+    $('matchend-place').textContent = map ? this.i18n.t(training ? 'matchEnd.trainingPlace' : 'matchEnd.place', { map }) : '';
     const summary = this.game.matchSummary;
     this._renderScoreboard($('scoreboard'), summary);
     this._renderCareer($('matchend-career'), summary.xpAfter, summary.xpBefore);
@@ -358,7 +408,7 @@ export class Menu {
   }
 
   onRestart() {
-    document.body.classList.remove('match-over', 'match-victory', 'match-defeat', 'match-draw');
+    document.body.classList.remove('match-over', 'match-victory', 'match-defeat', 'match-draw', 'match-training');
     $('overlay-matchend').classList.add('hidden');
     if (this.mode === 'ended') this._play();
   }
@@ -1176,6 +1226,7 @@ export class Menu {
       if (t.dataset.go) this._open(t.dataset.go);
       else if (t.hasAttribute('data-back')) this._back();
       else if (t.dataset.action === 'start') this.launch();
+      else if (t.dataset.action === 'training') this.launch({ training: true });
       else if (t.dataset.action === 'resume') this.resume();
       else if (t.dataset.action === 'quit') this.showMain();
       else if (t.dataset.action === 'resetKeys') this._resetKeys();

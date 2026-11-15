@@ -25,6 +25,7 @@
     { "id": "guardian", "points": 300, "trigger": { "count": "defend", "n": 3 }, "shape": "cross", "metal": "bronze", "ribbon": ["#24427a", "#3fa9f5", "#24427a"] },
     { "id": "flagRunner", "points": 300, "trigger": { "count": "capture", "n": 3 }, "shape": "star", "metal": "silver", "ribbon": ["#e8e8f0", "#24427a", "#e8e8f0"] },
     { "id": "mvp", "points": 500, "trigger": { "end": "mvp" }, "shape": "star", "metal": "gold", "ribbon": ["#ffd36b", "#7a1414", "#ffd36b"] },
+    { "id": "basicTraining", "points": 250, "once": true, "trigger": { "training": true }, "shape": "cross", "metal": "bronze", "ribbon": ["#2e5a2e", "#ffd36b", "#2e5a2e"] },
     { "id": "untouchable", "points": 600, "trigger": { "end": "untouchable" }, "shape": "cross", "metal": "gold", "ribbon": ["#e8e8f0", "#ffd36b", "#e8e8f0"] }
   ]
 }

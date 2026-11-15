@@ -114,6 +114,8 @@ js/game/
                       banchi di nebbia/polvere, pioggia, pozzanghere (effects.json -> weather)
   pickups.js          Pickups: armi/granate a terra (lasciate dai caduti o da punti fissi della mappa con respawn)
   medals.js           Medals (config/medals.json): definizioni, collezione salvata in Settings, icon(id) a pixel
+  training.js         Training (config/training.json): esercizi dell'addestramento, sagome procedurali, segnale
+                      a terra, testi del riquadro dell'istruttore
   ranks.js            Ranks (gradi da game.json -> ranks, insegne a pixel in canvas) + Career (xp in localStorage)
 config/
   game.json           parametri generali (version, levels, menu, display, i18n, player + arma iniziale, input,
@@ -141,6 +143,8 @@ CHANGELOG.md          storia delle versioni (inglese); a ogni rilascio: version 
 tools/gen_desert.mjs  genera config/levels/level03.json (deserto 97x65, simmetrico, verifica raggiungibilità)
 tools/gen_arena.mjs   genera config/levels/level01.json (Test Arena 97x65, 3 bandiere)
 tools/gen_crossroads.mjs genera config/levels/level02.json (Crossroads 97x65, 5 bandiere)
+tools/gen_training.mjs genera config/levels/training.json (campo d'addestramento 72x44, non simmetrico, fuori
+                      da game.json -> levels; legend con { waypoint } e { target })
 tools/gen_countryside.mjs genera config/levels/level04.json (Countryside 97x65: trincee con parapetti di sacchi,
                       siepi, frutteto, casale, stagno, crateri; tileset "countryside", meteo "country_breeze")
 tools/levelgen.mjs    utilità dei generatori: griglia simmetrica (rotazione 180°), room/line/fill, writeLevel
@@ -350,6 +354,22 @@ tests/                test di regressione (node --test): static.test.mjs, browse
   (`_careerPoints`). `matchSummary.medals` -> fine partita; schermata "Medaglie" del menu (`_renderMedals`).
   Testi in `medals.<id>.name/desc`.
   Anteprima a scala intera nel riquadro, respiro = parte sopra `breathCut` spostata di 1 px.
+- Addestramento (`config/training.json`, game.json -> `training`, `js/game/training.js`): voce `data-action="training"`
+  del menu principale -> `Menu.launch({ training: true })` (stesso briefing, testi `training.*`) -> `startTraining()`
+  -> `game.setup({ training: cfg })`: nessun bot, `training.ctf` sopra a game.json -> ctf (ticket infiniti, niente
+  calo né tempo), `game.training` = Training. Esercizi in ordine (`steps`: reach [+ sprint px, vehicle], targets
+  [group, point, grenades, weapon, time], reload, pickup, switch, flag, board, exit), stato active/done (pausa
+  `stepPause`, lode a caso da `training.praise`)/failed (tempo scaduto: si ricomincia l'esercizio). Segni nel livello:
+  legend `{ waypoint: id }` e `{ target: gruppo }` (tipo di sagoma da `groups.<g>.kind` = `targets.<man|tank>`,
+  `cover` = al riparo dietro sacchi). Sagome (`Target`, disegnate di lato come i pennoni, ordinate per y con soldati
+  e pennoni): proiettili in `_updateBullets` (`training.hitTest`/`damage`), esplosioni in `Game.explode`
+  (`training.blast`, corazzate × vehicleFactor), razzi diretti in `rockets.js` (5° argomento di onHit); immuni ai
+  proiettili se corazzate (carro) o al riparo (`bulletProof`). Le granate rimbalzano sui muri anche in volo: per
+  questo l'esercizio granate usa sagome al riparo e non dietro un muro. HUD: `mode.training` = `Training.hud()` ->
+  `Hud._drawTraining` (riquadro in alto al centro, `hud.training`; al posto dei ticket, i messaggi sotto), freccia
+  `edge.goal` = `Training.goal()`, segnale a terra `drawGround`. Fine: `Game._endTraining` -> medaglia con trigger
+  `{ training: true }` (`once`: punti solo la prima volta) e `onMatchEnd('training')` (titolo verde, tempo,
+  classifica nascosta, "Ripeti l'addestramento" = `restart()`).
 - Editor di mappe: salva livelli nel formato del gioco (`name`/`description` stringhe nel livello; il menu usa
   `levels.<id>.*` del file lingua se c'è, altrimenti quelli: `Menu._levelText`). Prova: main.js legge
   `?test=1` (`readTestLevel`), mette la mappa in testa a `levels` con `test: true` (id `editor.testLevelId`) e
@@ -636,6 +656,7 @@ tests/                test di regressione (node --test): static.test.mjs, browse
   pozzanghere, nebbia, ciclo dal giorno alla notte, meteo scelto dal menu).
 - Fatto anche: menu rifinito (anteprime come in partita, caricamento e briefing stilizzati, transizioni,
   illustrazione della battaglia a fine partita).
+- Fatto anche: addestramento guidato (13 esercizi sul campo d'addestramento, sergente istruttore, medaglia finale).
 - Fatto anche: munizioni contate per tutte le armi dei soldati (scorta, raccolta da armi uguali a terra,
   rifornimento alle bandiere possedute e alla base, bot che vanno a rifornirsi).
 - Non ancora presenti: asset grafici reali. (La mappa procedurale è stata scartata: niente card nel menu.)

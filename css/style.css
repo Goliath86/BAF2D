@@ -119,8 +119,14 @@ body.match-draw #game {
   filter: grayscale(0.85) brightness(0.55);
 }
 
-body.match-victory #game {
+body.match-victory #game,
+body.match-training #game {
   filter: brightness(0.8);
+}
+
+/* addestramento completato: titolo verde, niente classifica (c'è solo il giocatore) */
+#overlay-matchend[data-outcome="training"] .scoreboard {
+  display: none;
 }
 
 #overlay-matchend {
@@ -165,6 +171,12 @@ body.match-victory #game {
 #overlay-matchend[data-outcome="defeat"] .matchend-title {
   color: #e8463a;
   text-shadow: 4px 4px 0 #3a0a08;
+}
+
+#overlay-matchend[data-outcome="training"] .matchend-title {
+  color: #7cf07c;
+  text-shadow: 4px 4px 0 #14401a;
+  font-size: 28px; /* titolo lungo: su una riga */
 }
 
 /* il cursore torna visibile per cliccare i pulsanti */

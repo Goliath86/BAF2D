@@ -1,0 +1,38 @@
+{
+  "level": "config/levels/training.json",
+  "team": "blue",
+  "timeOfDay": "day",
+  "weather": null,
+  "ctf": { "tickets": 9999, "timeLimit": 0, "bleed": { "interval": 0 } },
+  "medal": "basicTraining",
+  "stepPause": 1.6,
+  "failPause": 2.2,
+  "endDelay": 1.2,
+  "sounds": { "step": "squad_order", "fail": "dry_fire", "down": "hit_kill" },
+  "marker": { "radius": 9, "reach": 12, "color": "#ffd36b", "shadow": "#0b0b12", "speed": 4 },
+  "targets": {
+    "man": { "hp": 30, "hw": 5, "top": 13, "bottom": 2, "riseTime": 0.35, "impact": "wood" },
+    "tank": { "hp": 100, "hw": 10, "top": 10, "bottom": 3, "riseTime": 0.5, "impact": "metal", "armor": true }
+  },
+  "groups": {
+    "a": { "kind": "man" },
+    "g": { "kind": "man", "cover": { "impact": "sandbag", "colors": { "bag": "#9a8a5a", "light": "#c2b07a", "dark": "#4a3e24" } } },
+    "r": { "kind": "tank" },
+    "f": { "kind": "man" }
+  },
+  "steps": [
+    { "id": "move", "type": "reach", "point": "1" },
+    { "id": "sprint", "type": "reach", "point": "2", "sprint": 120 },
+    { "id": "aim", "type": "targets", "group": "a", "point": "3" },
+    { "id": "reload", "type": "reload" },
+    { "id": "grenade", "type": "targets", "group": "g", "point": "4", "grenades": 2 },
+    { "id": "pickup", "type": "pickup", "weapon": "launcher", "point": "L" },
+    { "id": "rocket", "type": "targets", "group": "r", "weapon": "launcher" },
+    { "id": "switch", "type": "switch" },
+    { "id": "flag", "type": "flag", "flag": "A" },
+    { "id": "board", "type": "board" },
+    { "id": "drive", "type": "reach", "point": "5", "vehicle": true },
+    { "id": "exit", "type": "exit" },
+    { "id": "final", "type": "targets", "group": "f", "time": 60 }
+  ]
+}

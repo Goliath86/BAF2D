@@ -32,6 +32,7 @@
     "medals": "Medals",
     "tagline": "Top-down capture the flag",
     "newGame": "New game",
+    "training": "Training",
     "soldier": "Soldier",
     "options": "Options",
     "back": "Back",
@@ -162,7 +163,11 @@
     "defeatTimeSubtitle": "Time's up: the enemy team has more tickets",
     "drawTimeSubtitle": "Time's up: the teams are tied",
     "rematch": "Rematch",
-    "menu": "Main menu"
+    "menu": "Main menu",
+    "training": "Training complete",
+    "trainingSubtitle": "All exercises passed in {time}. Welcome to the front, soldier.",
+    "trainingPlace": "{map}",
+    "repeatTraining": "Train again"
   },
   "deploy": {
     "title": "Deploy",
@@ -403,7 +408,93 @@
     "guardian": { "name": "Guardian", "desc": "Defend your flags: three defense kills in a match." },
     "flagRunner": { "name": "Flag runner", "desc": "Take part in three flag captures in a match." },
     "mvp": { "name": "MVP", "desc": "Finish the match first in the scoreboard." },
-    "untouchable": { "name": "Untouchable", "desc": "Win a match without ever dying." }
+    "untouchable": { "name": "Untouchable", "desc": "Win a match without ever dying." },
+    "basicTraining": { "name": "Basic training", "desc": "Complete the training on the training ground." }
+  },
+  "training": {
+    "name": "Training ground",
+    "tag": "Training",
+    "exercises": "{n} exercises",
+    "objective": "Follow the drill sergeant's orders: move, shoot, throw grenades, use the launcher, take a flag and drive a jeep. Pass the final test to earn your medal.",
+    "tip": "Drill sergeant: \"The yellow marker shows where to go. The arrow on the edge of the screen points to it when it's out of sight.\"",
+    "kicker": "EXERCISE {n}/{total} · {title}",
+    "good": "Well done, recruit!",
+    "praise": ["Well done, recruit!", "Not bad. Next!", "Good. Keep moving!", "That's how it's done!", "Right. Don't get cocky."],
+    "failed": "Time's up! From the top, recruit!",
+    "resupplied": "The sergeant hands you another launcher",
+    "progress": {
+      "targets": "Targets: {n}/{total}",
+      "time": "Time: {time}",
+      "sprint": "Running: {pct}%",
+      "flag": "Flag: {pct}%"
+    },
+    "steps": {
+      "move": {
+        "title": "MOVEMENT",
+        "text": "Welcome to the training ground, recruit! Move with {up} {left} {down} {right} and reach the yellow marker.",
+        "textTouch": "Welcome to the training ground, recruit! Move with the left stick and reach the yellow marker."
+      },
+      "sprint": {
+        "title": "RUNNING",
+        "text": "Hold {sprint} to run to the end of the track. You can't shoot while running, and your breath runs out (blue bar).",
+        "textTouch": "Push the left stick all the way to run to the end of the track. You can't shoot while running, and your breath runs out (blue bar)."
+      },
+      "aim": {
+        "title": "SHOOTING",
+        "text": "Behind the firing line: aim with the mouse and shoot with the left button. The crosshair also sets how far the shot goes. Knock down the 3 targets.",
+        "textTouch": "Behind the firing line: aim with the right stick, push it all the way to shoot. Knock down the 3 targets."
+      },
+      "reload": {
+        "title": "RELOADING",
+        "text": "Half-empty magazine. Press {reload} to reload before you need it: while reloading you're slow and can't shoot.",
+        "textTouch": "Half-empty magazine. Tap the reload button (round arrow) before you need it: while reloading you can't shoot."
+      },
+      "grenade": {
+        "title": "GRENADES",
+        "text": "Two targets are dug in behind sandbags: bullets just hit the bags. Press {grenade} to throw a grenade between them: it lands under the crosshair.",
+        "textTouch": "Two targets are dug in behind sandbags: bullets just hit the bags. Tap the grenade button: it flies where you aim with the right stick."
+      },
+      "pickup": {
+        "title": "WEAPONS ON THE GROUND",
+        "text": "Get the rocket launcher on the table: walk up to it and press {pickup}. Fallen soldiers leave their weapons on the ground too.",
+        "textTouch": "Get the rocket launcher on the table: walk up to it and tap the pick-up button. Fallen soldiers leave their weapons on the ground too."
+      },
+      "rocket": {
+        "title": "ANTI-TANK",
+        "text": "Bullets bounce off armour. Hit the tank target with a rocket. Don't fire at close range: the blast would hit you too.",
+        "textTouch": "Bullets bounce off armour. Hit the tank target with a rocket. Don't fire at close range: the blast would hit you too."
+      },
+      "switch": {
+        "title": "SWITCHING WEAPONS",
+        "text": "You carry two weapons: press {switch} to go back to the rifle.",
+        "textTouch": "You carry two weapons: tap the button with the two arrows to go back to the rifle."
+      },
+      "flag": {
+        "title": "FLAGS",
+        "text": "In battle you win by holding flags. Stand inside flag A's area until the banner reaches the top. An enemy in the area stops the capture.",
+        "textTouch": "In battle you win by holding flags. Stand inside flag A's area until the banner reaches the top. An enemy in the area stops the capture."
+      },
+      "board": {
+        "title": "VEHICLES",
+        "text": "Get in the jeep: walk up to it and press {pickup}.",
+        "textTouch": "Get in the jeep: walk up to it and tap the button that appears."
+      },
+      "drive": {
+        "title": "DRIVING",
+        "text": "{up} accelerates, {down} brakes and reverses, {left} {right} steer. Follow the road west to the yellow marker.",
+        "textTouch": "Point the left stick where you want to go. Follow the road west to the yellow marker."
+      },
+      "exit": {
+        "title": "OUT OF THE VEHICLE",
+        "text": "Press {pickup} to get out. A vehicle protects you from bullets, but rockets destroy it.",
+        "textTouch": "Tap the button to get out. A vehicle protects you from bullets, but rockets destroy it."
+      },
+      "final": {
+        "title": "FINAL TEST",
+        "text": "Assault course! Knock down the 6 targets between the trenches within {seconds} seconds. Use everything you've learned.",
+        "textTouch": "Assault course! Knock down the 6 targets between the trenches within {seconds} seconds. Use everything you've learned."
+      }
+    }
   },
   "editor": {
     "title": "Map editor",

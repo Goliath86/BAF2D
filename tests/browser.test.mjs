@@ -274,6 +274,82 @@ describe('gioco nel browser', { skip: chrome ? false : 'Chrome non trovato (impo
     assert.ok(easy.taken < hard.taken * 0.6, `recluta ${easy.taken} danni, veterano ${hard.taken}`);
   });
 
+  it('addestramento: dal menu, tutti gli esercizi in ordine (colpi, granate, razzo veri), medaglia e schermata finale', async () => {
+    await openGame('lang=it');
+    // dal pulsante del menu principale, attraverso il briefing
+    await ev(`document.querySelector('[data-action="training"]').click()`);
+    assert.ok(await ev(`!!BAF2D_MENU.briefing`), 'il briefing non si apre');
+    for (let i = 0; i < 100 && !(await ev('BAF2D_MENU.briefing?.ready === true')); i++) await new Promise((r) => setTimeout(r, 100));
+    await page.key('Enter');
+    assert.equal(await ev(`BAF2D_MENU.mode`), 'playing');
+    assert.ok(await ev(`!!BAF2D.training && BAF2D.bots.length === 0`), 'addestramento non avviato (o con dei bot)');
+    await shot('training-start');
+    const total = await ev(`(() => { const g = BAF2D; g.suspended = true;
+      window.CTRL = {};
+      g._humanControl = () => ({ move: CTRL.move || { x: 0, y: 0 }, sprint: !!CTRL.sprint,
+        aim: (u) => (CTRL.aim ? Math.atan2(CTRL.aim.y - u.y, CTRL.aim.x - u.x) : u.angle),
+        firing: !!CTRL.fire, reload: !!CTRL.reload, grenade: !!CTRL.grenade, switchWeapon: !!CTRL.switch, repeat: false, faceMove: false });
+      g.input.mouse.seen = false; // gittata senza mouse: bordo schermo (colpi) e defaultRange (granate)
+      window.ID = () => g.training.step?.id ?? 'end';
+      window.RUN = (sec, fn) => { for (let i = 0; i < sec * 60; i++) { fn?.(); g.update(1 / 60); } return ID(); };
+      window.NEXT = () => { const i = g.training.index; for (let k = 0; k < 600 && g.training.index === i && !g.ended; k++) g.update(1 / 60); return ID(); };
+      window.WALK = (pt, sprint) => RUN(10, () => { const p = g.player, dx = pt.x - p.x, dy = pt.y - p.y, d = Math.hypot(dx, dy) || 1;
+        CTRL.sprint = sprint; CTRL.move = d > 3 ? { x: dx / d, y: dy / d } : { x: 0, y: 0 }; });
+      return g.training.steps.length; })()`);
+    const step = (js) => ev(`(() => { const g = BAF2D, p = g.player, T = g.training, P = T.points; ${js} })()`);
+    assert.equal(await step(`return ID();`), 'move');
+    assert.equal(await step(`WALK(P['1'], false); CTRL.move = null; return NEXT();`), 'sprint', 'movimento');
+    // arrivare camminando non basta: bisogna correre
+    assert.equal(await step(`p.x = P['2'].x - 200; p.y = P['2'].y; WALK(P['2'], false); return ID() + ' ' + (Math.hypot(p.x - P['2'].x, p.y - P['2'].y) <= 6);`),
+      'sprint true', 'la corsa passa camminando (o non arriva in fondo alla pista)');
+    assert.equal(await step(`p.x = P['2'].x - 200; p.y = P['2'].y; WALK(P['2'], true); CTRL.move = null; CTRL.sprint = false; return NEXT();`), 'aim', 'corsa');
+    assert.equal(await step(`p.x = P['3'].x; p.y = P['3'].y;
+      for (const t of T.targets.filter((t) => t.group === 'a')) { CTRL.aim = { x: t.x, y: t.y - 6 }; RUN(3, () => { CTRL.fire = !t.down && p.ammo > 0; CTRL.reload = p.ammo === 0; }); }
+      CTRL.fire = CTRL.reload = false; return NEXT();`), 'reload', 'tiro');
+    assert.equal(await step(`CTRL.reload = true; RUN(0.1); CTRL.reload = false; return NEXT();`), 'grenade', 'ricarica');
+    // le sagome al riparo: i proiettili non le abbattono, una granata sì
+    assert.equal(await step(`const list = T.targets.filter((t) => t.group === 'g');
+      CTRL.aim = { x: list[0].x, y: list[0].y - 6 }; p.x = list[0].x; p.y = list[0].y - 80; RUN(1.5, () => { CTRL.fire = p.ammo > 0; }); CTRL.fire = false;
+      return list.filter((t) => t.down).length;`), 0, 'i proiettili abbattono le sagome al riparo');
+    assert.equal(await step(`const list = T.targets.filter((t) => t.group === 'g'), range = g.grenadeTypes.get('frag').defaultRange ?? 90;
+      for (let k = 0; k < 4 && list.some((t) => !t.down); k++) {
+        const up = list.filter((t) => !t.down), mx = up.reduce((s, t) => s + t.x, 0) / up.length;
+        p.x = mx; p.y = up[0].y - range; CTRL.aim = { x: mx, y: up[0].y };
+        RUN(0.1, () => { CTRL.grenade = true; }); CTRL.grenade = false; RUN(3.5);
+      }
+      return NEXT();`), 'pickup', 'granate');
+    assert.equal(await step(`p.x = P['L'].x; p.y = P['L'].y + 2; RUN(0.2); const it = g.pickups.nearestWeapon(p); if (it) g._swapWeapon(p, it); return NEXT();`), 'rocket', 'raccolta');
+    // il carro: i proiettili non lo scalfiscono, un razzo sì
+    assert.equal(await step(`const t = T.targets.find((t) => t.group === 'r'); T.damage(t, 50, 'bullet', p, g); return t.hp;`), 100, 'i proiettili danneggiano il carro');
+    assert.equal(await step(`const t = T.targets.find((t) => t.group === 'r'); CTRL.aim = { x: t.x, y: t.y - 5 };
+      RUN(0.6); CTRL.fire = true; RUN(0.05); CTRL.fire = false; RUN(2); return NEXT();`), 'switch', 'razzo');
+    assert.equal(await step(`CTRL.switch = true; RUN(0.05); CTRL.switch = false; return NEXT();`), 'flag', 'cambio arma');
+    assert.equal(await step(`const f = g.ctf.flags[0]; p.x = f.x; p.y = f.y + 10; RUN(7); return NEXT();`), 'board', 'bandiera');
+    assert.equal(await step(`const v = g.vehicles[0]; p.x = v.x + 12; p.y = v.y; RUN(0.1); g._enterVehicle(p, v); return NEXT();`), 'drive', 'salita');
+    // sceso prima del punto: si torna a "sali sul mezzo"
+    assert.equal(await step(`g._exitVehicle(p); RUN(0.1); return ID();`), 'board', 'scendere durante la guida non torna indietro');
+    assert.equal(await step(`g._enterVehicle(p, g.vehicles[0]); NEXT(); const v = p.vehicle; v.x = P['5'].x; v.y = P['5'].y; RUN(0.2); return NEXT();`), 'exit', 'guida');
+    assert.equal(await step(`g._exitVehicle(p); return NEXT();`), 'final', 'discesa');
+    await shot('training-final');
+    // tempo scaduto: la prova riparte con le sagome rialzate
+    assert.equal(await step(`const f = T.targets.filter((t) => t.group === 'f'); T.damage(f[0], 999, 'bullet', p, g);
+      T.timeLeft = 0.05; RUN(0.2); const st = T.state; RUN(3); return st + ' ' + f.filter((t) => t.down).length + ' ' + ID();`), 'failed 0 final');
+    assert.equal(await step(`for (const t of T.targets.filter((t) => t.group === 'f')) T.damage(t, 999, 'bullet', p, g); RUN(4);
+      return JSON.stringify({ ended: g.ended?.outcome, medals: g.matchMedals });`), JSON.stringify({ ended: 'training', medals: [game.training ? 'basicTraining' : ''] }));
+    assert.equal(total, 13);
+    assert.equal(await ev(`BAF2D_MENU.mode`), 'ended');
+    assert.ok(await ev(`!document.getElementById('overlay-matchend').classList.contains('hidden')`), 'schermata finale non visibile');
+    assert.equal(await ev(`getComputedStyle(document.getElementById('scoreboard')).display`), 'none', 'classifica visibile nell\'addestramento');
+    await page.screenshot(path.join(OUT, 'training-end.png'));
+    // ripeti: si ricomincia dal primo esercizio, la medaglia non dà altri punti
+    const xp = await ev('BAF2D.career.xp');
+    assert.equal(await ev(`(() => { BAF2D.ended.time = 99; BAF2D.restart(); return BAF2D.training.step.id + ' ' + BAF2D.training.index; })()`), 'move 0');
+    assert.equal(await ev(`(() => { const g = BAF2D; g.suspended = true; g.training.index = g.training.steps.length - 1; g.training._enter(g);
+      for (const t of g.training.targets.filter((t) => t.group === 'f')) g.training.damage(t, 999, 'bullet', g.player, g);
+      for (let i = 0; i < 240; i++) g.update(1 / 60); return g.career.xp; })()`), xp, 'la medaglia dell\'addestramento dà punti anche la seconda volta');
+    assert.deepEqual(await T('sanity()'), []);
+  });
+
   it('touch su telefono: i pulsanti non finiscono sotto la minimappa, fuori schermo o uno sopra l\'altro', async () => {
     const sizes = [[844, 390], [740, 360], [926, 428], [667, 375]];
     try {

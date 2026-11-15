@@ -22,6 +22,7 @@ import { Lights } from './lights.js';
 import { Atmosphere } from './atmosphere.js';
 import { Water } from './water.js';
 import { GroundMarks } from './marks.js';
+import { Training } from './training.js';
 import { configureRotation, drawRotated } from '../engine/rotsprite.js';
 
 const STEP = 1 / 60; // update a timestep fisso
@@ -163,8 +164,10 @@ export class Game {
    * Prepara una partita: level = JSON del livello, team = squadra del giocatore,
    * allies / enemies = bot compagni / avversari, attract = partita dimostrativa (tutti bot, niente HUD né audio).
    */
-  setup({ level, team, allies = 0, enemies = 4, tickets = null, timeLimit = null, timeOfDay = null, weather = null, difficulty = null, attract = false }) {
+  setup({ level, team, allies = 0, enemies = 4, tickets = null, timeLimit = null, timeOfDay = null, weather = null, difficulty = null, training = null, attract = false }) {
     this.level = level;
+    // training = config/training.json: addestramento sul suo livello (esercizi, sagome, niente bot)
+    this.trainingCfg = training;
     this.setDifficulty(difficulty);
     // ora del giorno (game.json -> lights.times): dal menu, altrimenti quella del livello, altrimenti il default
     this.lights.setTime(timeOfDay || level.timeOfDay || this.config.lights?.default || null);
@@ -175,6 +178,7 @@ export class Game {
     const ctfCfg = { ...this.config.ctf };
     if (tickets > 0) ctfCfg.tickets = Math.round(tickets);
     if (timeLimit !== null && timeLimit !== undefined) ctfCfg.timeLimit = Math.max(0, Number(timeLimit) || 0);
+    Object.assign(ctfCfg, training?.ctf || {}); // addestramento: ticket infiniti, niente calo né tempo limite
     this.ctf = new Ctf(ctfCfg, this.teams, this.map, level);
     // decorazioni e meteo del livello (level.weather = tipo in effects.json -> weather)
     this.props.reset(this.map);
@@ -194,6 +198,8 @@ export class Game {
     const enemy = this.ctf.teamIds.find((t) => t !== this.playerTeam);
     this.botCounts = { [this.playerTeam]: Math.max(0, allies | 0) };
     if (enemy) this.botCounts[enemy] = Math.max(0, enemies | 0);
+    if (training) for (const t of Object.keys(this.botCounts)) this.botCounts[t] = 0;
+    this.training = training ? new Training(training, level, this.map, this.playerTeam) : null;
     this.attract = !!attract;
     this.suspended = false;
     this._reset();
@@ -265,6 +271,7 @@ export class Game {
     this.killFeed = [];
     this.deathSpots = []; // { x, y, team } dei caduti (illustrazione di fine partita)
     this._spawnBots();
+    this.training?.reset(this); // primo esercizio, sagome in piedi
     this._snapCamera();
   }
 
@@ -390,15 +397,20 @@ export class Game {
       else if (kind === 'vehicle') ok = !!t.vehicle;
       else if (kind === 'count') ok = t.count === value && (st.counts[value] || 0) === (t.n ?? 1);
       else if (kind === 'end') ok = t.end === value;
+      else if (kind === 'training') ok = !!t.training;
       if (ok) this._awardMedal(def);
     }
   }
 
-  /** Medaglia presa: collezione, fascia sull'HUD, suono, punti in classifica e carriera. */
+  /**
+   * Medaglia presa: collezione, fascia sull'HUD, suono, punti in classifica e carriera. "once" = i punti solo la
+   * prima volta (es. l'addestramento, che si può ripetere): le volte dopo solo fascia e conteggio.
+   */
   _awardMedal(def) {
+    const again = def.once && this.medals.count(def.id) > 0;
     this.medals.add(def.id);
     this.matchMedals.push(def.id);
-    const n = def.points ?? 0;
+    const n = again ? 0 : def.points ?? 0;
     this.hud.promote({
       title: this.i18n.t('hud.medal'),
       name: this.i18n.t(`medals.${def.id}.name`),
@@ -959,6 +971,10 @@ export class Game {
       if (!this.attract && !this.player.dead && this.input.wasPressed('squadOrder')) this._issueOrder();
       if (this.player.dead && !this.respawn) this._onPlayerDeath();
       this._updatePickups(dt);
+      if (this.training) {
+        this.training.update(dt, this);
+        if (this.training.finished) this._endTraining();
+      }
       if (this.respawn) this._updateRespawn(dt);
       // chi pilota un elicottero in volo non conta per le bandiere
       this.ctf.update(dt, this.units.filter((u) => !u.vehicle?.airborne));
@@ -987,9 +1003,10 @@ export class Game {
     this.marks.update(dt, this.effectsCfg.marksFlush ?? 0.4); // scritte nella mappa a blocchi
     this._kickUp(dt);
     this._updateBullets(dt);
-    this.rockets.update(dt, this, (r, x, y, v) => {
-      // colpo diretto su un mezzo + esplosione
+    this.rockets.update(dt, this, (r, x, y, v, target) => {
+      // colpo diretto su un mezzo (o su una sagoma dell'addestramento) + esplosione
       if (v) v.damage(r.def.directDamage ?? 0, r.owner);
+      if (target) this.training.damage(target, r.def.directDamage ?? 0, 'rocket', r.owner, this);
       this.explode(r.def, x, y, r.owner, null, 'rocket');
     });
     this.grenades.update(dt, this.map, (g) => this.explode(g.def, g.x, g.y, g.owner, null, 'grenade'));
@@ -1189,6 +1206,9 @@ export class Game {
     }
     // mezzi: distanza dal bordo dello scafo, danno × vehicleFactor (granate: ridotto, razzi: pieno)
     const vf = def.vehicleFactor ?? 1;
+    // addestramento: sagome (quelle corazzate come i mezzi, × vehicleFactor)
+    this.training?.blast(x, y, radius, def.damage ?? 80, def.minDamageFactor ?? 0.2, vf, owner, cause, this,
+      (x0, y0, x1, y1) => this._lineOfSight(x0, y0, x1, y1));
     if (vf <= 0) return;
     for (const v of this.vehicles) {
       if (v.destroyed || v === exclude) continue;
@@ -1780,6 +1800,16 @@ export class Game {
     }
   }
 
+  /** Addestramento completato: medaglia (trigger { training: true }) e schermata finale (outcome "training"). */
+  _endTraining() {
+    this.ended = { time: 0, shown: false, outcome: 'training', trainingTime: this.training.elapsed };
+    if (this.respawn) this.onDeployClose?.();
+    this.respawn = null;
+    this.pickupOffer = null;
+    this.vehicleOffer = null;
+    this._medalTrigger('training');
+  }
+
   _updateMatchEnd(dt) {
     const e = this.ended;
     e.time += dt;
@@ -1939,7 +1969,7 @@ export class Game {
   _onPlayerHit(target, killed, dealt = 0) {
     if (!target || target.team === this.player.team) return;
     const hc = this.config.hud?.hitMarker || {};
-    const kind = killed ? 'kill' : target instanceof Player ? 'hit' : 'armor';
+    const kind = killed ? 'kill' : target.hitKind || (target instanceof Player ? 'hit' : 'armor');
     this.hud.damageNumber(target.x, target.y, dealt, kind, target); // solo con l'opzione attiva
     if (hc.show === false) return;
     const cur = this.hitMarker;
@@ -2139,7 +2169,13 @@ export class Game {
         let veh = hit ? null : this.vehicleAt(b.x, b.y, 0, b.fromVehicle);
         // un elicottero amico in volo: il colpo gli passa sotto
         if (veh?.high && veh.team === b.team && !this.combat.friendlyFire) veh = null;
-        if (hit) {
+        // addestramento: sagome (il carro ignora i proiettili: solo l'impatto sul metallo)
+        const target = hit || veh ? null : this.training?.hitTest(b.x, b.y);
+        if (target) {
+          this.training.damage(target, b.damage, 'bullet', b.owner, this);
+          this.effects.impact(target.impact, b.x, b.y, b.x, b.y, -b.dx, -b.dy);
+          done = true;
+        } else if (hit) {
           this._hitUnit(b, hit);
           done = true;
         } else if (veh) {
@@ -2332,6 +2368,7 @@ export class Game {
     for (const v of this.vehicles) if (v.high) v.drawShadow(ctx); // ombre degli elicotteri in volo
     this.weather.drawGround(ctx); // sabbia che scorre rasoterra
     this.ctf.drawZones(ctx);
+    this.training?.drawGround(ctx, this); // addestramento: segnale sull'obiettivo
     this.effects.drawCasings(ctx, false); // bossoli a terra
     this.grenades.draw(ctx, false); // granate a terra
     this.pickups.drawPads(ctx);
@@ -2346,7 +2383,7 @@ export class Game {
     const soldiers = this.units.filter((u) => !u.dead && !u.vehicle);
     // ombre portate dei soldati tutte insieme, sotto a soldati, mezzi e pennoni
     this.lighting.drawShadows(ctx, this.map, view, soldiers, (u) => u.drawParts());
-    const sorted = [...this.ctf.flags, ...liveVehicles, ...soldiers].sort((a, b) => a.y - b.y);
+    const sorted = [...this.ctf.flags, ...(this.training?.targets || []), ...liveVehicles, ...soldiers].sort((a, b) => a.y - b.y);
     for (const o of sorted) {
       if (o.drawParts) {
         o.draw(ctx);
@@ -2405,7 +2442,8 @@ export class Game {
       const r = this.respawn;
       const pr = this.ranks.progress(this.career.xp);
       this.hud.draw(ui, display, this.player, {
-        ctf: this.ctf,
+        ctf: this.training ? null : this.ctf, // addestramento: niente ticket, c'è il riquadro dell'istruttore
+        training: this.training && !this.ended ? this.training.hud(this) : null,
         team: this.playerTeam,
         zone: this.ended ? null : this.ctf.zoneStatus(this.player),
         respawnIn: r && !this.onDeployOpen ? Math.max(0, r.delay - r.time) : null, // con la schermata di rientro: lì
@@ -2533,6 +2571,7 @@ export class Game {
       teams: this.ctf.teams,
       squad,
       order: this.squadOrder.type === 'flag' ? this.squadOrder.flag : null,
+      goal: this.training?.goal(this) || null, // addestramento: freccia verso l'obiettivo dell'esercizio
     };
   }
 

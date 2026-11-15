@@ -55,7 +55,7 @@ export class Rockets {
     });
   }
 
-  /** onHit(rocket, x, y, vehicleHit) quando esplode. */
+  /** onHit(rocket, x, y, vehicleHit, trainingTarget) quando esplode. */
   update(dt, game, onHit) {
     for (let i = this.list.length - 1; i >= 0; i--) {
       const r = this.list[i];
@@ -76,6 +76,10 @@ export class Rockets {
           const v = game.vehicleAt(r.x, r.y, r.def.hitPadding ?? 1, r.vehicle);
           if (v && !(game.sameTeamNoFF(v.team, r.team) && v.occupied)) hit = { x: r.x, y: r.y, vehicle: v };
           else if (game.soldierAt(r.x, r.y, r.team, r.owner)) hit = { x: r.x, y: r.y, vehicle: null };
+          else if (game.training?.hitTest(r.x, r.y, r.def.hitPadding ?? 1)) {
+            // addestramento: colpo diretto su una sagoma (danno diretto + esplosione)
+            hit = { x: r.x, y: r.y, vehicle: null, target: game.training.hitTest(r.x, r.y, r.def.hitPadding ?? 1) };
+          }
           else if (r.range <= 1e-6) hit = { x: r.x, y: r.y, vehicle: null };
         }
       }
@@ -87,7 +91,7 @@ export class Rockets {
       }
       if (hit) {
         this.list.splice(i, 1);
-        onHit(r, hit.x, hit.y, hit.vehicle);
+        onHit(r, hit.x, hit.y, hit.vehicle, hit.target || null);
       }
     }
   }

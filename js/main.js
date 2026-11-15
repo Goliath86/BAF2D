@@ -91,7 +91,7 @@ async function boot() {
     if (!levelList.length) throw new LocalizedError('errors.noLevels', {}, 'No levels defined in game.json ("levels")');
     // sfondo del menu: "scene" = scena animata (menu.scene), altrimenti partita dimostrativa
     const useScene = config.menu?.background === 'scene' && config.menu?.scene;
-    const [assetsCfg, effectsCfg, weaponsCfg, vehiclesCfg, sceneCfg, soldierCfg, medalsCfg, ...levelData] = await Promise.all([
+    const [assetsCfg, effectsCfg, weaponsCfg, vehiclesCfg, sceneCfg, soldierCfg, medalsCfg, trainingCfg, ...levelData] = await Promise.all([
       loadJSON(config.assets),
       loadJSON(config.effects),
       loadJSON(config.weapons),
@@ -99,8 +99,11 @@ async function boot() {
       useScene ? loadJSON(config.menu.scene) : null,
       config.soldier ? loadJSON(config.soldier) : {}, // personalizzazione del soldato (schermata "Soldato")
       config.medals ? loadJSON(config.medals) : {}, // medaglie (imprese in partita, collezione salvata)
+      config.training ? loadJSON(config.training) : null, // addestramento (voce del menu principale)
       ...levelList.map((l) => loadJSON(l.file)),
     ]);
+    // livello del campo d'addestramento (fuori dall'elenco delle mappe di "Nuova partita")
+    const training = trainingCfg ? { cfg: trainingCfg, level: await loadJSON(trainingCfg.level) } : null;
     loadingStep(i18n, 'assets', 0.45);
     const levels = levelList.map((l, i) => ({ ...l, data: levelData[i] }));
     const testLevel = readTestLevel(config.editor);
@@ -156,6 +159,7 @@ async function boot() {
       assets,
       display,
       levels,
+      training,
       testId,
       sceneCfg,
       soldierCfg,

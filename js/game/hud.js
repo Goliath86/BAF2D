@@ -191,6 +191,12 @@ export class Hud {
     if (mode?.vehicle) this._drawVehicle(ui, u, display.cssWidth, mode.vehicle);
     else this._drawWeapon(ui, u, display.cssWidth, player, mode?.holster);
     if (mode?.reloadPrompt) this._drawReloadPrompt(ui, u, display, mode.reloadPrompt);
+    if (mode?.training) {
+      // addestramento: istruzioni del sergente al posto dei ticket (i messaggi sotto il riquadro)
+      const W = Math.floor(display.cssWidth / u);
+      const y = this._drawTraining(ui, u, W, mode.training);
+      if (this.toast) this._text(ui, u, this.toast.text, Math.floor(W / 2), y + 2, this.cfg.fontSize ?? 7, this.toast.color, 'center');
+    }
     if (mode?.ctf) {
       const W = Math.floor(display.cssWidth / u);
       let y = this._drawTickets(ui, u, W, mode.ctf, mode.team, mode.zone);
@@ -505,7 +511,58 @@ export class Hud {
       if (inside(sx, sy, 2)) continue;
       arrow(project(sx, sy), this.cfg.minimap?.squad || '#7cf07c', 2.5);
     }
+    // addestramento: obiettivo dell'esercizio fuori dalla visuale (freccia gialla che pulsa)
+    if (e.goal) {
+      const sx = e.goal.x - e.view.x;
+      const sy = e.goal.y - e.view.y;
+      if (!inside(sx, sy, 4)) {
+        ui.globalAlpha = pulse;
+        arrow(project(sx, sy), this.cfg.training?.kicker || '#ffd36b', 5);
+      }
+    }
     ui.globalAlpha = 1;
+  }
+
+  /**
+   * Riquadro dell'istruttore dell'addestramento (hud.training), in alto al centro: "ESERCIZIO n/N · TITOLO",
+   * istruzione a capo su più righe, avanzamento (sagome, tempo, corsa, bandiera); verde a esercizio superato,
+   * rosso a tempo scaduto. t = Training.hud(). Restituisce la y (pixel di gioco) sotto il riquadro.
+   */
+  _drawTraining(ui, u, W, t) {
+    const tc = this.cfg.training || {};
+    const size = tc.fontSize ?? 6;
+    const line = size + 2;
+    const pad = tc.padding ?? 4;
+    const width = Math.max(80, Math.min(tc.width ?? 220, W - 2 * (tc.side ?? 88)));
+    ui.font = `bold ${Math.round(size * u)}px ${this.cfg.font || 'monospace'}`;
+    // a capo per parole entro la larghezza del riquadro
+    const lines = [];
+    for (const para of String(t.text).split('\n')) {
+      let cur = '';
+      for (const w of para.split(' ')) {
+        const next = cur ? `${cur} ${w}` : w;
+        if (cur && ui.measureText(next).width / u > width - pad * 2) {
+          lines.push(cur);
+          cur = w;
+        } else cur = next;
+      }
+      lines.push(cur);
+    }
+    const colors = { active: tc.kicker || '#ffd36b', done: tc.done || '#7cf07c', failed: tc.failed || '#ff4a3a' };
+    const h = pad * 2 + line * (1 + lines.length + (t.progress ? 1 : 0));
+    const x0 = Math.round(W / 2 - width / 2);
+    const y0 = tc.top ?? 4;
+    this._px(ui, u, x0, y0, width, h, tc.back || 'rgba(11,11,18,0.8)');
+    this._px(ui, u, x0, y0, 2, h, colors[t.state] || colors.active);
+    let y = y0 + pad;
+    this._text(ui, u, t.kicker, x0 + pad + 2, y, size, colors[t.state] || colors.active);
+    y += line;
+    for (const l of lines) {
+      this._text(ui, u, l, x0 + pad + 2, y, size, t.state === 'active' ? this.cfg.text || '#fff' : colors[t.state]);
+      y += line;
+    }
+    if (t.progress) this._text(ui, u, t.progress, x0 + pad + 2, y, size, tc.progress || '#8ad4ff');
+    return y0 + h;
   }
 
   /**

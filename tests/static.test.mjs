@@ -201,6 +201,51 @@ describe('configurazione', () => {
     }
   });
 
+  test('addestramento: esercizi validi, punti e sagome nel livello, testi, medaglia', () => {
+    const tr = json(game.training);
+    const level = json(tr.level);
+    const tileset = assets.tilesets[level.tileset];
+    const tileNames = new Set(tileset.tiles.flatMap((t) => [t.name, t.id]));
+    const points = new Set();
+    const groups = new Set();
+    for (const [ch, e] of Object.entries(level.legend)) {
+      const obj = e && typeof e === 'object' && !Array.isArray(e) ? e : { tile: e };
+      for (const t of Array.isArray(obj.tile) ? obj.tile : [obj.tile]) assert.ok(tileNames.has(t), `legend "${ch}": tile "${t}"`);
+      if (obj.pickup) assert.ok(game.pickups.types[obj.pickup], `legend "${ch}": pickup "${obj.pickup}"`);
+      if (obj.vehicle) assert.ok(vehiclesCfg.vehicles[obj.vehicle], `legend "${ch}": vehicle "${obj.vehicle}"`);
+      if (!level.map.some((r) => r.includes(ch))) continue;
+      if (obj.waypoint) points.add(obj.waypoint);
+      if (obj.target) groups.add(obj.target);
+    }
+    for (const t of Object.keys(game.teams)) assert.ok(level.map.some((r, y) => [...r].some((c) => level.legend[c]?.spawn === t)), `spawn "${t}"`);
+    const types = ['reach', 'targets', 'reload', 'pickup', 'switch', 'flag', 'board', 'exit'];
+    const ids = new Set();
+    for (const s of tr.steps) {
+      assert.ok(!ids.has(s.id), `esercizio "${s.id}" ripetuto`);
+      ids.add(s.id);
+      assert.ok(types.includes(s.type), `esercizio "${s.id}": tipo "${s.type}"`);
+      if (s.point) assert.ok(points.has(s.point), `esercizio "${s.id}": waypoint "${s.point}" non è nel livello`);
+      if (s.type === 'reach') assert.ok(s.point, `esercizio "${s.id}": manca "point"`);
+      if (s.type === 'targets') {
+        assert.ok(groups.has(s.group), `esercizio "${s.id}": nessuna sagoma del gruppo "${s.group}"`);
+        assert.ok(tr.targets[tr.groups[s.group]?.kind || 'man'], `gruppo "${s.group}": tipo di sagoma`);
+      }
+      if (s.weapon) assert.ok(weaponsCfg.weapons[s.weapon], `esercizio "${s.id}": arma "${s.weapon}"`);
+      if (s.type === 'flag') assert.ok(level.map.some((r) => [...r].some((c) => level.legend[c]?.flag === s.flag)), `bandiera "${s.flag}"`);
+      for (const [lang, L] of Object.entries(langs)) {
+        assert.equal(typeof lookup(L, `training.steps.${s.id}.title`), 'string', `${lang}: training.steps.${s.id}.title`);
+        assert.equal(typeof lookup(L, `training.steps.${s.id}.text`), 'string', `${lang}: training.steps.${s.id}.text`);
+      }
+    }
+    for (const snd of Object.values(tr.sounds || {})) assert.ok(assets.sounds[snd], `training.sounds: "${snd}"`);
+    const medals = json('config/medals.json');
+    assert.ok(medals.list.some((m) => m.id === tr.medal && m.trigger?.training), `medaglia "${tr.medal}" con trigger { training: true }`);
+    const walk = walkGrid(level, assets);
+    const res = checkGrid(walk);
+    assert.equal(res.unreachable, 0, 'celle percorribili irraggiungibili');
+    assert.deepEqual(res.deadEnds.length, 0, 'vicoli ciechi');
+  });
+
   test('effetti: i tipi di impatto dei tile esistono', () => {
     for (const [ts, def] of Object.entries(assets.tilesets)) {
       for (const t of def.tiles) {
@@ -306,7 +351,7 @@ describe('livelli', () => {
       assert.ok(gens.length >= 4, 'generatori non trovati');
       for (const g of gens) {
         const src = read(`tools/${g}`);
-        const out = src.match(/config\/levels\/(level\d+\.json)/)?.[1];
+        const out = src.match(/config\/levels\/([\w-]+\.json)/)?.[1];
         assert.ok(out, `${g}: file di uscita non trovato`);
         execFileSync(process.execPath, [path.join('tools', g)], { cwd: tmp, stdio: 'pipe' });
         const want = read(`config/levels/${out}`).replace(/\r\n/g, '\n');

@@ -36,6 +36,8 @@
       <section class="menu-screen" data-screen="main">
         <nav class="menu-list">
           <button type="button" class="menu-item" data-go="newGame" data-i18n="menu.newGame"></button>
+          <!-- addestramento: esercizi guidati sul campo d'addestramento (config/training.json) -->
+          <button type="button" class="menu-item" data-action="training" data-i18n="menu.training"></button>
           <button type="button" class="menu-item" data-go="soldier" data-i18n="menu.soldier"></button>
           <button type="button" class="menu-item" data-go="medals" data-i18n="menu.medals"></button>
           <button type="button" class="menu-item" data-go="options" data-i18n="menu.options"></button>
@@ -234,7 +236,7 @@
       <p class="briefing-kicker" data-i18n="briefing.title"></p>
       <h2 id="briefing-name" class="briefing-name"></h2>
       <ul id="briefing-tags" class="briefing-tags"></ul>
-      <p class="briefing-objective" data-i18n="start.objective"></p>
+      <p id="briefing-objective" class="briefing-objective"></p>
       <div class="pixel-bar briefing-bar"><span></span></div>
       <p id="briefing-status" class="briefing-status"></p>
       <p id="briefing-tip" class="briefing-tip"></p>

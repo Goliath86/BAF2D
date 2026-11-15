@@ -32,6 +32,7 @@
     "medals": "Medaglie",
     "tagline": "Cattura la bandiera, vista dall'alto",
     "newGame": "Nuova partita",
+    "training": "Addestramento",
     "soldier": "Soldato",
     "options": "Opzioni",
     "back": "Indietro",
@@ -162,7 +163,11 @@
     "defeatTimeSubtitle": "Tempo scaduto: la squadra nemica ha più ticket",
     "drawTimeSubtitle": "Tempo scaduto: squadre in parità",
     "rematch": "Rivincita",
-    "menu": "Menu principale"
+    "menu": "Menu principale",
+    "training": "Addestramento completato",
+    "trainingSubtitle": "Tutti gli esercizi superati in {time}. Benvenuto al fronte, soldato.",
+    "trainingPlace": "{map}",
+    "repeatTraining": "Ripeti l'addestramento"
   },
   "deploy": {
     "title": "Rientro",
@@ -403,7 +408,93 @@
     "guardian": { "name": "Guardiano", "desc": "Difendi le tue bandiere: tre uccisioni in difesa in una partita." },
     "flagRunner": { "name": "Portabandiera", "desc": "Partecipa a tre catture di bandiera in una partita." },
     "mvp": { "name": "Migliore in campo", "desc": "Finisci la partita primo in classifica." },
-    "untouchable": { "name": "Intoccabile", "desc": "Vinci una partita senza mai morire." }
+    "untouchable": { "name": "Intoccabile", "desc": "Vinci una partita senza mai morire." },
+    "basicTraining": { "name": "Addestramento di base", "desc": "Completa l'addestramento sul campo." }
+  },
+  "training": {
+    "name": "Campo d'addestramento",
+    "tag": "Addestramento",
+    "exercises": "{n} esercizi",
+    "objective": "Esegui gli ordini del sergente istruttore: muoviti, spara, lancia granate, usa il lanciarazzi, conquista una bandiera e guida una jeep. Supera la prova finale per meritare la medaglia.",
+    "tip": "Sergente istruttore: \"Il segnale giallo indica dove andare. Quando è fuori vista, la freccia sul bordo dello schermo punta verso di lui.\"",
+    "kicker": "ESERCIZIO {n}/{total} · {title}",
+    "good": "Ben fatto, recluta!",
+    "praise": ["Ben fatto, recluta!", "Niente male. Avanti il prossimo!", "Bene. Non fermarti!", "Così si fa!", "Giusto. Ma non montarti la testa."],
+    "failed": "Tempo scaduto! Da capo, recluta!",
+    "resupplied": "Il sergente ti passa un altro lanciarazzi",
+    "progress": {
+      "targets": "Sagome: {n}/{total}",
+      "time": "Tempo: {time}",
+      "sprint": "Corsa: {pct}%",
+      "flag": "Bandiera: {pct}%"
+    },
+    "steps": {
+      "move": {
+        "title": "MOVIMENTO",
+        "text": "Benvenuto al campo, recluta! Muoviti con {up} {left} {down} {right} e raggiungi il segnale giallo.",
+        "textTouch": "Benvenuto al campo, recluta! Muoviti con lo stick sinistro e raggiungi il segnale giallo."
+      },
+      "sprint": {
+        "title": "CORSA",
+        "text": "Tieni premuto {sprint} per correre fino in fondo alla pista. Correndo non si spara e il fiato finisce (barra azzurra).",
+        "textTouch": "Spingi lo stick sinistro fino in fondo per correre fino in fondo alla pista. Correndo non si spara e il fiato finisce (barra azzurra)."
+      },
+      "aim": {
+        "title": "TIRO",
+        "text": "Dietro la linea di tiro: mira col mouse e spara col tasto sinistro. Il mirino decide anche fin dove arriva il colpo. Abbatti le 3 sagome.",
+        "textTouch": "Dietro la linea di tiro: mira con lo stick destro, spingilo fino in fondo per sparare. Abbatti le 3 sagome."
+      },
+      "reload": {
+        "title": "RICARICA",
+        "text": "Caricatore a metà. Premi {reload} per ricaricare prima che serva: mentre ricarichi sei lento e non spari.",
+        "textTouch": "Caricatore a metà. Tocca il pulsante di ricarica (la freccia tonda) prima che serva: mentre ricarichi non spari."
+      },
+      "grenade": {
+        "title": "GRANATE",
+        "text": "Due sagome sono al riparo nella buca: i proiettili si piantano nei sacchi. Premi {grenade} per lanciare una granata in mezzo a loro: cade sotto il mirino.",
+        "textTouch": "Due sagome sono al riparo nella buca: i proiettili si piantano nei sacchi. Tocca il pulsante granata: vola dove miri con lo stick destro."
+      },
+      "pickup": {
+        "title": "ARMI A TERRA",
+        "text": "Prendi il lanciarazzi sul tavolo: avvicinati e premi {pickup}. Anche i caduti lasciano le armi a terra.",
+        "textTouch": "Prendi il lanciarazzi sul tavolo: avvicinati e tocca il pulsante per raccoglierlo. Anche i caduti lasciano le armi a terra."
+      },
+      "rocket": {
+        "title": "ANTICARRO",
+        "text": "I proiettili rimbalzano sulla corazza. Colpisci la sagoma del carro con un razzo. Non sparare da vicino: l'esplosione colpirebbe anche te.",
+        "textTouch": "I proiettili rimbalzano sulla corazza. Colpisci la sagoma del carro con un razzo. Non sparare da vicino: l'esplosione colpirebbe anche te."
+      },
+      "switch": {
+        "title": "CAMBIO ARMA",
+        "text": "Porti due armi: premi {switch} per tornare al fucile.",
+        "textTouch": "Porti due armi: tocca il pulsante con le due frecce per tornare al fucile."
+      },
+      "flag": {
+        "title": "BANDIERE",
+        "text": "In battaglia vince chi tiene le bandiere. Resta nell'area della bandiera A finché il drappo non arriva in cima. Un nemico nell'area ferma la cattura.",
+        "textTouch": "In battaglia vince chi tiene le bandiere. Resta nell'area della bandiera A finché il drappo non arriva in cima. Un nemico nell'area ferma la cattura."
+      },
+      "board": {
+        "title": "MEZZI",
+        "text": "Sali sulla jeep: avvicinati e premi {pickup}.",
+        "textTouch": "Sali sulla jeep: avvicinati e tocca il pulsante che compare."
+      },
+      "drive": {
+        "title": "GUIDA",
+        "text": "{up} accelera, {down} frena e fa retromarcia, {left} {right} sterzano. Segui la strada verso ovest fino al segnale giallo.",
+        "textTouch": "Punta lo stick sinistro dove vuoi andare. Segui la strada verso ovest fino al segnale giallo."
+      },
+      "exit": {
+        "title": "SCENDERE",
+        "text": "Premi {pickup} per scendere. Un mezzo ti ripara dai proiettili, ma i razzi lo distruggono.",
+        "textTouch": "Tocca il pulsante per scendere. Un mezzo ti ripara dai proiettili, ma i razzi lo distruggono."
+      },
+      "final": {
+        "title": "PROVA FINALE",
+        "text": "Percorso d'assalto! Abbatti le 6 sagome tra le trincee in {seconds} secondi. Usa tutto quello che hai imparato.",
+        "textTouch": "Percorso d'assalto! Abbatti le 6 sagome tra le trincee in {seconds} secondi. Usa tutto quello che hai imparato."
+      }
+    }
   },
   "editor": {
     "title": "Editor di mappe",
