@@ -493,7 +493,7 @@
 
   "explosions": {
     "frag": {
-      "sound": "explosion",
+      "sound": "explosion_grenade",
       "decal": { "sprite": "scorch", "life": 30, "fade": 8, "alpha": 0.9, "clipSolid": true },
       "crater": { "radius": 4, "hole": "#1c1914", "ring": "#2e2820", "rim": "#5a4c3a", "clods": 7, "alpha": 0.75 },
       "fireball": { "sprite": "explosion", "duration": 0.7 },
