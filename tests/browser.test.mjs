@@ -95,6 +95,10 @@ describe('gioco nel browser', { skip: chrome ? false : 'Chrome non trovato (impo
     assert.equal(await ev('BAF2D.suspended'), true, 'il gioco corre sotto al briefing');
     assert.ok((await ev(`document.getElementById('briefing-map').width`)) > 100, 'mappa del briefing non disegnata');
     await page.screenshot(path.join(OUT, 'briefing.png'));
+    // senza tasti resta ad aspettare (non parte da sola dopo minTime)
+    await new Promise((r) => setTimeout(r, ((game.menu.briefing?.minTime ?? 2.2) + 0.8) * 1000));
+    assert.equal(await ev('BAF2D_MENU.briefing?.ready'), true, 'il briefing si è chiuso da solo senza un tasto');
+    assert.equal(await ev('BAF2D.suspended'), true, 'la partita è partita senza un tasto');
     await page.key('Enter');
     assert.equal(await ev('BAF2D_MENU.briefing'), null, 'il briefing non si chiude con un tasto');
     assert.equal(await ev('BAF2D.suspended'), false, 'il gioco non riparte dopo il briefing');

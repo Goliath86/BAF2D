@@ -169,8 +169,9 @@ export class Menu {
 
   /**
    * "Inizia" dal pulsante: schermata di briefing (mappa che scorre, nome, condizioni, obiettivo, consiglio) che
-   * copre la preparazione della partita; il gioco resta fermo finché non si chiude (menu.briefing.minTime s o un
-   * tasto/tocco dopo che la partita è pronta). startMatch() resta sincrona (la usano anche i test).
+   * copre la preparazione della partita; il gioco resta fermo finché il giocatore non preme un tasto o tocca lo
+   * schermo, accettati solo a partita pronta e dopo menu.briefing.minTime s. startMatch() resta sincrona (la usano
+   * anche i test).
    */
   launch() {
     if (this.briefing) return;
@@ -191,11 +192,15 @@ export class Menu {
       this.game.suspended = true;
       this.input.enabled = false;
       this._briefingMap();
-      b.ready = true;
-      ov.classList.add('ready');
-      $('briefing-status').textContent = this.i18n.t(this.input.mode === 'touch' ? 'briefing.readyTouch' : 'briefing.ready');
+      // partita pronta: dopo almeno minTime s dall'apertura (un tasto premuto prima non la salta) si aspetta
+      // un tasto o un tocco del giocatore, senza partire da sola
       const wait = Math.max(0, (bc.minTime ?? 2.2) * 1000 - (performance.now() - b.start));
-      b.timer = setTimeout(() => this._endBriefing(), wait);
+      b.timer = setTimeout(() => {
+        if (this.briefing !== b) return;
+        b.ready = true;
+        ov.classList.add('ready');
+        $('briefing-status').textContent = this.i18n.t(this.input.mode === 'touch' ? 'briefing.readyTouch' : 'briefing.ready');
+      }, wait);
     }));
   }
 

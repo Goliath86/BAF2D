@@ -308,7 +308,8 @@ tests/                test di regressione (node --test): static.test.mjs, browse
   `#overlay-message`). Pulsante "Inizia" -> `Menu.launch()`: `#overlay-briefing` (nome, etichette, obiettivo,
   consiglio), due fotogrammi e poi `startMatch()` (sincrona, la usano i test) con `game.suspended = true`;
   `_briefingMap` = `mapPicture` della partita che scorre (`menu.briefing`: minTime, scale, pan, panTime);
-  `_endBriefing` (dopo `minTime` o un tasto/tocco a partita pronta) fa partire il gioco. `menu.briefing` attivo =
+  `_endBriefing` (solo con un tasto/tocco, accettato a partita pronta e dopo `minTime`: mai da solo) fa partire
+  il gioco. `menu.briefing` attivo =
   tasti fermati in `_onKey`, pulsante di pausa nascosto.
 - Anteprime delle mappe: `_thumbnail` veloce (senza fusione), poi `_richThumbs` (`menu.previews`) una mappa alla
   volta: `TileMap.prewarm(level, tileset, block, onDone)` + `mapPicture` + `mapThumb` sul canvas della card
