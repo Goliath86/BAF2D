@@ -1,0 +1,33 @@
+{
+  "neutralinoVersion": "6.8.0",
+  "binary": "neutralino-win_x64.exe",
+  "config": {
+    "applicationId": "baf2d.game",
+    "defaultMode": "window",
+    "port": 51851,
+    "url": "/",
+    "documentRoot": "/resources/",
+    "enableServer": true,
+    "enableNativeAPI": false,
+    "tokenSecurity": "one-time",
+    "logging": { "enabled": false, "writeToLogFile": false },
+    "nativeAllowList": [],
+    "modes": {
+      "window": {
+        "title": "BAF2D",
+        "width": 1280,
+        "height": 720,
+        "minWidth": 640,
+        "minHeight": 360,
+        "center": true,
+        "resizable": true,
+        "maximize": false,
+        "fullScreen": false,
+        "icon": "/resources/arts/icons/icon-192.png",
+        "enableInspector": false,
+        "exitProcessOnClose": true,
+        "useSavedState": true
+      }
+    }
+  }
+}

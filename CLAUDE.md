@@ -136,10 +136,21 @@ js/editor/            editor di mappe (editor.html + css/editor.css, cfg game.js
 js/engine/levelcheck.js checkGrid (celle irraggiungibili, vicoli ciechi): usato da check_level.mjs e dall'editor
 tools/serve.mjs       server statico (solo moduli Node built-in)
 tools/build-zip.mjs   zip HTML5 per itch.io in dist/ (gitignored): index.html, manifest, LICENSE, css, js, config,
-                      arts/icons; versione da game.json; percorsi con "/" (non usare Compress-Archive di PS 5.1)
+                      arts/icons; versione da game.json; percorsi con "/" (non usare Compress-Archive di PS 5.1);
+                      esporta gameFiles()/gameInfo() per build-win
+tools/build-win.mjs   build Windows x64 con Neutralinojs (WebView2): dist/BAF2D-<versione>-windows/ (BAF2D.exe =
+                      binario della release ufficiale, scaricata in dist/.cache; resources.neu = ASAR con
+                      neutralino.config.json + resources/<file del gioco>; LICENSE) e lo zip con la cartella BAF2D/.
+                      Configurazione in tools/neutralino.json (versione di Neutralino, finestra, server). La porta del
+                      server DEVE restare fissa: localStorage dipende dall'origine (porta compresa), con la porta
+                      casuale grado/medaglie/impostazioni si perderebbero a ogni avvio. Dati di WebView2 in
+                      %APPDATA%\BAF2D.exe. Prova: WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9333 e
+                      CDP su http://127.0.0.1:9333/json (finestra coperta = fotogrammi rallentati)
+tools/ziplib.mjs      zip (scrittura/lettura) e ASAR (scrittura/lettura) senza dipendenze, per le due build
 docs/itch-io.md       testi e impostazioni della pagina itch.io (inglese), note di rilascio per versione
 CHANGELOG.md          storia delle versioni (inglese); a ogni rilascio: version in game.json, CHANGELOG, note in
                       docs/itch-io.md, screenshot 1920x1080 in arts/screenshots/, node tools/build-zip.mjs
+                      e node tools/build-win.mjs
 tools/gen_desert.mjs  genera config/levels/level03.json (deserto 97x65, simmetrico, verifica raggiungibilità)
 tools/gen_arena.mjs   genera config/levels/level01.json (Test Arena 97x65, 3 bandiere)
 tools/gen_crossroads.mjs genera config/levels/level02.json (Crossroads 97x65, 5 bandiere)

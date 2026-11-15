@@ -12,6 +12,7 @@ import { ROOT } from './lib/browser.mjs';
 import { checkGrid } from '../js/engine/levelcheck.js';
 import { walkGrid } from '../tools/check_level.mjs';
 import { EditorMap, objectKey } from '../js/editor/model.js';
+import { asarBuffer, unasarBuffer, unzipBuffer, zipBuffer } from '../tools/ziplib.mjs';
 
 const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 const json = (p) => JSON.parse(read(p));
@@ -366,6 +367,34 @@ describe('livelli', () => {
 
 describe('algoritmi', () => {
   const grid = (rows) => rows.map((r) => [...r].map((c) => c !== '#'));
+
+  test('archivi delle build: zip e ASAR (resources.neu) restituiscono gli stessi file', () => {
+    const files = [
+      { name: 'index.html', data: Buffer.from('<!DOCTYPE html>àèì') },
+      { name: 'config/game.json', data: Buffer.from(read('config/game.json')) },
+      { name: 'arts/icons/icon-32.png', data: fs.readFileSync(path.join(ROOT, 'arts/icons/icon-32.png')) },
+      { name: 'a/b/c.txt', data: Buffer.from('x'.repeat(1000)) },
+      { name: 'odd.txt', data: Buffer.from('123') }, // lunghezze non multiple di 4
+    ];
+    const z = unzipBuffer(zipBuffer(files.map((f) => ({ ...f, mtime: new Date(2026, 10, 15) }))));
+    const a = unasarBuffer(asarBuffer(files));
+    for (const f of files) {
+      assert.ok(z.get(f.name)?.equals(f.data), `zip: ${f.name}`);
+      assert.ok(a.get(f.name)?.equals(f.data), `asar: ${f.name}`);
+    }
+    assert.equal(z.size, files.length);
+    assert.equal(a.size, files.length);
+  });
+
+  test('build Windows: configurazione di Neutralino (porta fissa = progressi salvati tra un avvio e l\'altro)', () => {
+    const neu = json('tools/neutralino.json');
+    assert.match(neu.neutralinoVersion, /^\d+\.\d+\.\d+$/);
+    assert.ok(neu.config.port > 1024, 'porta fissa: con la porta casuale localStorage cambia a ogni avvio');
+    assert.equal(neu.config.documentRoot, '/resources/');
+    assert.equal(neu.config.enableServer, true);
+    assert.ok(neu.config.modes.window.title);
+    assert.ok(fs.existsSync(path.join(ROOT, neu.config.modes.window.icon.replace(/^\/resources\//, ''))), 'icona della finestra');
+  });
 
   test('checkGrid: stanza aperta da due lati = nessun vicolo cieco', () => {
     const res = checkGrid(grid([
