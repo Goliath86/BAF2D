@@ -770,7 +770,7 @@
       ]
     },
     "reload_rifle": {
-      "src": null,
+      "src": "assets/sounds/reload_ar.mp3",
       "volume": 0.2,
       "placeholder": { "wave": "triangle", "freqStart": 700, "freqEnd": 250, "duration": 0.05, "at": [0.25, 0.9, 1.35] }
     },
