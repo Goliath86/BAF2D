@@ -577,7 +577,7 @@
       ]
     },
     "rocket": {
-      "sound": "explosion",
+      "sound": "explosion_grenade",
       "decal": { "sprite": "scorch", "life": 25, "fade": 8, "alpha": 0.8, "clipSolid": true },
       "crater": { "radius": 5, "hole": "#1c1914", "ring": "#2e2820", "rim": "#5a4c3a", "clods": 8, "alpha": 0.75 },
       "fireball": { "sprite": "explosion", "duration": 0.6 },
