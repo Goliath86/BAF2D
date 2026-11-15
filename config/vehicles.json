@@ -104,7 +104,8 @@
       "respawn": 45,
       "shadow": [4, 5],
       "muzzles": { "vehicle_mg": 21 },
-      "weapons": ["vehicle_mg", "vehicle_rockets"]
+      "weapons": ["vehicle_mg", "vehicle_rockets"],
+      "weaponSounds": { "vehicle_mg": "shoot_tank_mg" }
     },
     "helicopter": {
       "name": "vehicles.helicopter",
@@ -135,7 +136,8 @@
       "shadow": [3, 4],
       "shadowLift": 5,
       "muzzles": { "vehicle_mg": 25, "vehicle_rockets": 6 },
-      "weapons": ["vehicle_mg", "vehicle_rockets"]
+      "weapons": ["vehicle_mg", "vehicle_rockets"],
+      "weaponSounds": { "vehicle_mg": "shoot_helicopter_mg" }
     }
   }
 }

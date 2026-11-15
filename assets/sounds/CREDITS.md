@@ -37,3 +37,5 @@ Only **CC0 / public domain** sounds go here: they are committed to the repositor
 | explosion_grenade_1.mp3 | TODO | TODO | CC0 |
 | reload_rifle_1.mp3 | TODO | TODO | CC0 |
 | reload_shotgun_1.mp3 | TODO | TODO | CC0 |
+| shoot_tank_mg_1.mp3 | TODO | TODO | CC0 |
+| shoot_helicopter_mg_1.mp3 | TODO | TODO | CC0 |

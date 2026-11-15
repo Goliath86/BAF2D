@@ -104,6 +104,10 @@ describe('configurazione', () => {
       for (const k of ['sprite', 'turretSprite']) if (v[k]) assert.ok(assets.sprites[v[k]], `${id}.${k} "${v[k]}"`);
       if (v.engineSound) assert.ok(assets.sounds[v.engineSound], `${id}.engineSound "${v.engineSound}"`);
       for (const w of v.weapons || []) assert.ok(weaponsCfg.weapons[w]?.vehicleOnly, `${id}: arma "${w}" non è "vehicleOnly"`);
+      for (const [w, s] of Object.entries(v.weaponSounds || {})) {
+        assert.ok((v.weapons || []).includes(w), `${id}.weaponSounds: arma "${w}" non è tra le armi del mezzo`);
+        assert.ok(assets.sounds[s], `${id}.weaponSounds.${w}: suono "${s}"`);
+      }
       assert.equal(typeof lookup(en, v.name), 'string', `${id}: nome "${v.name}" mancante nella lingua`);
     }
   });

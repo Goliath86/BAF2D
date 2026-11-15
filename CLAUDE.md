@@ -471,7 +471,8 @@ tests/                test di regressione (node --test): static.test.mjs, browse
   `_enterVehicle` / `_exitVehicle`; i bot impostano `brain.enterNow` (`BotBrain._boardTick`, cfg `bots.ai.vehicles`).
   Armi del mezzo = voci di weapons.json con `vehicleOnly` (stato in `vehicle.guns`), sparano con
   `Game.fireVehicle` -> `Game.fire(shooter)`: `shooter` = Player o oggetto `{ weapon, angle, muzzle, x, y, team,
-  aimDistance, owner, fromVehicle }`. Corazza (`armor`): i proiettili fanno solo l'impatto `metal`; danni da
+  aimDistance, owner, fromVehicle }`. Suono dell'arma per mezzo: `vehicles.json -> weaponSounds.<arma>` (carro ed
+  elicottero hanno la loro mitragliatrice, la jeep usa `shoot_mg` dell'arma). Corazza (`armor`): i proiettili fanno solo l'impatto `metal`; danni da
   `Game.explode` (× `vehicleFactor` del def: granate 0.4, razzi 1.2-1.5) e `directDamage` dei razzi; `v.lastHitBy`
   riceve il merito (`scoring.points.vehicle`). `_destroyVehicle`: esplosione `blast`, pilota ucciso, carcassa
   (`wreckTime`), rientro dopo `respawn` s; mezzo vuoto lontano dalla base per `abandonTime` s = rimosso e ricreato.

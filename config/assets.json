@@ -914,6 +914,24 @@
         { "wave": "noise", "duration": 0.05, "volume": 0.5 }
       ]
     },
+    "shoot_tank_mg": {
+      "src": "assets/sounds/shoot_tank_mg_1.mp3",
+      "volume": 0.24,
+      "pitchJitter": 0.05,
+      "placeholder": [
+        { "wave": "square", "freqStart": 700, "freqEnd": 120, "duration": 0.07 },
+        { "wave": "noise", "duration": 0.05, "volume": 0.5 }
+      ]
+    },
+    "shoot_helicopter_mg": {
+      "src": "assets/sounds/shoot_helicopter_mg_1.mp3",
+      "volume": 0.24,
+      "pitchJitter": 0.05,
+      "placeholder": [
+        { "wave": "square", "freqStart": 700, "freqEnd": 120, "duration": 0.07 },
+        { "wave": "noise", "duration": 0.05, "volume": 0.5 }
+      ]
+    },
     "reload_launcher": {
       "src": null,
       "volume": 0.18,
