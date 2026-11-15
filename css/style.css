@@ -1910,6 +1910,17 @@ body.mode-touch .pause-button:not(.hidden) {
   color: #c8c8d8;
 }
 
+/* storia della mappa: corsivo, filo dorato a sinistra */
+.briefing-story {
+  margin: 0 0 10px;
+  padding-left: 10px;
+  border-left: 3px solid var(--menu-gold);
+  font-size: 13px;
+  font-style: italic;
+  line-height: 1.5;
+  color: #e0d8c0;
+}
+
 .briefing-bar {
   margin-top: 12px;
 }
@@ -2083,6 +2094,12 @@ body.match-over #ui {
 
   .briefing-name {
     font-size: 20px;
+  }
+
+  .briefing-story {
+    margin-bottom: 6px;
+    font-size: 11px;
+    line-height: 1.4;
   }
 
   .briefing-objective {

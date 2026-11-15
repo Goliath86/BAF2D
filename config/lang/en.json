@@ -75,19 +75,28 @@
   "levels": {
     "arena": {
       "name": "Test Arena",
-      "description": "Industrial arena with three flags: warehouses, crate stacks and a walled ring around the centre flag."
+      "description": "Industrial arena with three flags: warehouses, crate stacks and a walled ring around the centre flag.",
+      "story": "The old Kessler freight yard was supposed to be demolished years ago. Instead, both armies use it to test their new squads against each other, and the walls show it. Today the referees have gone home: this time it's for real."
     },
     "crossroads": {
       "name": "Crossroads",
-      "description": "Symmetric map with five flags: two outposts on the sides and a contested centre."
+      "description": "Symmetric map with five flags: two outposts on the sides and a contested centre.",
+      "story": "Five roads meet at the old customs post, and whoever holds the junction controls the supply lines of the whole front. The outposts on either side have changed hands a dozen times since spring. High command wants the centre by nightfall."
     },
     "desert": {
       "name": "Desert Village",
-      "description": "Large desert map swept by the wind: a ruined village in the centre, an oasis with palms, wide dirt roads and dry-stone walls for cover."
+      "description": "Large desert map swept by the wind: a ruined village in the centre, an oasis with palms, wide dirt roads and dry-stone walls for cover.",
+      "story": "The well of Qasr Hamra is the only fresh water for fifty kilometres, and the caravan road runs right past it. The villagers left when the first shells fell; the palms and the dry-stone walls stayed. Hold the oasis and the desert is yours."
     },
     "countryside": {
       "name": "Countryside",
-      "description": "Green farmland between two trench lines: sandbag parapets, hedgerows, orchards, shell craters and a farmhouse to fight over in the middle."
+      "description": "Green farmland between two trench lines: sandbag parapets, hedgerows, orchards, shell craters and a farmhouse to fight over in the middle.",
+      "story": "For three months the front hasn't moved more than a few hundred metres across the Bellacroce farm. The trenches are deep, the orchard is full of craters and the old farmhouse in the middle belongs to whoever reached it last. Somebody has to break the stalemate."
+    },
+    "valley": {
+      "name": "Millstream Valley",
+      "description": "A wooded valley cut in two by a winding river: two bridges for vehicles, two footbridges, a village on each bank and the ruined mill on the island in the middle.",
+      "story": "The Millstream is the last natural barrier before the plains, and its bridges are the only way across for tanks. The engineers were told to blow them up; the order never arrived. Now both armies are racing to the river, and the old mill on the island watches every crossing."
     }
   },
   "options": {
@@ -413,6 +422,7 @@
   },
   "training": {
     "name": "Training ground",
+    "story": "Camp Ironwood was a farm before the war; now it's where recruits learn to stay alive. Sergeant Rourke has trained three generations of soldiers here, and he has never once said \"good job\" on the first day.",
     "tag": "Training",
     "exercises": "{n} exercises",
     "objective": "Follow the drill sergeant's orders: move, shoot, throw grenades, use the launcher, take a flag and drive a jeep. Pass the final test to earn your medal.",

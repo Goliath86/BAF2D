@@ -289,7 +289,10 @@ describe('lingue', () => {
   });
 
   test('livelli, squadre e medaglie hanno i loro testi', () => {
-    for (const l of game.levels) assert.equal(typeof lookup(en, `levels.${l.id}.name`), 'string', `levels.${l.id}.name`);
+    for (const l of game.levels) {
+      for (const f of ['name', 'description', 'story']) assert.equal(typeof lookup(en, `levels.${l.id}.${f}`), 'string', `levels.${l.id}.${f}`);
+    }
+    assert.equal(typeof lookup(en, 'training.story'), 'string', 'training.story');
     for (const t of Object.keys(game.teams)) assert.equal(typeof lookup(en, `teams.${t}`), 'string', `teams.${t}`);
     const medals = json('config/medals.json');
     for (const m of medals.list) assert.equal(typeof lookup(en, `medals.${m.id}.name`), 'string', `medals.${m.id}.name`);

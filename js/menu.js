@@ -243,6 +243,10 @@ export class Menu {
       tags.append(t);
     };
     $('briefing-objective').textContent = i18n.t(lvl.training ? 'training.objective' : 'start.objective');
+    // storia della mappa: levels.<id>.story (o "story" nel livello dell'editor); nascosta se manca
+    const story = lvl.training ? i18n.t('training.story') : this._levelText(lvl, 'story');
+    $('briefing-story').textContent = story;
+    $('briefing-story').classList.toggle('hidden', !story);
     if (lvl.training) {
       // addestramento: nome del campo, numero di esercizi, consiglio fisso del sergente
       $('briefing-name').textContent = i18n.t('training.name');

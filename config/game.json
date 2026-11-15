@@ -13,7 +13,8 @@
     { "id": "arena", "file": "config/levels/level01.json" },
     { "id": "crossroads", "file": "config/levels/level02.json" },
     { "id": "desert", "file": "config/levels/level03.json" },
-    { "id": "countryside", "file": "config/levels/level04.json" }
+    { "id": "countryside", "file": "config/levels/level04.json" },
+    { "id": "valley", "file": "config/levels/level05.json" }
   ],
 
   "props": {

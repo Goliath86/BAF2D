@@ -154,6 +154,9 @@ CHANGELOG.md          storia delle versioni (inglese); a ogni rilascio: version 
 tools/gen_desert.mjs  genera config/levels/level03.json (deserto 97x65, simmetrico, verifica raggiungibilità)
 tools/gen_arena.mjs   genera config/levels/level01.json (Test Arena 97x65, 3 bandiere)
 tools/gen_crossroads.mjs genera config/levels/level02.json (Crossroads 97x65, 5 bandiere)
+tools/gen_valley.mjs  genera config/levels/level05.json (Millstream Valley 97x65: fiume a S con isola del mulino
+                      al centro, 2 ponti per i mezzi + 2 passerelle, villaggi B/D, torri di pietra A/E; tileset
+                      "countryside"). Mappa originale: niente ricostruzioni di livelli di altri giochi
 tools/gen_training.mjs genera config/levels/training.json (campo d'addestramento 72x44, non simmetrico, fuori
                       da game.json -> levels; legend con { waypoint } e { target })
 tools/gen_countryside.mjs genera config/levels/level04.json (Countryside 97x65: trincee con parapetti di sacchi,
@@ -300,7 +303,10 @@ tests/                test di regressione (node --test): static.test.mjs, browse
   (niente update, scena disegnata), input disabilitato.
 - Menu (`menu.js`, config `game.json -> menu`): schermate = `<section data-screen>` in index.html, pila `stack` con
   "Indietro"/Esc; `mode` = menu/playing/paused/ended. Livelli in `game.json -> levels` (`{ id, file }`, nomi/descrizioni
-  in `levels.<id>.name/description` delle lingue), anteprime dal canvas pre-renderizzato del TileMap. Lingua a runtime: `i18n.setLanguage(lang)` (+ `applyToDOM`,
+  in `levels.<id>.name/description` delle lingue), anteprime dal canvas pre-renderizzato del TileMap. Ogni mappa ha una breve storia
+  (`levels.<id>.story`, per l'addestramento `training.story`; per le mappe dell'editor il campo `story` del livello,
+  letto da `Menu._levelText`) mostrata nel briefing (`#briefing-story`); il test statico la pretende per ogni livello
+  di `game.json -> levels`. Lingua a runtime: `i18n.setLanguage(lang)` (+ `applyToDOM`,
   supporta anche `data-i18n-title`). Tasti: `input.setBindings(custom)` sopra i default, azioni modificabili in
   `input.rebindable` (Canc = rimuovi, Esc = annulla; i tasti di azioni non modificabili non si assegnano). Input non
   fa `preventDefault` da disabilitato (i pulsanti HTML ricevono Invio/Spazio). Tasto `pause` (Esc/P) gestito dal Menu

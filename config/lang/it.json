@@ -75,19 +75,28 @@
   "levels": {
     "arena": {
       "name": "Arena di prova",
-      "description": "Arena industriale con tre bandiere: magazzini, cataste di casse e un anello di muri attorno alla bandiera centrale."
+      "description": "Arena industriale con tre bandiere: magazzini, cataste di casse e un anello di muri attorno alla bandiera centrale.",
+      "story": "Il vecchio scalo merci Kessler doveva essere demolito anni fa. Invece i due eserciti lo usano per mettere alla prova le nuove squadre, e i muri lo dimostrano. Oggi gli arbitri sono andati a casa: stavolta si fa sul serio."
     },
     "crossroads": {
       "name": "Crocevia",
-      "description": "Mappa simmetrica con cinque bandiere: due avamposti ai lati e un centro conteso."
+      "description": "Mappa simmetrica con cinque bandiere: due avamposti ai lati e un centro conteso.",
+      "story": "Cinque strade si incontrano alla vecchia dogana, e chi tiene l'incrocio controlla i rifornimenti di tutto il fronte. Gli avamposti ai lati hanno cambiato padrone una dozzina di volte da primavera. Il comando vuole il centro entro sera."
     },
     "desert": {
       "name": "Villaggio nel deserto",
-      "description": "Grande mappa desertica spazzata dal vento: villaggio in rovina al centro, oasi con palme, ampie strade sterrate e muretti a secco come riparo."
+      "description": "Grande mappa desertica spazzata dal vento: villaggio in rovina al centro, oasi con palme, ampie strade sterrate e muretti a secco come riparo.",
+      "story": "Il pozzo di Qasr Hamra è l'unica acqua dolce per cinquanta chilometri, e la pista delle carovane ci passa accanto. Gli abitanti se ne sono andati alle prime cannonate; sono rimasti le palme e i muretti a secco. Chi tiene l'oasi tiene il deserto."
     },
     "countryside": {
       "name": "Campagna",
-      "description": "Campi verdi tra due linee di trincea: parapetti di sacchi di sabbia, siepi, frutteti, crateri di granata e un casale da contendersi al centro."
+      "description": "Campi verdi tra due linee di trincea: parapetti di sacchi di sabbia, siepi, frutteti, crateri di granata e un casale da contendersi al centro.",
+      "story": "Da tre mesi il fronte non si sposta di più di qualche centinaio di metri attraverso la tenuta Bellacroce. Le trincee sono profonde, il frutteto è pieno di crateri e il vecchio casale al centro è di chi ci arriva per ultimo. Qualcuno deve rompere lo stallo."
+    },
+    "valley": {
+      "name": "Valle del Mulino",
+      "description": "Una valle boscosa tagliata in due da un fiume a serpentina: due ponti per i mezzi, due passerelle, un villaggio su ogni sponda e il mulino in rovina sull'isola al centro.",
+      "story": "Il fiume del Mulino è l'ultima barriera naturale prima della pianura, e i suoi ponti sono l'unico passaggio per i carri. Il genio aveva l'ordine di farli saltare; l'ordine non è mai arrivato. Ora i due eserciti corrono verso il fiume, e il vecchio mulino sull'isola sorveglia ogni attraversamento."
     }
   },
   "options": {
@@ -413,6 +422,7 @@
   },
   "training": {
     "name": "Campo d'addestramento",
+    "story": "Prima della guerra Campo Ironwood era una fattoria; ora è il posto dove le reclute imparano a restare vive. Il sergente Rourke ci ha addestrato tre generazioni di soldati, e non ha mai detto \"ben fatto\" il primo giorno.",
     "tag": "Addestramento",
     "exercises": "{n} esercizi",
     "objective": "Esegui gli ordini del sergente istruttore: muoviti, spara, lancia granate, usa il lanciarazzi, conquista una bandiera e guida una jeep. Supera la prova finale per meritare la medaglia.",
