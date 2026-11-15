@@ -916,7 +916,7 @@
     },
     "shoot_tank_mg": {
       "src": "assets/sounds/shoot_tank_mg_1.mp3",
-      "volume": 0.24,
+      "volume": 0.32,
       "pitchJitter": 0.05,
       "placeholder": [
         { "wave": "square", "freqStart": 700, "freqEnd": 120, "duration": 0.07 },
