@@ -858,12 +858,6 @@ button {
   box-shadow: 4px 4px 0 var(--menu-gold-dark);
 }
 
-.map-card:disabled {
-  cursor: default;
-  opacity: 0.55;
-  border-style: dashed;
-}
-
 .map-thumb {
   position: static; /* la regola generale "canvas" è per i canvas di gioco */
   width: 120px;

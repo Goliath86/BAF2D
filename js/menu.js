@@ -540,13 +540,6 @@ export class Menu {
       list.append(card);
       this.mapCards.push({ card, lvl });
     }
-    // mappa procedurale: per ora solo annunciata ("menu.procedural": true la renderà selezionabile)
-    const proc = el('button', 'map-card procedural');
-    proc.type = 'button';
-    proc.disabled = !this.cfg.procedural;
-    proc.append(this._proceduralThumb(), this._mapInfo());
-    list.append(proc);
-    this.procCard = proc;
     this._richThumbs();
   }
 
@@ -594,40 +587,6 @@ export class Menu {
       });
     };
     setTimeout(next, pv.delay ?? 800);
-  }
-
-  /** Anteprima della mappa procedurale: rumore a blocchi con un "?" disegnato a pixel. */
-  _proceduralThumb() {
-    const k = this.cfg.thumbTile ?? 4;
-    const c = el('canvas', 'map-thumb');
-    const cols = 40;
-    const rows = 26;
-    c.width = cols * k;
-    c.height = rows * k;
-    const g = c.getContext('2d');
-    let seed = 7;
-    const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-    for (let y = 0; y < rows; y++) {
-      for (let x = 0; x < cols; x++) {
-        const edge = x === 0 || y === 0 || x === cols - 1 || y === rows - 1;
-        g.fillStyle = edge || rnd() < 0.12 ? '#3d3127' : rnd() < 0.5 ? '#2a2f3a' : '#262b35';
-        g.fillRect(x * k, y * k, k, k);
-      }
-    }
-    const q = ['.###.', '#...#', '...#.', '..#..', '.....', '..#..'];
-    const s = k * 2;
-    const ox = Math.round(c.width / 2 - (5 * s) / 2);
-    const oy = Math.round(c.height / 2 - (6 * s) / 2);
-    for (let y = 0; y < q.length; y++) {
-      for (let x = 0; x < 5; x++) {
-        if (q[y][x] !== '#') continue;
-        g.fillStyle = '#0b0b12';
-        g.fillRect(ox + x * s + k / 2, oy + y * s + k / 2, s, s);
-        g.fillStyle = '#ffd36b';
-        g.fillRect(ox + x * s, oy + y * s, s, s);
-      }
-    }
-    return c;
   }
 
   _buildTeams() {
@@ -1182,12 +1141,6 @@ export class Menu {
       card.querySelector('.map-meta').textContent = `${i18n.t('newGame.flags', { count: flags })} · ${i18n.t('newGame.size', { cols, rows })}`;
       card.querySelector('.map-desc').textContent = this._levelText(lvl, 'description');
     }
-    const p = this.procCard;
-    const name = p.querySelector('.map-name');
-    name.textContent = i18n.t('newGame.procedural');
-    if (!this.cfg.procedural) name.append(el('span', 'map-badge', i18n.t('newGame.comingSoon')));
-    p.querySelector('.map-meta').textContent = '';
-    p.querySelector('.map-desc').textContent = i18n.t('newGame.proceduralDesc');
     for (const { id, b } of this.teamButtons) b.textContent = i18n.t(`teams.${id}`);
     for (const [key, s] of Object.entries(this.steppers)) {
       s.minus.title = s.minus.ariaLabel = `${i18n.t('newGame.decrease')} (${i18n.t(`newGame.${key}`)})`;

@@ -285,8 +285,7 @@ tests/                test di regressione (node --test): static.test.mjs, browse
   (niente update, scena disegnata), input disabilitato.
 - Menu (`menu.js`, config `game.json -> menu`): schermate = `<section data-screen>` in index.html, pila `stack` con
   "Indietro"/Esc; `mode` = menu/playing/paused/ended. Livelli in `game.json -> levels` (`{ id, file }`, nomi/descrizioni
-  in `levels.<id>.name/description` delle lingue), anteprime dal canvas pre-renderizzato del TileMap. Mappa procedurale:
-  card disabilitata "prossimamente" (`menu.procedural`). Lingua a runtime: `i18n.setLanguage(lang)` (+ `applyToDOM`,
+  in `levels.<id>.name/description` delle lingue), anteprime dal canvas pre-renderizzato del TileMap. Lingua a runtime: `i18n.setLanguage(lang)` (+ `applyToDOM`,
   supporta anche `data-i18n-title`). Tasti: `input.setBindings(custom)` sopra i default, azioni modificabili in
   `input.rebindable` (Canc = rimuovi, Esc = annulla; i tasti di azioni non modificabili non si assegnano). Input non
   fa `preventDefault` da disabilitato (i pulsanti HTML ricevono Invio/Spazio). Tasto `pause` (Esc/P) gestito dal Menu
@@ -639,5 +638,5 @@ tests/                test di regressione (node --test): static.test.mjs, browse
   illustrazione della battaglia a fine partita).
 - Fatto anche: munizioni contate per tutte le armi dei soldati (scorta, raccolta da armi uguali a terra,
   rifornimento alle bandiere possedute e alla base, bot che vanno a rifornirsi).
-- Non ancora presenti: mappa procedurale, asset grafici reali.
+- Non ancora presenti: asset grafici reali. (La mappa procedurale è stata scartata: niente card nel menu.)
 - Controlli touch (stick + pulsante ricarica) verificati dall'utente su un dispositivo reale (2026-11-02).

@@ -45,7 +45,6 @@
     "tickets": { "min": 100, "max": 1000, "step": 50, "default": 400 },
     "timeLimit": { "min": 0, "max": 60, "step": 5, "default": 20 },
     "weathers": ["level", "clear", "rain", "fog"],
-    "procedural": false,
     "background": "scene",
     "scene": "config/menu_scene.json",
     "thumbTile": 4,
