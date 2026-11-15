@@ -1,11 +1,22 @@
 // Audio via Web Audio API. Suoni da file ("src") oppure sintetizzati come placeholder.
+//
+// Voce di assets.json -> sounds:
+//   src         = file (es. "assets/sounds/shoot_rifle.mp3") o lista di varianti (una a caso a ogni riproduzione,
+//                 mai la stessa due volte di fila); null = solo sintetizzato. Le varianti che non si caricano sono
+//                 saltate; se non se ne carica nessuna si usa "placeholder" (avviso in console).
+//   volume      = volume relativo (0..1)
+//   pitchJitter = variazione casuale del tono dei file (es. 0.06 = ±6%): lo stesso sparo ripetuto non suona finto
+//   maxVoices   = copie dello stesso suono da file che suonano insieme (default 6): oltre, si ferma la più vecchia
+//   placeholder = suono sintetizzato (fallback), loop = motore sintetizzato (vedi loop())
 
 import { loadArrayBuffer } from './loader.js';
 
 export class AudioManager {
   constructor(sounds = {}, cfg = {}) {
     this.defs = sounds;
-    this.buffers = new Map();
+    this.buffers = new Map(); // nome -> [AudioBuffer] (varianti caricate)
+    this.lastVariant = new Map(); // nome -> indice dell'ultima variante suonata
+    this.voices = new Map(); // nome -> [sorgenti da file in corso] (maxVoices)
     this.hearing = cfg.hearing || {};
     this.listener = null; // { x, y } posizione dell'ascoltatore nel mondo (vedi gainAt)
     this.volume = cfg.masterVolume ?? 0.6; // volume generale 0..1 (opzioni)
@@ -62,19 +73,36 @@ export class AudioManager {
     }
   }
 
+  /** Carica i file dei suoni (tutte le varianti in parallelo); quelli mancanti restano sintetizzati. */
   async load() {
     if (!this.ctx) return;
     const jobs = Object.entries(this.defs)
       .filter(([, d]) => d.src)
       .map(async ([name, d]) => {
-        try {
-          const data = await loadArrayBuffer(d.src);
-          this.buffers.set(name, await this.ctx.decodeAudioData(data));
-        } catch (e) {
-          console.warn(`Suono "${name}" non caricato (${e.message}) -> uso placeholder`);
-        }
+        const list = Array.isArray(d.src) ? d.src : [d.src];
+        const loaded = await Promise.all(list.map(async (src) => {
+          try {
+            return await this.ctx.decodeAudioData(await loadArrayBuffer(src));
+          } catch (e) {
+            console.warn(`Sound "${name}": "${src}" not loaded (${e.message})`);
+            return null;
+          }
+        }));
+        const ok = loaded.filter(Boolean);
+        if (ok.length) this.buffers.set(name, ok);
+        else if (d.placeholder || d.loop) console.warn(`Sound "${name}": no file loaded, using the synthesized placeholder`);
       });
     await Promise.all(jobs);
+  }
+
+  /** Una variante a caso del suono "name" (mai la stessa due volte di fila), o null se non ha file caricati. */
+  _variant(name) {
+    const list = this.buffers.get(name);
+    if (!list?.length) return null;
+    let i = Math.floor(Math.random() * list.length);
+    if (list.length > 1 && i === this.lastVariant.get(name)) i = (i + 1) % list.length;
+    this.lastVariant.set(name, i);
+    return list[i];
   }
 
   /** I browser richiedono un gesto utente prima di riprodurre audio. */
@@ -117,16 +145,33 @@ export class AudioManager {
     const gain = this.gainAt(pos);
     if (gain <= 0.01) return none;
     const vol = (def.volume ?? 1) * gain;
-    const buffer = this.buffers.get(name);
+    const buffer = this._variant(name);
     let sources = [];
     if (buffer) {
       const src = ctx.createBufferSource();
       src.buffer = buffer;
+      const j = def.pitchJitter ?? 0;
+      if (j > 0) src.playbackRate.value = 1 + (Math.random() * 2 - 1) * j;
       const g = ctx.createGain();
       g.gain.value = vol;
       src.connect(g).connect(this.master);
       src.start();
       sources = [src];
+      // copie in corso dello stesso suono: oltre maxVoices si ferma la più vecchia
+      const live = this.voices.get(name) || [];
+      live.push(src);
+      src.onended = () => {
+        const k = live.indexOf(src);
+        if (k >= 0) live.splice(k, 1);
+      };
+      while (live.length > (def.maxVoices ?? 6)) {
+        try {
+          live.shift().stop();
+        } catch (e) {
+          // già terminata
+        }
+      }
+      this.voices.set(name, live);
     } else if (def.placeholder) {
       // "placeholder" può essere una lista di strati suonati insieme (es. esplosione = rumore + boom grave);
       // "at": istanti (s) di partenza delle ripetizioni del suono sintetizzato (default [0])
@@ -175,7 +220,7 @@ export class AudioManager {
     let filter = null;
     let lfo = null;
 
-    const buffer = this.buffers.get(name);
+    const buffer = this._variant(name); // suono continuo: una variante per tutta la durata
     if (buffer) {
       const src = ctx.createBufferSource();
       src.buffer = buffer;

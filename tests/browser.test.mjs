@@ -274,6 +274,56 @@ describe('gioco nel browser', { skip: chrome ? false : 'Chrome non trovato (impo
     assert.ok(easy.taken < hard.taken * 0.6, `recluta ${easy.taken} danni, veterano ${hard.taken}`);
   });
 
+  it('suoni da file: varianti a caso senza ripetizioni, tono variato, copie limitate, fallback sintetizzato', async () => {
+    await openGame();
+    // due WAV minimi (0,2 s di onda quadra a toni diversi) come URL data:, più una variante rotta (non audio)
+    const wav = (freq) => {
+      const rate = 22050;
+      const n = Math.round(rate * 0.2);
+      const b = Buffer.alloc(44 + n * 2);
+      b.write('RIFF', 0); b.writeUInt32LE(36 + n * 2, 4); b.write('WAVEfmt ', 8); b.writeUInt32LE(16, 16);
+      b.writeUInt16LE(1, 20); b.writeUInt16LE(1, 22); b.writeUInt32LE(rate, 24); b.writeUInt32LE(rate * 2, 28);
+      b.writeUInt16LE(2, 32); b.writeUInt16LE(16, 34); b.write('data', 36); b.writeUInt32LE(n * 2, 40);
+      for (let i = 0; i < n; i++) b.writeInt16LE(Math.sin((i * freq * 2 * Math.PI) / rate) > 0 ? 8000 : -8000, 44 + i * 2);
+      return `data:audio/wav;base64,${b.toString('base64')}`;
+    };
+    const r = await ev(`(async () => {
+      const { AudioManager } = await import('/js/engine/audio.js');
+      const broken = 'data:audio/mpeg;base64,' + btoa('not audio');
+      const synth = { wave: 'square', freqStart: 400, duration: 0.05 };
+      const a = new AudioManager({
+        shot: { src: [${JSON.stringify(wav(440))}, ${JSON.stringify(wav(660))}, broken], pitchJitter: 0.1, maxVoices: 2, placeholder: synth },
+        onlyBroken: { src: broken, placeholder: synth },
+        synthOnly: { src: null, placeholder: synth },
+      }, {});
+      await a.ctx.resume();
+      await a.load();
+      const seq = [];
+      const rates = new Set();
+      for (let i = 0; i < 12; i++) {
+        a.play('shot');
+        const live = a.voices.get('shot');
+        seq.push(a.lastVariant.get('shot'));
+        rates.add(live[live.length - 1].playbackRate.value.toFixed(3));
+      }
+      const fb = a.play('onlyBroken');
+      return { state: a.ctx.state, variants: a.buffers.get('shot')?.length ?? 0, broken: a.buffers.has('onlyBroken'), synth: a.buffers.has('synthOnly'),
+        repeats: seq.some((v, i) => i > 0 && v === seq[i - 1]), used: [...new Set(seq)].length, voices: a.voices.get('shot').length,
+        rates: rates.size, fallback: typeof fb.stop };
+    })()`);
+    assert.equal(r.state, 'running', 'contesto audio non attivo');
+    assert.equal(r.variants, 2, 'varianti caricate (quella rotta va saltata)');
+    assert.equal(r.broken, false, 'un suono senza file validi non deve avere buffer');
+    assert.equal(r.synth, false);
+    assert.equal(r.repeats, false, 'la stessa variante due volte di fila');
+    assert.equal(r.used, 2, 'non usa tutte le varianti');
+    assert.ok(r.voices <= 2, `maxVoices non rispettato (${r.voices} copie)`);
+    assert.ok(r.rates > 1, 'pitchJitter non varia il tono');
+    assert.equal(r.fallback, 'function', 'il fallback sintetizzato non suona');
+    // gli avvisi per i file non caricati ci sono (e non sono errori)
+    assert.ok(page.warnings.some((w) => w.includes('onlyBroken')), 'manca l\'avviso del suono senza file');
+  });
+
   it('addestramento: dal menu, tutti gli esercizi in ordine (colpi, granate, razzo veri), medaglia e schermata finale', async () => {
     await openGame('lang=it');
     // dal pulsante del menu principale, attraverso il briefing

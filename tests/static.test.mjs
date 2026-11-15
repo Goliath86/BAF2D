@@ -247,6 +247,33 @@ describe('configurazione', () => {
     assert.deepEqual(res.deadEnds.length, 0, 'vicoli ciechi');
   });
 
+  test('suoni: i file indicati esistono, sono pubblicabili e hanno i crediti; ogni suono ha un fallback', () => {
+    const credits = read('assets/sounds/CREDITS.md');
+    const rows = credits.split('\n').filter((l) => /^\|\s*[^|\s-][^|]*\.(mp3|ogg|wav|m4a)\s*\|/i.test(l));
+    const credited = new Map(rows.map((l) => {
+      const cells = l.split('|').map((c) => c.trim());
+      return [cells[1], cells];
+    }));
+    for (const [name, def] of Object.entries(assets.sounds)) {
+      assert.ok(def.placeholder || def.loop, `suono "${name}": manca il fallback sintetizzato (placeholder o loop)`);
+      if (def.pitchJitter !== undefined) assert.ok(def.pitchJitter >= 0 && def.pitchJitter <= 0.5, `suono "${name}": pitchJitter`);
+      if (def.maxVoices !== undefined) assert.ok(Number.isInteger(def.maxVoices) && def.maxVoices >= 1, `suono "${name}": maxVoices`);
+      if (!def.src) continue;
+      for (const src of Array.isArray(def.src) ? def.src : [def.src]) {
+        assert.match(src, /^assets\/sounds\/[\w.-]+\.(mp3|ogg|wav|m4a)$/i, `suono "${name}": "${src}" deve stare in assets/sounds/ (mp3/ogg/wav/m4a)`);
+        assert.ok(fs.existsSync(path.join(ROOT, src)), `suono "${name}": "${src}" non esiste`);
+      }
+    }
+    const filesHere = fs.readdirSync(path.join(ROOT, 'assets/sounds')).filter((f) => /\.(mp3|ogg|wav|m4a)$/i.test(f));
+    for (const f of filesHere) {
+      const row = credited.get(f);
+      assert.ok(row, `assets/sounds/${f}: manca la riga nei crediti (assets/sounds/CREDITS.md)`);
+      assert.match(row[4] || '', /cc0|public domain/i, `assets/sounds/${f}: licenza "${row[4]}" (solo CC0 / pubblico dominio)`);
+      assert.ok(row[2] && row[3], `assets/sounds/${f}: fonte e autore nei crediti`);
+    }
+    for (const f of credited.keys()) assert.ok(filesHere.includes(f), `crediti: "${f}" non è in assets/sounds/`);
+  });
+
   test('effetti: i tipi di impatto dei tile esistono', () => {
     for (const [ts, def] of Object.entries(assets.tilesets)) {
       for (const t of def.tiles) {

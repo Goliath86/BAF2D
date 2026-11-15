@@ -519,6 +519,13 @@ tests/                test di regressione (node --test): static.test.mjs, browse
   `vehicle.rpm`), `_silenceEngines` in pausa (ciclo di `start()`) e in `_reset`.
 - Audio posizionale: `audio.play(nome, { x, y })` attenua con la distanza da `audio.listener` (centro visuale,
   `audio.hearing.near/far`).
+- Suoni reali (solo CC0 / pubblico dominio) in `assets/sounds/` (committati, inclusi negli zip e nella build Windows),
+  ognuno con la sua riga in `assets/sounds/CREDITS.md` (file | fonte | autore | licenza: lo controlla il test
+  statico, che vieta anche `src` fuori da `assets/sounds/`). Voce di `assets.json -> sounds`: `src` = file o lista di
+  varianti (`_variant`: una a caso, mai la stessa due volte di fila; per i suoni continui una per tutta la durata),
+  `pitchJitter` (±tono), `maxVoices` (copie insieme, default 6: oltre si ferma la più vecchia), `placeholder`/`loop`
+  = fallback sintetizzato obbligatorio (usato se nessuna variante si carica, con un avviso in console). Nomi dei
+  file: `<suono>_<n>.mp3`. MP3 mono 44,1 kHz consigliato (OGG non va sui vecchi iPhone).
 - Sprite con `extends`: ereditano tutto tranne `src`, `placeholder` fuso campo per campo.
 - Movimento touch analogico: lunghezza vettore stick SX (dopo deadzone, elevata a `moveCurve`) × `speed`.
 - `Animator.update(dt)` accetta dt negativo (animazione all'indietro).

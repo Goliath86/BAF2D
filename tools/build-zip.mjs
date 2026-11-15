@@ -1,6 +1,7 @@
 // Crea lo zip per itch.io (progetto HTML, index.html alla radice dello zip):
 //   node tools/build-zip.mjs            -> dist/BAF2D-<versione>-html5.zip (versione da config/game.json)
-// Contiene solo ciò che serve al gioco nel browser: index.html, editor.html (editor di mappe), manifest, LICENSE, css/, js/, config/, arts/icons/.
+// Contiene solo ciò che serve al gioco nel browser: index.html, editor.html (editor di mappe), manifest, LICENSE, css/, js/, config/, arts/icons/,
+// assets/sounds/ (suoni reali CC0 con i crediti).
 // Mai assets/licensed/ (asset con licenza: vietata la ridistribuzione). Solo moduli Node built-in: lo zip è scritto
 // a mano (tools/ziplib.mjs, deflate di zlib) con percorsi separati da "/" (richiesto dai server Linux come quello di itch.io).
 
@@ -10,7 +11,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { zipBuffer } from './ziplib.mjs';
 
 export const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-export const INCLUDE = ['index.html', 'editor.html', 'manifest.webmanifest', 'LICENSE', 'css', 'js', 'config', 'arts/icons'];
+export const INCLUDE = ['index.html', 'editor.html', 'manifest.webmanifest', 'LICENSE', 'css', 'js', 'config', 'arts/icons', 'assets/sounds'];
 const EXCLUDE = [/^assets\/licensed\//];
 
 /** Elenco dei file (percorsi relativi con "/"), in ordine. */
