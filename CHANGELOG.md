@@ -3,7 +3,26 @@
 All notable changes to BAF2D. Versions follow [semantic versioning](https://semver.org/); the current version is
 in `config/game.json` (`version`) and shown at the bottom of the main menu panel.
 
-## [1.5.5] — 2026-11-15
+## [1.5.6] — 2026-11-15
+
+### Added
+- **New map: Millstream Valley.** A wooded valley cut in two by a winding river. Two bridges are the only way across
+  for vehicles, two footbridges let infantry cross elsewhere, there is a village on each bank, stone towers on the
+  flanks and the ruined mill on the island in the middle. Five flags, symmetric, no dead ends.
+- **A story for every map**: the briefing now opens with a few lines about the place you're fighting over (the
+  training ground has one too).
+- **Real sound effects** (all CC0) for the assault rifle (two shots, each soldier always uses the same one), the shotgun, the
+  rocket launcher, grenade and rocket explosions, assault rifle and shotgun reloads, and the machine guns of the
+  tank and the helicopter, each with its own sound. Every sound gets a small random pitch change, and sounds that
+  pile up are capped so big firefights don't turn into noise. Sounds without a recording yet keep the old
+  synthesized effect.
+- **Music**: a theme in the main menu that fades out when the briefing starts, with its own **Music volume** option.
+- **Windows version**: a download that runs the game in its own window (Windows 10/11 x64, no install: unzip and
+  run `BAF2D.exe`). Rank, medals and settings are saved on your PC.
+
+### Changed
+- Rockets now explode with the same sound as grenades.
+- The download is bigger (about 4.7 MB instead of 0.75 MB) because of the music and sound files.
 
 ### Added
 - **Training** (main menu → *Training*): a drill sergeant takes you through 13 exercises on a new training ground:

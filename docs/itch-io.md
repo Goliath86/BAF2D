@@ -1,4 +1,4 @@
-# BAF2D — itch.io page (v1.5.5)
+# BAF2D — itch.io page (v1.5.6)
 
 Copy each block into the matching field of the itch.io "Edit game" page.
 
@@ -15,7 +15,9 @@ Top-down pixel-art capture the flag in sun, rain, fog or darkness: boot camp tra
 ## Classification / Kind of project
 
 - Classification: **Games**
-- Kind of project: **HTML** (upload `dist/BAF2D-1.5.5-html5.zip`, tick "This file will be played in the browser")
+- Kind of project: **HTML** (upload `dist/BAF2D-1.5.6-html5.zip`, tick "This file will be played in the browser")
+- Second upload: `dist/BAF2D-1.5.6-windows.zip`, platform **Windows** (downloadable, not played in the browser).
+  Name it "BAF2D for Windows (64-bit)".
 - Release status: **Released**
 
 ## Embed options (Uploads → HTML)
@@ -52,11 +54,12 @@ pick up better weapons and jump into vehicles. Every match feeds your career: sc
     when they fight you.</li>
   <li><strong>Capture the Flag with tickets.</strong> Raise your flag in contested zones: flags you hold drain the
     enemy's tickets, and every death costs your team one. Pick the ticket count before each match.</li>
-  <li><strong>Four large maps.</strong> The industrial <em>Test Arena</em>, <em>Crossroads</em> with its two
+  <li><strong>Five large maps.</strong> The industrial <em>Test Arena</em>, <em>Crossroads</em> with its two
     avenues crossing at the centre, <em>Desert Village</em>: a windswept map with a ruined village, an oasis with
-    palms, dry-stone walls and wide dirt roads built for vehicles, and <em>Countryside</em>: green farmland between
-    two zig-zag trench lines with sandbag parapets, hedgerows, orchards, shell craters and a farmhouse in the middle.
-    Every map is symmetric and has no dead ends: there is always another way round.</li>
+    palms, dry-stone walls and wide dirt roads built for vehicles, <em>Countryside</em>: green farmland between
+    two zig-zag trench lines with sandbag parapets, hedgerows, orchards, shell craters and a farmhouse in the middle,
+    and <em>Millstream Valley</em>: a river with two bridges for the tanks, footbridges, a village on each bank and a
+    ruined mill on the island. Every map is symmetric, has no dead ends and its own story told in the briefing.</li>
   <li><strong>Day, dusk or night, rain or fog.</strong> Pick the time of day and the weather for every match, or let
     the light fade from day to night as you fight. At night the battlefield is lit only by muzzle flashes,
     explosions, burning wrecks, torches and lamps, and vehicles drive with their headlights on. Rain fills puddles
@@ -95,8 +98,8 @@ pick up better weapons and jump into vehicles. Every match feeds your career: sc
   <li><strong>Map editor.</strong> Build your own maps on desktop: tiles, flags, team bases, pickups, vehicles,
     decorations and weather, with symmetry tools and a check for dead ends. Save them as JSON and test them in the
     game with one click.</li>
-  <li><strong>Desktop and mobile.</strong> Keyboard and mouse, or twin virtual sticks on touch screens
-    (landscape).</li>
+  <li><strong>Desktop and mobile.</strong> Play in the browser with keyboard and mouse or twin virtual sticks on touch
+    screens (landscape), or download the <strong>Windows version</strong>.</li>
   <li><strong>English and Italian.</strong></li>
 </ul>
 
@@ -135,11 +138,16 @@ Keys can be remapped in Options, where you can also turn on <strong>auto reload<
   <li>The main menu runs a live thermal-camera drone feed over a city at war.</li>
   <li>On phones, play in landscape: the game asks for fullscreen on the first tap. Graphics quality switches to
     <em>Low</em> automatically on touch devices; you can change it in Options.</li>
-  <li>All graphics and sounds are generated in code: no external assets, about 0.7&nbsp;MB to download.</li>
+  <li>All graphics are drawn in code, pixel by pixel. Weapons, explosions and the menu music use public-domain (CC0)
+    recordings; the other effects are synthesized in code. About 4.7&nbsp;MB to download.</li>
+  <li>Windows version: unzip and run <code>BAF2D.exe</code> (Windows 10/11, 64-bit, uses the WebView2 runtime built into
+    Windows). Progress is saved on your PC, separately from the browser version.</li>
 </ul>
 
 <h3>Credits</h3>
 <p>Made with plain JavaScript and HTML5 Canvas, no engine or libraries.<br>
+Sound effects and music: public domain (CC0), see <code>assets/sounds/CREDITS.md</code> and
+<code>assets/music/CREDITS.md</code>.<br>
 Source code licensed under the GNU GPL v3.</p>
 ```
 
@@ -149,6 +157,7 @@ Source code licensed under the GNU GPL v3.</p>
 - Tags (up to 10): `top-down-shooter`, `pixel-art`, `capture-the-flag`, `2d`, `singleplayer`, `tactical`, `vehicles`,
   `bots`, `retro`, `mobile`
 - Made with: **HTML5**
+- Platforms: **HTML5** (browser) and **Windows**
 - Inputs: **Keyboard**, **Mouse**, **Touchscreen**
 - Languages: **English**, **Italian**
 - Average session: **A few minutes** (a match lasts about 5–12 minutes)
@@ -159,26 +168,71 @@ Source code licensed under the GNU GPL v3.</p>
 - Cover image: `arts/cover.png` (630 × 500, the size itch.io asks for).
 - Screenshots (1920 × 1080, in `arts/screenshots/`), suggested order and captions:
   1. `rain_countryside.png` — Rain over the countryside farm: craters, puddles and a firefight between the barns.
-  2. `night_countryside.png` — Night battle in the countryside: a tank takes a flag by the light of a burning wreck.
-  3. `desert_explosion.png` — A vehicle blows up at the desert oasis: fireball, shockwave and flying earth.
-  4. `fog_countryside.png` — Morning fog rolls over the trenches.
-  5. `training_range.png` — Boot camp: the drill sergeant walks you through the firing range.
-  6. `training_grenade.png` — Bullets won't reach dug-in targets: time for a grenade.
-  7. `briefing.png` — Every match opens with a briefing over the battlefield.
-  8. `dusk_desert.png` — Dusk in the desert village: torches, craters and fires after the fight.
-  9. `main_menu.png` — The main menu: a live thermal drone feed over a city at war.
-  10. `new_game.png` — Pick the map, the difficulty, the teams, the time of day and the weather.
-  11. `dusk_rain_crossroads.png` — Rain at dusk on Crossroads: a flag lights up while it's being captured.
-  12. `match_end.png` — Victory: where the fighting was fiercest, leaderboard, medals, promotion and unlocks.
-  13. `soldier_customization.png` — Build your soldier: call sign, starting weapon, camo, vest, gear.
-  14. `apache_strike.png` — Attack helicopter run: rockets and cannon fire on the enemy trench line.
-  15. `map_editor.png` — The map editor: paint tiles, place flags, bases, pickups and vehicles, then test the map.
-  16. `training_complete.png` — Training complete: your first medal.
-  17. `medal_ingame.png` — Medals in battle: 17 feats, each with its own pixel-art medal.
-- Not in the list: `day_countryside.png`, `night_arena.png`, `vehicle_combat.png`, `medals.png`,
+  2. `millstream_bridge.png` — Millstream Valley: the fight for the bridge to the mill island, wrecks in the river.
+  3. `night_countryside.png` — Night battle in the countryside: a tank takes a flag by the light of a burning wreck.
+  4. `desert_explosion.png` — A vehicle blows up at the desert oasis: fireball, shockwave and flying earth.
+  5. `fog_countryside.png` — Morning fog rolls over the trenches.
+  6. `training_range.png` — Boot camp: the drill sergeant walks you through the firing range.
+  7. `briefing_story.png` — Every match opens with a briefing over the battlefield and the story of the place.
+  8. `training_grenade.png` — Bullets won't reach dug-in targets: time for a grenade.
+  9. `dusk_desert.png` — Dusk in the desert village: torches, craters and fires after the fight.
+  10. `main_menu.png` — The main menu: a live thermal drone feed over a city at war.
+  11. `new_game.png` — Pick the map, the difficulty, the teams, the time of day and the weather.
+  12. `dusk_rain_crossroads.png` — Rain at dusk on Crossroads: a flag lights up while it's being captured.
+  13. `match_end.png` — Victory: where the fighting was fiercest, leaderboard, medals, promotion and unlocks.
+  14. `soldier_customization.png` — Build your soldier: call sign, starting weapon, camo, vest, gear.
+  15. `apache_strike.png` — Attack helicopter run: rockets and cannon fire on the enemy trench line.
+  16. `map_editor.png` — The map editor: paint tiles, place flags, bases, pickups and vehicles, then test the map.
+  17. `training_complete.png` — Training complete: your first medal.
+  18. `medal_ingame.png` — Medals in battle: 17 feats, each with its own pixel-art medal.
+- Not in the list: `briefing.png` (superseded by `briefing_story.png`), `day_countryside.png`, `night_arena.png`,
+  `vehicle_combat.png`, `medals.png`,
   `soldier_unlocks.png` (still valid, use them if you want more), `leaderboard.png` (superseded by `match_end.png`),
   `editor.png` (superseded by `map_editor.png`), and the pre-1.4 battle shots `oasis_battle.png`,
   `crossroads_firefight.png`, `promotion.png`, `apache_rocket.png` (older graphics).
+
+## Release notes (devlog) — v1.5.6
+
+Title: **BAF2D 1.5.6 — Millstream Valley, real sounds and a Windows version**
+
+Type: Update. Attach `millstream_bridge.png` (cover of the post), `briefing_story.png` and `new_game.png`.
+
+A smaller update, but one you'll hear: BAF2D finally has real gunfire, a menu theme, a new map, and you can now
+download it for Windows.
+
+**New map: Millstream Valley**
+- A wooded valley cut in two by a winding river. Only two bridges can carry vehicles, so tanks and jeeps have to
+  fight for them; infantry can also cross on two narrow footbridges.
+- There's a village on each bank, a stone tower on each flank and, in the middle of the river, the ruined mill on
+  its island: the flag everybody wants.
+- Like every other map it's symmetric and has no dead ends.
+
+**Every map has a story**
+- The briefing now opens with a few lines about where you're fighting and why: the freight yard nobody demolished,
+  the customs post at the crossroads, the only well for fifty kilometres, a farm where the front hasn't moved in three
+  months, the bridges the engineers were supposed to blow up. Even the training ground has one.
+
+**Real sounds**
+- Until now every sound in BAF2D was synthesized in code. This update brings in real recordings (all public domain,
+  CC0) for the assault rifle, the shotgun, the rocket launcher, the explosions, the rifle and shotgun reloads, and the
+  machine guns of the tank and the helicopter.
+- The rifle has two different shots and each soldier always uses the same one, so you can tell two rifles apart in
+  a firefight. Every sound gets a slight random pitch change, and sounds that pile up are capped so big battles
+  don't turn into noise.
+- Sounds without a recording yet (pistol, impacts, engines...) keep their synthesized version for now. More are
+  coming.
+
+**Music**
+- The main menu has a theme now. It fades out when the briefing starts, and there's a new **Music volume** option.
+
+**Windows version**
+- There's a new download, **BAF2D for Windows**: unzip it and run `BAF2D.exe`. The game opens in its own window
+  (Windows 10/11, 64-bit), with no install and no browser needed.
+- Your rank, medals and settings are saved on your PC. They're separate from the browser version, so you start a
+  new career there.
+
+The browser download is bigger now (about 4.7 MB instead of 0.75 MB) because of the music and sound files. Your
+rank, medals and soldier carry over in the browser as always. Let me know in the comments how the new sounds feel!
 
 ## Release notes (devlog) — v1.5.5
 
