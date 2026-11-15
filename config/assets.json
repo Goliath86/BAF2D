@@ -770,7 +770,7 @@
       ]
     },
     "reload_rifle": {
-      "src": "assets/sounds/reload_ar.mp3",
+      "src": "assets/sounds/reload_rifle_1.mp3",
       "volume": 0.2,
       "placeholder": { "wave": "triangle", "freqStart": 700, "freqEnd": 250, "duration": 0.05, "at": [0.25, 0.9, 1.35] }
     },
@@ -780,7 +780,7 @@
       "placeholder": { "wave": "triangle", "freqStart": 900, "freqEnd": 300, "duration": 0.04, "at": [0.2, 0.8] }
     },
     "reload_shotgun": {
-      "src": "assets/sounds/reload_shotgun.mp3",
+      "src": "assets/sounds/reload_shotgun_1.mp3",
       "volume": 0.2,
       "placeholder": { "wave": "triangle", "freqStart": 500, "freqEnd": 200, "duration": 0.05, "at": [0.4, 1.2, 2.0, 2.25] }
     },
